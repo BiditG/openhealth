@@ -48,11 +48,11 @@ export function SiteNav() {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/hub"
+            href="/login"
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#125745]"
           >
             <LogIn className="h-4 w-4" strokeWidth={1.8} />
-            Open App
+            Sign in
           </Link>
         </div>
       </div>

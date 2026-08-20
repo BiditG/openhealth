@@ -8,7 +8,7 @@ export async function requireActiveUser() {
   const session = await auth.api.getSession();
 
   if (!session?.user) {
-    redirect("/?auth=required");
+    redirect("/login");
   }
 
   const [user] = await db
