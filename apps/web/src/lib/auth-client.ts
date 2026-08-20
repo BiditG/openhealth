@@ -111,10 +111,12 @@ export const signUp = {
     name,
     email,
     password,
+    metadata,
   }: {
     name: string;
     email: string;
     password: string;
+    metadata?: Record<string, unknown>;
   }) => {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
@@ -127,7 +129,7 @@ export const signUp = {
       email,
       password,
       options: {
-        data: { name, full_name: name },
+        data: { name, full_name: name, ...metadata },
       },
     });
     return { data: toAuthData(data), error };

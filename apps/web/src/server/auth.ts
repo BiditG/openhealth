@@ -78,6 +78,66 @@ function getAdminEmails() {
     .filter(Boolean);
 }
 
+function getString(value: unknown, maxLength: number) {
+  return typeof value === "string" && value.length <= maxLength ? value : null;
+}
+
+function getNumber(value: unknown, max: number) {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numberValue) && numberValue > 0 && numberValue <= max
+    ? numberValue
+    : null;
+}
+
+function getOnboardingProfile(user: User) {
+  const rawProfile = user.user_metadata?.onboarding_profile;
+  if (!rawProfile || typeof rawProfile !== "object" || Array.isArray(rawProfile)) {
+    return null;
+  }
+
+  const profile = rawProfile as Record<string, unknown>;
+  const sex = getString(profile.sex, 20);
+  const activityLevel = getString(profile.activityLevel, 40);
+  const safeSex: "male" | "female" | "other" | null =
+    sex === "male" || sex === "female" || sex === "other" ? sex : null;
+  const safeActivityLevel:
+    | "sedentary"
+    | "lightly_active"
+    | "moderately_active"
+    | "very_active"
+    | "extremely_active" =
+    activityLevel === "sedentary" ||
+    activityLevel === "lightly_active" ||
+    activityLevel === "moderately_active" ||
+    activityLevel === "very_active" ||
+    activityLevel === "extremely_active"
+      ? activityLevel
+      : "moderately_active";
+  const medicalConditions = Array.isArray(profile.medicalConditions)
+    ? profile.medicalConditions
+        .filter((condition): condition is string => typeof condition === "string")
+        .map((condition) => condition.trim())
+        .filter(Boolean)
+        .slice(0, 20)
+    : [];
+
+  return {
+    sex: safeSex,
+    heightCm: getNumber(profile.heightCm, 300),
+    currentWeightKg: getNumber(profile.currentWeightKg, 500),
+    dateOfBirth: /^\d{4}-\d{2}-\d{2}$/.test(String(profile.dateOfBirth))
+      ? String(profile.dateOfBirth)
+      : null,
+    activityLevel: safeActivityLevel,
+    medicalConditions,
+    medications: getString(profile.medications, 1000),
+    allergies: getString(profile.allergies, 1000),
+    dietaryPreference: getString(profile.dietaryPreference, 80),
+    primaryGoal: getString(profile.primaryGoal, 80),
+    onboardingCompleted: profile.onboardingCompleted === true,
+  };
+}
+
 async function ensureApplicationUser(user: User) {
   const email = user.email;
   if (!email) return;
@@ -116,10 +176,53 @@ async function ensureApplicationUser(user: User) {
       },
     });
 
-  await db
-    .insert(userProfiles)
-    .values({ userId: user.id })
-    .onConflictDoNothing({ target: userProfiles.userId });
+  const onboardingProfile = getOnboardingProfile(user);
+  const existingProfile = await db
+    .select({ onboardingCompleted: userProfiles.onboardingCompleted })
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, user.id))
+    .then((rows) => rows[0]);
+
+  if (onboardingProfile && !existingProfile?.onboardingCompleted) {
+    await db
+      .insert(userProfiles)
+      .values({
+        userId: user.id,
+        sex: onboardingProfile.sex,
+        heightCm: onboardingProfile.heightCm ? String(onboardingProfile.heightCm) : null,
+        currentWeightKg: onboardingProfile.currentWeightKg ? String(onboardingProfile.currentWeightKg) : null,
+        dateOfBirth: onboardingProfile.dateOfBirth,
+        activityLevel: onboardingProfile.activityLevel,
+        medicalConditions: onboardingProfile.medicalConditions,
+        medications: onboardingProfile.medications,
+        allergies: onboardingProfile.allergies,
+        dietaryPreference: onboardingProfile.dietaryPreference,
+        primaryGoal: onboardingProfile.primaryGoal,
+        onboardingCompleted: onboardingProfile.onboardingCompleted,
+      })
+      .onConflictDoUpdate({
+        target: userProfiles.userId,
+        set: {
+          sex: onboardingProfile.sex,
+          heightCm: onboardingProfile.heightCm ? String(onboardingProfile.heightCm) : null,
+          currentWeightKg: onboardingProfile.currentWeightKg ? String(onboardingProfile.currentWeightKg) : null,
+          dateOfBirth: onboardingProfile.dateOfBirth,
+          activityLevel: onboardingProfile.activityLevel,
+          medicalConditions: onboardingProfile.medicalConditions,
+          medications: onboardingProfile.medications,
+          allergies: onboardingProfile.allergies,
+          dietaryPreference: onboardingProfile.dietaryPreference,
+          primaryGoal: onboardingProfile.primaryGoal,
+          onboardingCompleted: onboardingProfile.onboardingCompleted,
+          updatedAt: new Date(),
+        },
+      });
+  } else if (!existingProfile) {
+    await db
+      .insert(userProfiles)
+      .values({ userId: user.id })
+      .onConflictDoNothing({ target: userProfiles.userId });
+  }
 
   const existing = await db
     .select({ referralCode: users.referralCode })

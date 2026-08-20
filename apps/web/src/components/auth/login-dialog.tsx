@@ -5,10 +5,24 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { signIn, signUp } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc-client";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
+
+const registrationSteps = [
+  "email",
+  "password",
+  "gender",
+  "age",
+  "height",
+  "weight",
+  "goal",
+  "complications",
+] as const;
+
+type GoalFocus = "body_building" | "weight_reduction" | "general_health";
 
 interface LoginDialogProps {
   open: boolean;
@@ -20,7 +34,6 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
   const { t } = useTranslation("common");
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -28,12 +41,13 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
   const [referralCode, setReferralCode] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  const [registerStep, setRegisterStep] = useState(0);
   const [age, setAge] = useState("");
   const [sex, setSex] = useState<"male" | "female" | "other" | "">("");
-  const [heightCm, setHeightCm] = useState("");
+  const [heightFt, setHeightFt] = useState("");
   const [weightKg, setWeightKg] = useState("");
   const [activityLevel, setActivityLevel] = useState("moderately_active");
-  const [primaryGoal, setPrimaryGoal] = useState("maintain");
+  const [primaryGoal, setPrimaryGoal] = useState<GoalFocus>("general_health");
   const [calorieTarget, setCalorieTarget] = useState("2050");
   const [dietaryPreference, setDietaryPreference] = useState("");
   const [medicalConditions, setMedicalConditions] = useState("");
@@ -42,16 +56,16 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
   const completeOnboarding = trpc.user.completeOnboarding.useMutation();
 
   const resetForm = () => {
-    setName("");
     setEmail("");
     setPassword("");
     setReferralCode("");
+    setRegisterStep(0);
     setAge("");
     setSex("");
-    setHeightCm("");
+    setHeightFt("");
     setWeightKg("");
     setActivityLevel("moderately_active");
-    setPrimaryGoal("maintain");
+    setPrimaryGoal("general_health");
     setCalorieTarget("2050");
     setDietaryPreference("");
     setMedicalConditions("");
@@ -69,19 +83,80 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
     return dob.toISOString().slice(0, 10);
   };
 
+  const getNameFromEmail = () => email.trim().split("@")[0] || "User";
+
+  const getHeightCmFromFeet = () => {
+    const feet = Number(heightFt);
+    if (!Number.isFinite(feet) || feet <= 0) return null;
+    return Number((feet * 30.48).toFixed(1));
+  };
+
   const parseList = (value: string) =>
     value
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
 
+  const validateRegistrationStep = () => {
+    const step = registrationSteps[registerStep];
+
+    if (step === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return "Enter a valid email address.";
+    }
+    if (step === "password" && password.length < 8) {
+      return t("auth.passwordMinLength");
+    }
+    if (step === "gender" && !sex) {
+      return "Choose your gender.";
+    }
+    if (step === "age") {
+      const years = Number(age);
+      if (!Number.isInteger(years) || years < 1 || years > 120) {
+        return "Enter an age between 1 and 120.";
+      }
+    }
+    if (step === "height") {
+      const feet = Number(heightFt);
+      if (!Number.isFinite(feet) || feet < 1 || feet > 9) {
+        return "Enter your height in feet, for example 5.8.";
+      }
+    }
+    if (step === "weight") {
+      const weight = Number(weightKg);
+      if (!Number.isFinite(weight) || weight <= 0 || weight > 500) {
+        return "Enter your weight in kg.";
+      }
+    }
+    if (step === "goal" && !primaryGoal) {
+      return "Choose your primary goal.";
+    }
+
+    return "";
+  };
+
+  const handleRegisterNext = () => {
+    const validationError = validateRegistrationStep();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError("");
+    setRegisterStep((currentStep) => Math.min(currentStep + 1, registrationSteps.length - 1));
+  };
+
+  const handleRegisterBack = () => {
+    setError("");
+    setRegisterStep((currentStep) => Math.max(currentStep - 1, 0));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
     try {
       if (mode === "login") {
+        setLoading(true);
         const result = await signIn.email({ email, password });
         if (result.error) {
           setError(result.error.message || "Sign in failed. Check your email and password.");
@@ -95,19 +170,44 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
         }
         posthog.capture("user_logged_in", { method: "email" });
       } else {
-        if (password.length < 8) {
-          setError(t("auth.passwordMinLength"));
-          setLoading(false);
+        const validationError = validateRegistrationStep();
+        if (validationError) {
+          setError(validationError);
           return;
         }
-        const result = await signUp.email({ name, email, password });
+        setLoading(true);
+        const name = getNameFromEmail();
+        const profile = {
+          name,
+          sex: sex || null,
+          heightCm: getHeightCmFromFeet(),
+          currentWeightKg: weightKg ? Number(weightKg) : null,
+          dateOfBirth: getDateOfBirthFromAge(),
+          activityLevel: activityLevel as "sedentary" | "lightly_active" | "moderately_active" | "very_active" | "extremely_active",
+          medicalConditions: parseList(medicalConditions),
+          medications: medications || null,
+          allergies: allergies || null,
+          dietaryPreference: dietaryPreference || null,
+          primaryGoal,
+          onboardingCompleted: true,
+        };
+        const result = await signUp.email({
+          name,
+          email: email.trim(),
+          password,
+          metadata: {
+            onboarding_profile: profile,
+            primary_goal: primaryGoal,
+            medical_conditions: profile.medicalConditions,
+          },
+        });
         if (result.error) {
           setError(result.error.message || t("auth.registerFailed"));
           setLoading(false);
           return;
         }
         if (!result.data?.session) {
-          setError("Account created. Please confirm your email if Supabase sent a verification link, then sign in. After that, admin activation is required.");
+          setError("Registration saved. Please confirm your email if Supabase sent a verification link, then sign in.");
           setLoading(false);
           return;
         }
@@ -115,20 +215,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
         if (result.data?.user) {
           try {
             await completeOnboarding.mutateAsync({
-              profile: {
-                name,
-                sex: sex || null,
-                heightCm: heightCm ? Number(heightCm) : null,
-                currentWeightKg: weightKg ? Number(weightKg) : null,
-                dateOfBirth: getDateOfBirthFromAge(),
-                activityLevel: activityLevel as "sedentary" | "lightly_active" | "moderately_active" | "very_active" | "extremely_active",
-                medicalConditions: parseList(medicalConditions),
-                medications: medications || null,
-                allergies: allergies || null,
-                dietaryPreference: dietaryPreference || null,
-                primaryGoal,
-                onboardingCompleted: true,
-              },
+              profile,
               goals: {
                 calorieTarget: calorieTarget ? Number(calorieTarget) : null,
                 proteinG: null,
@@ -182,6 +269,215 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
   const switchMode = () => {
     setMode(mode === "login" ? "register" : "login");
     setError("");
+    setRegisterStep(0);
+  };
+
+  const renderRegistrationStep = () => {
+    const step = registrationSteps[registerStep];
+    const stepNumber = registerStep + 1;
+    const totalSteps = registrationSteps.length;
+
+    return (
+      <div className="space-y-4 rounded-2xl border border-border bg-muted p-4">
+        <div className="space-y-2">
+          <div className="h-2 overflow-hidden rounded-full bg-white">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${(stepNumber / totalSteps) * 100}%` }}
+            />
+          </div>
+          <p className="text-xs font-semibold uppercase text-muted-foreground">
+            Step {stepNumber} of {totalSteps}
+          </p>
+        </div>
+
+        {step === "email" && (
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground" htmlFor="register-email">
+              What is your email?
+            </label>
+            <Input
+              id="register-email"
+              type="email"
+              placeholder={t("auth.emailPlaceholder")}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+          </div>
+        )}
+
+        {step === "password" && (
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground" htmlFor="register-password">
+              Create a password
+            </label>
+            <Input
+              id="register-password"
+              type="password"
+              placeholder={t("auth.passwordRegisterPlaceholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
+          </div>
+        )}
+
+        {step === "gender" && (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-foreground">What is your gender?</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                ["male", "Male"],
+                ["female", "Female"],
+                ["other", "Other"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setSex(value as typeof sex)}
+                  className={`min-h-[50px] rounded-xl border px-3 text-sm font-semibold transition-colors ${
+                    sex === value
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-white text-foreground hover:bg-background"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === "age" && (
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground" htmlFor="register-age">
+              How old are you?
+            </label>
+            <Input
+              id="register-age"
+              type="number"
+              inputMode="numeric"
+              placeholder="Age"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              min={1}
+              max={120}
+              required
+            />
+          </div>
+        )}
+
+        {step === "height" && (
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground" htmlFor="register-height">
+              What is your height in feet?
+            </label>
+            <Input
+              id="register-height"
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              placeholder="Example: 5.8"
+              value={heightFt}
+              onChange={(e) => setHeightFt(e.target.value)}
+              min={1}
+              max={9}
+              required
+            />
+          </div>
+        )}
+
+        {step === "weight" && (
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground" htmlFor="register-weight">
+              What is your weight?
+            </label>
+            <Input
+              id="register-weight"
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              placeholder="Weight kg"
+              value={weightKg}
+              onChange={(e) => setWeightKg(e.target.value)}
+              min={1}
+              max={500}
+              required
+            />
+          </div>
+        )}
+
+        {step === "goal" && (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-foreground">What is your primary goal?</p>
+            <div className="space-y-2">
+              {[
+                ["body_building", "Body building"],
+                ["weight_reduction", "Weight reduction"],
+                ["general_health", "General health"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setPrimaryGoal(value as GoalFocus)}
+                  className={`min-h-[50px] w-full rounded-xl border px-4 text-left text-sm font-semibold transition-colors ${
+                    primaryGoal === value
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-white text-foreground hover:bg-background"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === "complications" && (
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground" htmlFor="register-complications">
+              Possible health complications
+            </label>
+            <Textarea
+              id="register-complications"
+              placeholder="Example: diabetes, hypertension, asthma. Leave blank if none."
+              value={medicalConditions}
+              onChange={(e) => setMedicalConditions(e.target.value)}
+            />
+            <Input
+              placeholder={t("auth.referralCodePlaceholder")}
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              maxLength={12}
+            />
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleRegisterBack}
+            disabled={registerStep === 0 || loading}
+          >
+            Back
+          </Button>
+          {registerStep < registrationSteps.length - 1 ? (
+            <Button type="button" onClick={handleRegisterNext} disabled={loading}>
+              Next
+            </Button>
+          ) : (
+            <Button type="submit" disabled={loading}>
+              {loading ? t("auth.registering") : "Finish registration"}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -276,134 +572,33 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-
-        {mode === "register" && (
-          <div className="space-y-3 rounded-2xl border border-border bg-muted p-4">
+        {mode === "register" ? (
+          renderRegistrationStep()
+        ) : (
+          <>
             <Input
-              placeholder={t("auth.namePlaceholder")}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              type="email"
+              placeholder={t("auth.emailPlaceholder")}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
             />
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                type="number"
-                placeholder="Age"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                min={1}
-                max={120}
-                required
-              />
-              <select
-                value={sex}
-                onChange={(e) => setSex(e.target.value as typeof sex)}
-                className="min-h-[50px] rounded-xl border border-input bg-white px-4 text-base dark:bg-card"
-                required
-              >
-                <option value="">Sex</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-              <Input
-                type="number"
-                placeholder="Height cm"
-                value={heightCm}
-                onChange={(e) => setHeightCm(e.target.value)}
-                required
-              />
-              <Input
-                type="number"
-                placeholder="Weight kg"
-                value={weightKg}
-                onChange={(e) => setWeightKg(e.target.value)}
-                required
-              />
-            </div>
-            <select
-              value={activityLevel}
-              onChange={(e) => setActivityLevel(e.target.value)}
-              className="min-h-[50px] w-full rounded-xl border border-input bg-white px-4 text-base dark:bg-card"
-            >
-              <option value="sedentary">Mostly sitting</option>
-              <option value="lightly_active">Lightly active</option>
-              <option value="moderately_active">Moderately active</option>
-              <option value="very_active">Very active</option>
-              <option value="extremely_active">Athlete level</option>
-            </select>
-            <div className="grid grid-cols-2 gap-3">
-              <select
-                value={primaryGoal}
-                onChange={(e) => setPrimaryGoal(e.target.value)}
-                className="min-h-[50px] rounded-xl border border-input bg-white px-4 text-base dark:bg-card"
-              >
-                <option value="lose">Lose weight</option>
-                <option value="maintain">Maintain</option>
-                <option value="gain">Gain muscle</option>
-                <option value="manage_health">Manage health</option>
-              </select>
-              <Input
-                type="number"
-                placeholder="Daily kcal"
-                value={calorieTarget}
-                onChange={(e) => setCalorieTarget(e.target.value)}
-              />
-            </div>
+
             <Input
-              placeholder="Diet preference, e.g. vegetarian"
-              value={dietaryPreference}
-              onChange={(e) => setDietaryPreference(e.target.value)}
+              type="password"
+              placeholder={t("auth.passwordPlaceholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
             />
-            <Input
-              placeholder="Medical conditions, comma separated"
-              value={medicalConditions}
-              onChange={(e) => setMedicalConditions(e.target.value)}
-            />
-            <Input
-              placeholder="Medications"
-              value={medications}
-              onChange={(e) => setMedications(e.target.value)}
-            />
-            <Input
-              placeholder="Allergies"
-              value={allergies}
-              onChange={(e) => setAllergies(e.target.value)}
-            />
-          </div>
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? t("auth.loggingIn") : t("auth.login")}
+            </Button>
+          </>
         )}
-
-        <Input
-          type="email"
-          placeholder={t("auth.emailPlaceholder")}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-        <Input
-          type="password"
-          placeholder={mode === "register" ? t("auth.passwordRegisterPlaceholder") : t("auth.passwordPlaceholder")}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={mode === "register" ? 8 : undefined}
-        />
-
-        {mode === "register" && (
-          <Input
-            placeholder={t("auth.referralCodePlaceholder")}
-            value={referralCode}
-            onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-            maxLength={12}
-          />
-        )}
-
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading
-            ? (mode === "login" ? t("auth.loggingIn") : t("auth.registering"))
-            : (mode === "login" ? t("auth.login") : t("auth.register"))}
-        </Button>
       </form>
 
       <p className="mt-3 text-center text-sm text-muted-foreground">
