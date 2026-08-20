@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { updateProfileSchema, updateGoalsSchema } from "@open-health/shared/schemas";
+import { updateGoalsSchema, updateProfileSchema } from "@open-health/shared/schemas";
 import { protectedProcedure, router } from "../trpc";
-import { userProfiles, userGoals, nutrientDefinitions, users, foods } from "@/server/db/schema";
+import { userProfiles, userGoals, nutrientDefinitions, users, foods, weightLogs } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { getAiUsage } from "@/server/services/plan";
 import * as userService from "@/server/services/user-mutation";
@@ -25,6 +25,42 @@ export const userRouter = router({
     .input(updateProfileSchema)
     .mutation(async ({ ctx, input }) => {
       await userService.updateProfile(ctx.db, ctx.user.id, input);
+      return { success: true };
+    }),
+
+  completeOnboarding: protectedProcedure
+    .input(
+      z.object({
+        profile: updateProfileSchema,
+        goals: updateGoalsSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await userService.updateProfile(ctx.db, ctx.user.id, {
+        ...input.profile,
+        onboardingCompleted: true,
+      });
+      await userService.updateGoals(ctx.db, ctx.user.id, input.goals);
+
+      if (input.profile.currentWeightKg) {
+        const today = new Date().toISOString().slice(0, 10);
+        await ctx.db
+          .insert(weightLogs)
+          .values({
+            userId: ctx.user.id,
+            date: today,
+            weightKg: String(input.profile.currentWeightKg),
+            note: "Onboarding",
+          })
+          .onConflictDoUpdate({
+            target: [weightLogs.userId, weightLogs.date],
+            set: {
+              weightKg: String(input.profile.currentWeightKg),
+              note: "Onboarding",
+            },
+          });
+      }
+
       return { success: true };
     }),
 

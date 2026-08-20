@@ -35,7 +35,7 @@ async function insertTestFood(overrides?: { calories?: string }) {
   const [food] = await db
     .insert(foods)
     .values({
-      name: "雞胸肉",
+      name: "Chicken breast",
       source: "user",
       servingSize: "100",
       servingUnit: "g",

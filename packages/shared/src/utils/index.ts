@@ -28,7 +28,7 @@ export function formatDurationSeconds(seconds: number): string {
 }
 
 /**
- * Format seconds into a human-readable preset label (e.g. "10 分鐘").
+ * Format seconds into a human-readable preset label.
  */
 export function formatMinutesLabel(seconds: number): string {
   const m = Math.floor(seconds / 60);

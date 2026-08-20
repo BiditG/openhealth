@@ -12,8 +12,7 @@ export const dynamic = "force-dynamic";
 const BASE_URL = "https://openhealth.blog";
 
 const notFoundTitles: Record<Locale, string> = {
-  "zh-TW": "找不到頁面 — Open Health",
-  en: "Not Found — Open Health",
+  en: "Not Found — Swastha",
 };
 
 interface Props {
@@ -21,7 +20,7 @@ interface Props {
 }
 
 async function getPost(slug: string, locale: string) {
-  let result = await db
+  const result = await db
     .select()
     .from(blogPosts)
     .where(
@@ -33,21 +32,6 @@ async function getPost(slug: string, locale: string) {
     )
     .limit(1);
 
-  // Fallback to zh-TW if not found
-  if (!result[0] && locale !== "zh-TW") {
-    result = await db
-      .select()
-      .from(blogPosts)
-      .where(
-        and(
-          eq(blogPosts.slug, slug),
-          eq(blogPosts.status, "published"),
-          eq(blogPosts.locale, "zh-TW")
-        )
-      )
-      .limit(1);
-  }
-
   return result[0] ?? null;
 }
 
@@ -58,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return { title: notFoundTitles[lang] };
 
   return {
-    title: `${post.title} — Open Health`,
+    title: `${post.title} — Swastha`,
     description: post.summary?.slice(0, 160) ?? "",
     openGraph: {
       title: post.title,
@@ -68,10 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     alternates: {
       canonical: `${BASE_URL}/blog/${slug}`,
-      languages: {
-        "zh-TW": `${BASE_URL}/blog/${slug}`,
-        en: `${BASE_URL}/en/blog/${slug}`,
-      },
+      languages: { en: `${BASE_URL}/blog/${slug}` },
     },
   };
 }

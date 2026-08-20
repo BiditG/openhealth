@@ -14,13 +14,6 @@ import {
 } from "@/server/services/posture-push-scheduler";
 
 const DEFAULT_POSTURES: Record<string, { name: string; emoji: string; maxMinutes: number; suggestedBreak: string; sortOrder: number }[]> = {
-  "zh-TW": [
-    { name: "坐姿", emoji: "🪑", maxMinutes: 45, suggestedBreak: "站起來走動 2 分鐘", sortOrder: 0 },
-    { name: "站姿", emoji: "🧍", maxMinutes: 60, suggestedBreak: "坐下休息或走動一下", sortOrder: 1 },
-    { name: "走路", emoji: "🚶", maxMinutes: 120, suggestedBreak: "找個地方坐下休息", sortOrder: 2 },
-    { name: "躺姿", emoji: "🛌", maxMinutes: 30, suggestedBreak: "起來活動一下", sortOrder: 3 },
-    { name: "半躺", emoji: "🛋️", maxMinutes: 45, suggestedBreak: "變換姿勢、伸展一下", sortOrder: 4 },
-  ],
   en: [
     { name: "Sitting", emoji: "🪑", maxMinutes: 45, suggestedBreak: "Stand up and walk for 2 min", sortOrder: 0 },
     { name: "Standing", emoji: "🧍", maxMinutes: 60, suggestedBreak: "Sit down or take a short walk", sortOrder: 1 },
@@ -47,8 +40,8 @@ export const postureRouter = router({
 
     // If user has no definitions, seed defaults
     if (defs.length === 0) {
-      const lang = input?.lang ?? "zh-TW";
-      const postures = DEFAULT_POSTURES[lang] ?? DEFAULT_POSTURES["zh-TW"];
+      const lang = input?.lang ?? "en";
+      const postures = DEFAULT_POSTURES[lang] ?? DEFAULT_POSTURES.en;
       const seeded = await ctx.db
         .insert(postureDefinitions)
         .values(
@@ -230,15 +223,10 @@ export const postureRouter = router({
           const fireAt = new Date(
             now.getTime() + postureDef.maxMinutes * 60000
           );
-          const isEn = input.lang === "en";
           schedulePush(ctx.user.id, newSession.id, fireAt, {
             type: "posture-reminder",
-            title: isEn
-              ? `${postureDef.emoji} Time to switch posture!`
-              : `${postureDef.emoji} 該換姿勢了！`,
-            body: isEn
-              ? `You've been "${postureDef.name}" for over ${postureDef.maxMinutes} min. ${postureDef.suggestedBreak}`
-              : `你已經維持「${postureDef.name}」超過 ${postureDef.maxMinutes} 分鐘。${postureDef.suggestedBreak}`,
+            title: `${postureDef.emoji} Time to switch posture!`,
+            body: `You've been "${postureDef.name}" for over ${postureDef.maxMinutes} min. ${postureDef.suggestedBreak}`,
             tag: "posture-reminder",
             url: "/hub/posture",
           });
@@ -300,9 +288,9 @@ export const postureRouter = router({
       const conditions = [eq(postureSessions.userId, ctx.user.id)];
 
       if (input.date) {
-        // Use Asia/Taipei timezone (UTC+8) for date boundaries
-        const dayStart = new Date(`${input.date}T00:00:00+08:00`);
-        const dayEnd = new Date(`${input.date}T00:00:00+08:00`);
+        // Use Nepal timezone (UTC+5:45) for date boundaries.
+        const dayStart = new Date(`${input.date}T00:00:00+05:45`);
+        const dayEnd = new Date(`${input.date}T00:00:00+05:45`);
         dayEnd.setDate(dayEnd.getDate() + 1);
         conditions.push(gte(postureSessions.startedAt, dayStart));
         conditions.push(lt(postureSessions.startedAt, dayEnd));

@@ -1,11 +1,19 @@
 "use client";
 
 import { useSession } from "@/lib/auth-client";
-import { User } from "lucide-react";
+import { Camera, HeartPulse, Search, User } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { LoginDialog } from "@/components/auth/login-dialog";
 import { useTranslation } from "react-i18next";
+
+const navItems = [
+  { href: "/today", label: "Today" },
+  { href: "/hub/food", label: "Food" },
+  { href: "/hub/progress", label: "Progress" },
+  { href: "/hub/chat", label: "AI Coach" },
+  { href: "/learn", label: "Learn" },
+];
 
 export function Header() {
   const { data: session } = useSession();
@@ -14,23 +22,55 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-black/[0.06] dark:border-white/[0.06] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-14 max-w-lg lg:max-w-3xl items-center justify-between px-4">
-          <Link href="/hub" className="text-base font-light tracking-[0.3em] text-foreground transition-all duration-300 hover:opacity-60">
-            OH
+      <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85 dark:bg-background/90">
+        <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between px-4 lg:h-[72px] lg:px-6">
+          <Link href="/hub" className="flex items-center gap-2.5 text-foreground transition-opacity duration-200 hover:opacity-80">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-primary">
+              <HeartPulse className="h-4 w-4" strokeWidth={2} />
+            </span>
+            <span className="text-lg font-bold leading-none tracking-tight">Swastha</span>
           </Link>
 
+          <nav className="hidden items-center gap-1 lg:flex">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-xl px-3.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
           {session?.user ? (
-            <Link
-              href="/settings/profile"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-black/[0.06] dark:border-white/[0.06] text-neutral-500 transition-all duration-300 hover:text-foreground"
-            >
-              <User className="h-4 w-4" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/hub/food/scan"
+                className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#0D8064] md:inline-flex"
+              >
+                <Camera className="h-4 w-4" strokeWidth={2} />
+                Scan meal
+              </Link>
+              <Link
+                href="/hub/food/search"
+                className="hidden h-11 w-11 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground transition-colors hover:bg-muted hover:text-primary sm:flex dark:bg-card"
+                aria-label="Search foods"
+              >
+                <Search className="h-5 w-5" strokeWidth={1.8} />
+              </Link>
+              <Link
+                href="/settings/profile"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-secondary text-primary transition-colors hover:bg-muted dark:bg-card"
+                aria-label="Profile"
+              >
+                <User className="h-5 w-5" strokeWidth={1.8} />
+              </Link>
+            </div>
           ) : (
             <button
               onClick={() => setShowLogin(true)}
-              className="text-sm font-light text-neutral-500 transition-all duration-300 hover:text-foreground"
+              className="min-h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#0D8064]"
             >
               {t("auth.login")}
             </button>

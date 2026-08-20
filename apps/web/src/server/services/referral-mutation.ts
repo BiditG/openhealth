@@ -26,11 +26,11 @@ export async function applyReferralCode(
     .limit(1);
 
   if (referrer.length === 0) {
-    return { success: false, error: "推薦碼不存在" };
+    return { success: false, error: "Referral code does not exist" };
   }
 
   if (referrer[0].id === userId) {
-    return { success: false, error: "不能使用自己的推薦碼" };
+    return { success: false, error: "You cannot use your own referral code" };
   }
 
   // Insert referral — unique index on refereeId prevents duplicates
@@ -46,15 +46,15 @@ export async function applyReferralCode(
     referralId = inserted.id;
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return { success: false, error: "你已經使用過推薦碼了" };
+      return { success: false, error: "You have already used a referral code" };
     }
     throw error;
   }
 
   // Grant achievements + trial days to both
   await Promise.all([
-    grantAchievement(referrer[0].id, "推薦達人"),
-    grantAchievement(userId, "受邀新星"),
+    grantAchievement(referrer[0].id, "Referral Builder"),
+    grantAchievement(userId, "Invited Starter"),
     grantReferralTrialDays(referralId, referrer[0].id, userId),
   ]);
 
@@ -75,7 +75,7 @@ export async function customizeReferralCode(
       .where(eq(users.id, userId));
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return { success: false, error: "此推薦碼已被使用" };
+      return { success: false, error: "This referral code is already in use" };
     }
     throw error;
   }

@@ -101,7 +101,7 @@ export const coachRouter = router({
       if (!relation) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "找不到此學員",
+          message: "Client not found",
         });
       }
 
@@ -192,7 +192,7 @@ export const coachRouter = router({
         .then((r) => r[0]);
 
       if (!relation) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "找不到此學員" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
       }
 
       const weekEnd = getWeekEnd(input.weekStart);
@@ -341,9 +341,9 @@ export const coachRouter = router({
       const result = await coachingService.connectToCoach(ctx.db, ctx.user.id, input.code);
       if (!result.success) {
         throw new TRPCError({
-          code: result.error === "教練碼不存在" ? "NOT_FOUND"
-            : result.error === "不能加入自己為教練" ? "BAD_REQUEST"
-            : result.error === "你已經是此教練的學員了" ? "CONFLICT"
+          code: result.error === "Coach code does not exist" ? "NOT_FOUND"
+            : result.error === "You cannot add yourself as your coach" ? "BAD_REQUEST"
+            : result.error === "You are already connected to this coach" ? "CONFLICT"
             : "INTERNAL_SERVER_ERROR",
           message: result.error,
         });
@@ -374,7 +374,7 @@ export const coachRouter = router({
         .then((r) => r[0]);
 
       if (!relation) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "找不到此學員" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
       }
 
       await ctx.db
@@ -413,7 +413,7 @@ export const coachRouter = router({
         .then((r) => r[0]);
 
       if (!relation) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "找不到此學員" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
       }
 
       const [message] = await ctx.db
@@ -427,10 +427,10 @@ export const coachRouter = router({
         .returning();
 
       // Send push notification (fire-and-forget)
-      const coachName = ctx.user.name ?? "教練";
+      const coachName = ctx.user.name ?? "Coach";
       sendPushToUser(relation.clientId, {
         type: "coach_message",
-        title: `${coachName} 傳送了訊息`,
+        title: `${coachName} sent a message`,
         body:
           input.content.length > 100
             ? input.content.slice(0, 100) + "…"
@@ -464,7 +464,7 @@ export const coachRouter = router({
         .then((r) => r[0]);
 
       if (!relation) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "找不到此學員" });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
       }
 
       const conditions = [eq(coachMessages.coachClientId, relation.id)];

@@ -3,7 +3,7 @@ export interface ChangelogEntry {
   version: string;
   /** ISO date string, e.g. "2026-03-28" */
   date: string;
-  /** Bilingual title keyed by locale */
+  /** Title keyed by locale */
   title: Record<string, string>;
   /** List of feature items */
   items: {
@@ -24,33 +24,29 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.5.0",
     date: "2026-03-28",
-    title: { "zh-TW": "新功能上線 🎉", en: "New Features 🎉" },
+    title: { en: "New Features 🎉" },
     items: [
       {
         emoji: "📊",
         text: {
-          "zh-TW": "功能總覽頁面 — 一覽所有健康追蹤功能",
           en: "Feature Hub — overview of all health tracking features",
         },
       },
       {
         emoji: "🧘",
         text: {
-          "zh-TW": "冥想計時器 — 追蹤你的正念練習",
           en: "Meditation timer — track your mindfulness practice",
         },
       },
       {
         emoji: "🏋️",
         text: {
-          "zh-TW": "重訓記錄 — 自訂動作模板與組數追蹤",
           en: "Workout log — custom exercise templates & set tracking",
         },
       },
       {
         emoji: "💤",
         text: {
-          "zh-TW": "睡眠追蹤 — 記錄睡眠時間與品質",
           en: "Sleep tracking — log sleep duration & quality",
         },
       },

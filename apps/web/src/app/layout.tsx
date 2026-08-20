@@ -9,30 +9,30 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Open Health — Your Open-Source Health AI Agent",
+  title: "Swastha — Personal Health, Food, and Wellness AI for Nepal",
   description:
-    "第一個開源、行動優先的個人健康 AI Agent。理解你的飲食、睡眠、運動與體重，成為最認識你的健康小助手。",
+    "A mobile-first health platform for Nepal: understand food, track wellness, explain reports, and ask educational health questions with AI.",
   manifest: "/manifest.json",
   metadataBase: new URL("https://openhealth.blog"),
   openGraph: {
-    title: "Open Health — Your Open-Source Health AI Agent",
+    title: "Swastha — Personal Health, Food, and Wellness AI for Nepal",
     description:
-      "第一個開源、行動優先的個人健康 AI Agent。理解你的飲食、睡眠、運動與體重，成為最認識你的健康小助手。",
+      "Understand meals, track wellness, explain reports, and ask educational health questions with a Nepal-focused personal health platform.",
     url: "https://openhealth.blog",
-    siteName: "Open Health",
-    locale: "zh_TW",
+    siteName: "Swastha",
+    locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Open Health — Your Open-Source Health AI Agent",
+    title: "Swastha — Personal Health, Food, and Wellness AI for Nepal",
     description:
-      "第一個開源、行動優先的個人健康 AI Agent。成為最認識你的健康小助手。",
+      "A Nepal-focused personal health, food, wellness, and educational AI platform.",
   },
   keywords: [
     "health AI agent",
     "personal health AI",
-    "open source health AI",
+    "Nepal health app",
     "AI health assistant",
     "nutrition tracking",
     "sleep tracking",
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Open Health",
+    title: "Swastha",
   },
 };
 
@@ -62,7 +62,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const headersList = await headers();
-  const locale = headersList.get("x-locale") || "zh-TW";
+  const locale = headersList.get("x-locale") || "en";
 
   return (
     <html lang={locale} suppressHydrationWarning>

@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
-import { ArrowLeft, LogOut, Loader2 } from "lucide-react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Loader2, LogOut, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { signOut, useSession } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc-client";
 import { updateProfile } from "@/server/actions/profile";
-import posthog from "posthog-js";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 
 export default function ProfilePage() {
@@ -24,20 +26,38 @@ export default function ProfilePage() {
   const [name, setName] = useState("");
   const [sex, setSex] = useState("");
   const [heightCm, setHeightCm] = useState("");
+  const [currentWeightKg, setCurrentWeightKg] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [activityLevel, setActivityLevel] = useState("moderately_active");
-
+  const [primaryGoal, setPrimaryGoal] = useState("");
+  const [dietaryPreference, setDietaryPreference] = useState("");
+  const [medicalConditions, setMedicalConditions] = useState("");
+  const [medications, setMedications] = useState("");
+  const [allergies, setAllergies] = useState("");
   const [initialized, setInitialized] = useState(false);
+
   useEffect(() => {
     if (!initialized && session?.user && profile !== undefined) {
       setName(session.user.name || "");
       setSex(profile?.sex || "");
       setHeightCm(profile?.heightCm ? String(profile.heightCm) : "");
+      setCurrentWeightKg(profile?.currentWeightKg ? String(profile.currentWeightKg) : "");
       setDateOfBirth(profile?.dateOfBirth || "");
       setActivityLevel(profile?.activityLevel || "moderately_active");
+      setPrimaryGoal(profile?.primaryGoal || "");
+      setDietaryPreference(profile?.dietaryPreference || "");
+      setMedicalConditions(profile?.medicalConditions?.join(", ") || "");
+      setMedications(profile?.medications || "");
+      setAllergies(profile?.allergies || "");
       setInitialized(true);
     }
   }, [session, profile, initialized]);
+
+  const parseList = (value: string) =>
+    value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
 
   const handleSave = () => {
     setSaved(false);
@@ -47,15 +67,17 @@ export default function ProfilePage() {
         name,
         sex: sex ? (sex as "male" | "female" | "other") : null,
         heightCm: heightCm ? Number(heightCm) : null,
+        currentWeightKg: currentWeightKg ? Number(currentWeightKg) : null,
         dateOfBirth: dateOfBirth || null,
         activityLevel: activityLevel
-          ? (activityLevel as
-              | "sedentary"
-              | "lightly_active"
-              | "moderately_active"
-              | "very_active"
-              | "extremely_active")
+          ? (activityLevel as "sedentary" | "lightly_active" | "moderately_active" | "very_active" | "extremely_active")
           : null,
+        primaryGoal: primaryGoal || null,
+        dietaryPreference: dietaryPreference || null,
+        medicalConditions: parseList(medicalConditions),
+        medications: medications || null,
+        allergies: allergies || null,
+        onboardingCompleted: true,
       });
       if (!result.success) {
         setError(result.error);
@@ -77,113 +99,118 @@ export default function ProfilePage() {
   if (sessionPending || profileLoading) return <LoadingSpinner />;
 
   return (
-    <div className="px-4 py-6 space-y-6">
+    <div className="mx-auto max-w-[640px] space-y-6 px-4 py-6">
       <div className="flex items-center gap-3">
-        <Link
-          href="/settings"
-          className="p-2 text-neutral-400 transition-all duration-300 hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" strokeWidth={1.5} />
+        <Link href="/settings">
+          <Button variant="ghost" size="icon" aria-label="Back to settings">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
         </Link>
-        <h1 className="text-xl font-light tracking-wide">{t("profile")}</h1>
-      </div>
-
-      {/* Basic info */}
-      <div className="space-y-3">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-          {t("profilePage.basicInfo")}
-        </p>
-        <div className="space-y-4 border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-light text-neutral-500">{t("profilePage.name")}</label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="border-black/[0.06] dark:border-white/[0.06] font-light"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-light text-neutral-500">{t("profilePage.email")}</label>
-            <Input
-              defaultValue={session?.user?.email || ""}
-              disabled
-              className="border-black/[0.06] dark:border-white/[0.06] font-light"
-            />
-          </div>
+        <div>
+          <p className="text-sm font-semibold text-primary">Health profile</p>
+          <h1 className="text-3xl font-semibold text-foreground">{t("profile")}</h1>
         </div>
       </div>
 
-      {/* Body info */}
-      <div className="space-y-3">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-          {t("profilePage.bodyInfo")}
-        </p>
-        <div className="space-y-4 border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-light text-neutral-500">{t("profilePage.sex")}</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-black/[0.06] dark:border-white/[0.06] bg-background px-3 py-2 text-sm font-light"
-                value={sex}
-                onChange={(e) => setSex(e.target.value)}
-              >
-                <option value="">{t("profilePage.selectSex")}</option>
-                <option value="male">{t("profilePage.male")}</option>
-                <option value="female">{t("profilePage.female")}</option>
-                <option value="other">{t("profilePage.other")}</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-light text-neutral-500">{t("profilePage.height")}</label>
-              <Input
-                type="number"
-                placeholder="170"
-                value={heightCm}
-                onChange={(e) => setHeightCm(e.target.value)}
-                className="border-black/[0.06] dark:border-white/[0.06] font-light"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-light text-neutral-500">{t("profilePage.dateOfBirth")}</label>
-              <Input
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                className="border-black/[0.06] dark:border-white/[0.06] font-light"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-light text-neutral-500">{t("profilePage.activityLevel")}</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-black/[0.06] dark:border-white/[0.06] bg-background px-3 py-2 text-sm font-light"
-                value={activityLevel}
-                onChange={(e) => setActivityLevel(e.target.value)}
-              >
-                <option value="sedentary">{t("profilePage.sedentary")}</option>
-                <option value="lightly_active">{t("profilePage.lightlyActive")}</option>
-                <option value="moderately_active">{t("profilePage.moderatelyActive")}</option>
-                <option value="very_active">{t("profilePage.veryActive")}</option>
-                <option value="extremely_active">{t("profilePage.extremelyActive")}</option>
-              </select>
-            </div>
+      <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+        <div className="mb-5 flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-primary">
+            <User className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">{t("profilePage.basicInfo")}</h2>
+            <p className="text-sm text-muted-foreground">Used to personalize your health experience.</p>
           </div>
         </div>
-      </div>
+        <div className="space-y-5">
+          <Field label={t("profilePage.name")}>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Field label={t("profilePage.email")}>
+            <Input defaultValue={session?.user?.email || ""} disabled />
+          </Field>
+        </div>
+      </section>
 
-      {error && (
-        <p className="text-sm text-destructive font-light">{error}</p>
-      )}
+      <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+        <h2 className="text-lg font-semibold text-foreground">{t("profilePage.bodyInfo")}</h2>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">Only add what you want to use for estimates and goals.</p>
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <Field label={t("profilePage.sex")}>
+            <select
+              className="flex min-h-12 w-full rounded-xl border border-input bg-white px-4 py-3 text-base outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-card"
+              value={sex}
+              onChange={(e) => setSex(e.target.value)}
+            >
+              <option value="">{t("profilePage.selectSex")}</option>
+              <option value="male">{t("profilePage.male")}</option>
+              <option value="female">{t("profilePage.female")}</option>
+              <option value="other">{t("profilePage.other")}</option>
+            </select>
+          </Field>
+          <Field label={t("profilePage.height")}>
+            <Input type="number" placeholder="170" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
+          </Field>
+          <Field label="Current weight (kg)">
+            <Input type="number" placeholder="65" value={currentWeightKg} onChange={(e) => setCurrentWeightKg(e.target.value)} />
+          </Field>
+          <Field label={t("profilePage.dateOfBirth")}>
+            <Input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
+          </Field>
+          <Field label={t("profilePage.activityLevel")}>
+            <select
+              className="flex min-h-12 w-full rounded-xl border border-input bg-white px-4 py-3 text-base outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-card"
+              value={activityLevel}
+              onChange={(e) => setActivityLevel(e.target.value)}
+            >
+              <option value="sedentary">{t("profilePage.sedentary")}</option>
+              <option value="lightly_active">{t("profilePage.lightlyActive")}</option>
+              <option value="moderately_active">{t("profilePage.moderatelyActive")}</option>
+              <option value="very_active">{t("profilePage.veryActive")}</option>
+              <option value="extremely_active">{t("profilePage.extremelyActive")}</option>
+            </select>
+          </Field>
+          <Field label="Primary goal">
+            <select
+              className="flex min-h-12 w-full rounded-xl border border-input bg-white px-4 py-3 text-base outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-card"
+              value={primaryGoal}
+              onChange={(e) => setPrimaryGoal(e.target.value)}
+            >
+              <option value="">Select goal</option>
+              <option value="lose">Lose weight</option>
+              <option value="maintain">Maintain weight</option>
+              <option value="gain">Gain muscle</option>
+              <option value="manage_health">Manage health</option>
+            </select>
+          </Field>
+          <Field label="Diet preference">
+            <Input placeholder="Vegetarian, high protein, etc." value={dietaryPreference} onChange={(e) => setDietaryPreference(e.target.value)} />
+          </Field>
+        </div>
+      </section>
 
-      <button
-        className="w-full py-2.5 text-sm font-light border border-black/[0.06] dark:border-white/[0.06] rounded-md transition-all duration-300 hover:border-foreground/20 disabled:opacity-30"
-        onClick={handleSave}
-        disabled={isPending}
-      >
+      <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+        <h2 className="text-lg font-semibold text-foreground">Health notes</h2>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">Used for safer coaching context. This is not a medical record.</p>
+        <div className="mt-5 space-y-5">
+          <Field label="Medical conditions">
+            <Textarea placeholder="Diabetes, hypertension, thyroid, asthma..." value={medicalConditions} onChange={(e) => setMedicalConditions(e.target.value)} />
+          </Field>
+          <Field label="Medications">
+            <Textarea placeholder="Optional" value={medications} onChange={(e) => setMedications(e.target.value)} />
+          </Field>
+          <Field label="Allergies">
+            <Textarea placeholder="Peanuts, dairy, gluten..." value={allergies} onChange={(e) => setAllergies(e.target.value)} />
+          </Field>
+        </div>
+      </section>
+
+      {error && <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
+
+      <Button className="w-full" onClick={handleSave} disabled={isPending}>
         {isPending ? (
           <span className="flex items-center justify-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+            <Loader2 className="h-4 w-4 animate-spin" />
             {t("profilePage.saving")}
           </span>
         ) : saved ? (
@@ -191,15 +218,24 @@ export default function ProfilePage() {
         ) : (
           t("common:buttons.save")
         )}
-      </button>
+      </Button>
 
       <button
         onClick={handleSignOut}
-        className="flex w-full items-center justify-center gap-2 py-2.5 text-sm font-light text-neutral-400 transition-all duration-300 hover:text-destructive"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
       >
-        <LogOut className="h-4 w-4" strokeWidth={1.5} />
+        <LogOut className="h-4 w-4" />
         {t("profilePage.signOut")}
       </button>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-semibold text-foreground">{label}</label>
+      {children}
     </div>
   );
 }

@@ -84,7 +84,7 @@ export default function MeditationPage() {
 
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
-    return d.toLocaleDateString("zh-TW", {
+    return d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       weekday: "short",
@@ -93,7 +93,7 @@ export default function MeditationPage() {
 
   const formatTime = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
-    return d.toLocaleTimeString("zh-TW", {
+    return d.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
     });

@@ -237,7 +237,7 @@ export const foodRouter = router({
       if (!usage.allowed) {
         throw new TRPCError({
           code: "TOO_MANY_REQUESTS",
-          message: `已達今日 AI 辨識上限（${usage.limit} 次）`,
+          message: `Today's AI scan limit has been reached (${usage.limit} uses)`,
         });
       }
       return recognizeNutritionLabel(input.base64Image);
@@ -250,7 +250,7 @@ export const foodRouter = router({
       if (!usage.allowed) {
         throw new TRPCError({
           code: "TOO_MANY_REQUESTS",
-          message: `已達今日 AI 估算上限（${usage.limit} 次）`,
+          message: `Today's AI estimate limit has been reached (${usage.limit} uses)`,
         });
       }
       return estimateNutritionFromText(input.description);
@@ -299,14 +299,14 @@ export const foodRouter = router({
       if (!food) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "找不到食物",
+          message: "Food not found",
         });
       }
 
       if (food.createdBy !== ctx.user.id) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "只能刪除自己建立的食物",
+          message: "You can only delete foods you created",
         });
       }
 
@@ -331,11 +331,11 @@ export const foodRouter = router({
       });
 
       if (!existing) {
-        throw new Error("找不到食物");
+        throw new Error("Food not found");
       }
 
       if (existing.createdBy !== ctx.user.id) {
-        throw new Error("只能編輯自己建立的食物");
+        throw new Error("You can only edit foods you created");
       }
 
       const { id, nutrients, alternateServings, ...updateFields } = input;

@@ -11,7 +11,7 @@ vi.mock("@/server/db", () => {
     },
   };
 });
-vi.mock("@/lib/date", () => ({ getTaiwanDate: () => "2024-06-15" }));
+vi.mock("@/lib/date", () => ({ getNepalDate: () => "2024-06-15" }));
 
 import { checkAndIncrementAiUsage, getAiUsage } from "./plan";
 

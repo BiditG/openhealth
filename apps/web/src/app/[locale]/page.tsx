@@ -15,9 +15,7 @@ interface Props {
 }
 
 const descriptions: Record<Locale, string> = {
-  "zh-TW":
-    "第一個開源、行動優先的個人健康 AI Agent。理解你的飲食、睡眠、運動與體重，成為最認識你的健康小助手。",
-  en: "The first open-source, mobile-first personal health AI agent. Understands your nutrition, sleep, fitness, and becomes the health companion that knows you best.",
+  en: "A mobile-first health platform for Nepal: understand food, track wellness, explain reports, and ask educational health questions with AI.",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -25,14 +23,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const lang = (locale as Locale) || defaultLocale;
 
   return {
-    title: "Open Health — Your Open-Source Health AI Agent",
+    title: "Swastha — Personal Health, Food, and Wellness AI for Nepal",
     description: descriptions[lang],
     alternates: {
       canonical: BASE_URL,
-      languages: {
-        "zh-TW": BASE_URL,
-        en: `${BASE_URL}/en`,
-      },
+      languages: { en: BASE_URL },
     },
   };
 }
@@ -57,10 +52,14 @@ export default async function LandingPage({ params }: Props) {
       and(eq(blogPosts.status, "published"), eq(blogPosts.locale, lang))
     )
     .orderBy(desc(blogPosts.videoPublishedAt))
-    .limit(3);
+    .limit(3)
+    .catch((error: unknown) => {
+      console.error("Landing page recent posts unavailable:", error);
+      return [];
+    });
 
   return (
-    <div className="bg-white dark:bg-black text-black dark:text-white min-h-screen overflow-x-hidden selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <SiteNav />
       <LandingContent posts={recentPosts} />
     </div>

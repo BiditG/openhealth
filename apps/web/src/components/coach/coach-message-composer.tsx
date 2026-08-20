@@ -83,7 +83,7 @@ export function CoachMessageComposer({ clientId }: CoachMessageComposerProps) {
                 {msg.content}
               </p>
               <p className="mt-1 text-[10px] text-neutral-400 dark:text-neutral-600">
-                {new Date(msg.createdAt).toLocaleString("zh-TW", {
+                {new Date(msg.createdAt).toLocaleString("en-US", {
                   month: "numeric",
                   day: "numeric",
                   hour: "2-digit",

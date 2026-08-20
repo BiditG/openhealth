@@ -53,7 +53,7 @@ describe("logFoodSchema", () => {
 
 describe("createFoodSchema", () => {
   const valid = {
-    name: "雞胸肉",
+    name: "Chicken breast",
     servingSize: 100,
     servingUnit: "g",
     calories: 165,
@@ -70,7 +70,7 @@ describe("createFoodSchema", () => {
         brand: "Test Brand",
         barcode: "1234567890",
         nutrients: [{ nutrientId: 1, amount: 31 }],
-        alternateServings: [{ label: "1 片", grams: 120 }],
+        alternateServings: [{ label: "1 slice", grams: 120 }],
       })
     ).toBeDefined();
   });
@@ -107,7 +107,7 @@ describe("updateFoodSchema", () => {
   });
 
   it("accepts partial updates", () => {
-    expect(updateFoodSchema.parse({ id: testUuid, name: "新名稱" })).toBeDefined();
+    expect(updateFoodSchema.parse({ id: testUuid, name: "New name" })).toBeDefined();
     expect(updateFoodSchema.parse({ id: testUuid, calories: 200 })).toBeDefined();
   });
 
@@ -119,7 +119,7 @@ describe("updateFoodSchema", () => {
 
 describe("updateProfileSchema", () => {
   const valid = {
-    name: "測試用戶",
+    name: "Test user",
     sex: null,
     heightCm: null,
     dateOfBirth: null,
@@ -244,7 +244,7 @@ describe("logMeasurementsSchema", () => {
 describe("createFoodFromBarcodeSchema", () => {
   const valid = {
     barcode: "4710088430204",
-    name: "茶裏王",
+    name: "Tea drink",
     servingSize: 250,
     servingUnit: "ml",
     calories: 0,

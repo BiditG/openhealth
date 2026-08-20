@@ -114,7 +114,7 @@ export const fastingRouter = router({
         )
         .limit(1);
 
-      if (!log[0]) throw new Error("找不到該斷食記錄");
+      if (!log[0]) throw new Error("Fasting record not found");
 
       const startedAt = new Date(log[0].startedAt);
       const now = new Date();

@@ -72,7 +72,7 @@ export default function WorkoutDetailPage({
 
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
-    return d.toLocaleDateString("zh-TW", {
+    return d.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -82,7 +82,7 @@ export default function WorkoutDetailPage({
 
   const formatTime = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
-    return d.toLocaleTimeString("zh-TW", {
+    return d.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,

@@ -1,31 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { getTaiwanDate, getTaipeiTodayStart } from "./date";
+import { getKathmanduTodayStart, getNepalDate } from "./date";
 
-describe("getTaiwanDate", () => {
+describe("getNepalDate", () => {
   it("returns YYYY-MM-DD format", () => {
-    const result = getTaiwanDate();
+    const result = getNepalDate();
     expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("returns a valid date string", () => {
-    const result = getTaiwanDate();
+    const result = getNepalDate();
     const parsed = new Date(result);
     expect(parsed.toString()).not.toBe("Invalid Date");
   });
 });
 
-describe("getTaipeiTodayStart", () => {
+describe("getKathmanduTodayStart", () => {
   it("returns a Date object", () => {
-    const result = getTaipeiTodayStart();
+    const result = getKathmanduTodayStart();
     expect(result).toBeInstanceOf(Date);
   });
 
-  it("returns midnight (00:00:00) in UTC+8", () => {
-    const result = getTaipeiTodayStart();
-    // UTC+8 midnight = previous day 16:00 UTC
+  it("returns midnight (00:00:00) in UTC+5:45", () => {
+    const result = getKathmanduTodayStart();
+    // UTC+5:45 midnight = previous day 18:15 UTC
     const hours = result.getUTCHours();
-    expect(hours).toBe(16);
-    expect(result.getUTCMinutes()).toBe(0);
+    expect(hours).toBe(18);
+    expect(result.getUTCMinutes()).toBe(15);
     expect(result.getUTCSeconds()).toBe(0);
   });
 });

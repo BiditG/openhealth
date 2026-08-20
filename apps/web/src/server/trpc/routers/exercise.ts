@@ -174,7 +174,7 @@ export const exerciseRouter = router({
       if (!exercise || !exercise.isCustom || exercise.createdBy !== ctx.user.id) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "只能設定自己建立的自訂動作為公開",
+          message: "Only custom exercises you created can be made public",
         });
       }
 

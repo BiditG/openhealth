@@ -1,33 +1,34 @@
 "use client";
 
-import { signOut, useSession } from "@/lib/auth-client";
+import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { toast } from "sonner";
 import {
-  User,
-  LogOut,
   ChevronRight,
-  Sun,
-  Moon,
-  Monitor,
-  GraduationCap,
-  Globe,
-  Trash2,
   Crown,
+  GraduationCap,
   LayoutGrid,
+  Lock,
+  LogOut,
+  Monitor,
+  Moon,
+  ShieldCheck,
+  Sun,
+  Trash2,
+  User,
 } from "lucide-react";
+import { signOut, useSession } from "@/lib/auth-client";
 import { deleteAccount } from "@/server/actions/account";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
-import type { SupportedLanguage } from "@open-health/shared/i18n";
 
 const menuItems = [
-  { href: "/settings/profile", labelKey: "settings:profile" as const, icon: User },
-  { href: "/settings/subscription", labelKey: "settings:subscription" as const, icon: Crown },
-  { href: "/settings/coaching", labelKey: "settings:coaching" as const, icon: GraduationCap },
-  { href: "/settings/hub-config", labelKey: "settings:hubConfig" as const, icon: LayoutGrid },
+  { href: "/settings/profile", labelKey: "settings:profile" as const, icon: User, description: "Personal details and health profile" },
+  { href: "/settings/subscription", labelKey: "settings:subscription" as const, icon: Crown, description: "Plan and billing" },
+  { href: "/settings/coaching", labelKey: "settings:coaching" as const, icon: GraduationCap, description: "Coaching preferences" },
+  { href: "/settings/hub-config", labelKey: "settings:hubConfig" as const, icon: LayoutGrid, description: "Choose visible tools" },
 ];
 
 const themeOptions = [
@@ -36,16 +37,11 @@ const themeOptions = [
   { value: "system", labelKey: "theme.system" as const, icon: Monitor },
 ] as const;
 
-const languageOptions = [
-  { value: "zh-TW" as SupportedLanguage, labelKey: "settings:languageZhTW" as const },
-  { value: "en" as SupportedLanguage, labelKey: "settings:languageEn" as const },
-];
-
 export default function SettingsPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { t, i18n } = useTranslation(["common", "settings"]);
+  const { t } = useTranslation(["common", "settings"]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -60,150 +56,137 @@ export default function SettingsPage() {
       await deleteAccount();
       router.push("/login");
     } catch {
-      alert(t("settings:deleteAccountError"));
+      toast.error(t("settings:deleteAccountError"));
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
     }
   };
 
-  const handleLanguageChange = (lng: SupportedLanguage) => {
-    i18n.changeLanguage(lng);
-  };
-
   return (
-    <div className="px-4 py-6 space-y-6">
-      <h1 className="text-xl font-light tracking-wide">{t("settings:title")}</h1>
+    <div className="mx-auto max-w-[760px] space-y-6 px-4 py-6">
+      <section>
+        <p className="text-sm font-semibold text-primary">Profile</p>
+        <h1 className="mt-1 text-3xl font-semibold text-foreground">{t("settings:title")}</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Manage your account, preferences, and privacy in one place.
+        </p>
+      </section>
 
       {session?.user && (
-        <div className="flex items-center gap-3 py-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-black/[0.06] dark:border-white/[0.06]">
-            <User className="h-5 w-5 text-neutral-400" strokeWidth={1.5} />
+        <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-primary">
+              <User className="h-7 w-7" strokeWidth={1.8} />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-semibold text-foreground">{session.user.name}</p>
+              <p className="truncate text-sm text-muted-foreground">{session.user.email}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-light">{session.user.name}</p>
-            <p className="text-xs text-neutral-400 dark:text-neutral-600">
-              {session.user.email}
-            </p>
-          </div>
-        </div>
+        </section>
       )}
 
-      {/* Theme selector */}
-      <div className="space-y-3">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-          {t("theme.label")}
-        </p>
-        <div className="flex gap-2">
+      <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+        <h2 className="text-lg font-semibold text-foreground">{t("theme.label")}</h2>
+        <div className="mt-4 grid grid-cols-3 gap-2">
           {themeOptions.map((option) => (
             <button
               key={option.value}
               onClick={() => setTheme(option.value)}
               className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-light transition-all duration-300",
+                "flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors",
                 theme === option.value
-                  ? "border-foreground/20 text-foreground"
-                  : "border-black/[0.06] dark:border-white/[0.06] text-neutral-400 dark:text-neutral-600 hover:text-foreground hover:border-foreground/10"
+                  ? "border-primary bg-secondary text-primary"
+                  : "border-border bg-background text-muted-foreground hover:text-foreground",
               )}
             >
-              <option.icon className="h-4 w-4" strokeWidth={1.5} />
+              <option.icon className="h-4 w-4" strokeWidth={1.8} />
               {t(option.labelKey)}
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Language selector */}
-      <div className="space-y-3">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-          {t("settings:language")}
-        </p>
-        <div className="flex gap-2">
-          {languageOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => handleLanguageChange(option.value)}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-light transition-all duration-300",
-                i18n.language === option.value
-                  ? "border-foreground/20 text-foreground"
-                  : "border-black/[0.06] dark:border-white/[0.06] text-neutral-400 dark:text-neutral-600 hover:text-foreground hover:border-foreground/10"
-              )}
-            >
-              <Globe className="h-4 w-4" strokeWidth={1.5} />
-              {t(option.labelKey)}
-            </button>
-          ))}
-        </div>
-      </div>
+      <section className="rounded-3xl border border-border bg-white p-3 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+        {menuItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex items-center justify-between gap-4 rounded-2xl p-3 transition-colors hover:bg-secondary/70"
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-primary">
+                <item.icon className="h-5 w-5" strokeWidth={1.8} />
+              </span>
+              <span>
+                <span className="block text-base font-semibold text-foreground">{t(item.labelKey)}</span>
+                <span className="block text-sm text-muted-foreground">{item.description}</span>
+              </span>
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+          </Link>
+        ))}
+      </section>
 
-      {/* Menu items */}
-      <div className="space-y-3">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-          {t("settings:account")}
-        </p>
-        <div className="border-t border-black/[0.06] dark:border-white/[0.06]">
-          {menuItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center justify-between px-1 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06] transition-all duration-300 hover:pl-2 cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <item.icon className="h-4 w-4 text-neutral-400 dark:text-neutral-600" strokeWidth={1.5} />
-                <span className="text-sm font-light">{t(item.labelKey)}</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-neutral-300 dark:text-neutral-700" strokeWidth={1.5} />
-            </Link>
-          ))}
+      <section className="rounded-3xl border border-border bg-secondary p-5">
+        <div className="flex gap-3">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" strokeWidth={1.8} />
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Privacy and trust</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Your health data stays private. You can export or delete your information anytime.
+            </p>
+          </div>
         </div>
-      </div>
+      </section>
 
       {session?.user && (
-        <div className="space-y-3">
+        <section className="space-y-3">
           <button
             onClick={handleSignOut}
-            className="flex w-full items-center justify-center gap-2 py-3 text-sm font-light text-neutral-400 transition-all duration-300 hover:text-destructive"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-white text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground dark:bg-card"
           >
-            <LogOut className="h-4 w-4" strokeWidth={1.5} />
+            <LogOut className="h-4 w-4" strokeWidth={1.8} />
             {t("auth.logout")}
           </button>
 
           {!showDeleteConfirm ? (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="flex w-full items-center justify-center gap-2 py-3 text-xs font-light text-neutral-300 dark:text-neutral-700 transition-all duration-300 hover:text-destructive"
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
             >
-              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <Trash2 className="h-4 w-4" strokeWidth={1.8} />
               {t("settings:deleteAccount")}
             </button>
           ) : (
-            <div className="rounded-lg border border-destructive/20 p-4 space-y-3">
-              <p className="text-sm font-medium text-destructive">
-                {t("settings:deleteAccountConfirmTitle")}
-              </p>
-              <p className="text-xs font-light text-neutral-500">
-                {t("settings:deleteAccountConfirmMessage")}
-              </p>
-              <div className="flex gap-2">
+            <div className="rounded-2xl border border-destructive/20 bg-white p-5 dark:bg-card">
+              <div className="flex gap-3">
+                <Lock className="mt-0.5 h-5 w-5 shrink-0 text-destructive" strokeWidth={1.8} />
+                <div>
+                  <p className="text-base font-semibold text-destructive">{t("settings:deleteAccountConfirmTitle")}</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{t("settings:deleteAccountConfirmMessage")}</p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={isDeleting}
-                  className="flex-1 rounded-lg border border-black/[0.06] dark:border-white/[0.06] py-2 text-sm font-light transition-all duration-300 hover:border-foreground/20"
+                  className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold transition-colors hover:bg-muted"
                 >
                   {t("settings:deleteAccountCancel")}
                 </button>
                 <button
                   onClick={handleDeleteAccount}
                   disabled={isDeleting}
-                  className="flex-1 rounded-lg bg-destructive py-2 text-sm font-light text-white transition-all duration-300 hover:opacity-80 disabled:opacity-50"
+                  className="min-h-11 rounded-xl bg-destructive px-4 text-sm font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
                 >
-                  {isDeleting ? "..." : t("settings:deleteAccountConfirm")}
+                  {isDeleting ? "Deleting..." : t("settings:deleteAccountConfirm")}
                 </button>
               </div>
             </div>
           )}
-        </div>
+        </section>
       )}
     </div>
   );

@@ -3,32 +3,32 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-background: #ffffff;
-  --color-foreground: #09090b;
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #71717a;
+  --color-background: #f8faf9;
+  --color-foreground: #171a19;
+  --color-muted: #f3fbf8;
+  --color-muted-foreground: #626a66;
   --color-popover: #ffffff;
-  --color-popover-foreground: #09090b;
+  --color-popover-foreground: #171a19;
   --color-card: #ffffff;
-  --color-card-foreground: #09090b;
-  --color-border: #e4e4e7;
-  --color-input: #e4e4e7;
-  --color-primary: #16a34a;
+  --color-card-foreground: #171a19;
+  --color-border: #e9eeeb;
+  --color-input: #dde5e1;
+  --color-primary: #16a085;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #f4f4f5;
-  --color-secondary-foreground: #18181b;
-  --color-accent: #f4f4f5;
-  --color-accent-foreground: #18181b;
-  --color-destructive: #ef4444;
+  --color-secondary: #e7f7f2;
+  --color-secondary-foreground: #119977;
+  --color-accent: #e8a33a;
+  --color-accent-foreground: #171a19;
+  --color-destructive: #d95c5c;
   --color-destructive-foreground: #ffffff;
-  --color-ring: #16a34a;
-  --radius: 0.625rem;
+  --color-ring: #16a085;
+  --radius: 0.75rem;
 
-  --color-chart-1: #16a34a;
-  --color-chart-2: #3b82f6;
-  --color-chart-3: #f59e0b;
-  --color-chart-4: #8b5cf6;
-  --color-chart-5: #ef4444;
+  --color-chart-1: #16a085;
+  --color-chart-2: #3976b9;
+  --color-chart-3: #e8a33a;
+  --color-chart-4: #19a974;
+  --color-chart-5: #d95c5c;
 
   --animate-draw-enso: draw-enso 2s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
   --animate-fade-in-up: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -77,36 +77,80 @@
   }
 }
 
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@utility animate-modal-in {
+  animation: modal-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @layer base {
   * {
     @apply border-border;
+  }
+
+  html {
+    font-size: 16px;
   }
 
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
     overscroll-behavior-y: contain;
+    text-rendering: optimizeLegibility;
+    line-height: 1.6;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: 0;
+  }
+
+  :where([class*="rounded-3xl"]) {
+    border-radius: 1.75rem !important;
+  }
+
+  :where([class*="rounded-2xl"]) {
+    border-radius: 1.25rem !important;
+  }
+
+  :where([class*="shadow-"]) {
+    box-shadow: 0 4px 24px rgba(20, 50, 40, 0.045) !important;
+  }
+
+  ::selection {
+    background: #e7f7f2;
+    color: #171a19;
   }
 }
 
 .dark {
-  --color-background: #09090b;
-  --color-foreground: #fafafa;
-  --color-muted: #27272a;
-  --color-muted-foreground: #a1a1aa;
-  --color-popover: #09090b;
-  --color-popover-foreground: #fafafa;
-  --color-card: #09090b;
-  --color-card-foreground: #fafafa;
-  --color-border: #27272a;
-  --color-input: #27272a;
-  --color-primary: #22c55e;
-  --color-primary-foreground: #052e16;
-  --color-secondary: #27272a;
-  --color-secondary-foreground: #fafafa;
-  --color-accent: #27272a;
-  --color-accent-foreground: #fafafa;
-  --color-destructive: #dc2626;
+  --color-background: #101513;
+  --color-foreground: #f7faf8;
+  --color-muted: #17241f;
+  --color-muted-foreground: #a9b5af;
+  --color-popover: #142019;
+  --color-popover-foreground: #f7faf8;
+  --color-card: #142019;
+  --color-card-foreground: #f7faf8;
+  --color-border: #27362f;
+  --color-input: #304039;
+  --color-primary: #65d7bd;
+  --color-primary-foreground: #0d2119;
+  --color-secondary: #173d35;
+  --color-secondary-foreground: #dff5ee;
+  --color-accent: #d99535;
+  --color-accent-foreground: #140f08;
+  --color-destructive: #e07171;
   --color-destructive-foreground: #fafafa;
-  --color-ring: #22c55e;
+  --color-ring: #7ac7ad;
 }

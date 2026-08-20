@@ -83,21 +83,23 @@ export function DocsContent() {
                   const raw = t("quickStart.step3Desc", { interpolation: { skipOnVariables: true } })
                     .replace(/<\/?highlight>/g, "")
                     .replace(/<\/?link>/g, "");
-                  const parts = raw.split("設定 → 通知設定");
+                  const settingsLabel = "Settings → Notifications";
+                  const linkLabel = "Enable Notifications";
+                  const parts = raw.split(settingsLabel);
                   if (parts.length === 1) return raw;
                   const beforeHighlight = parts[0];
-                  const afterHighlight = parts.slice(1).join("設定 → 通知設定");
+                  const afterHighlight = parts.slice(1).join(settingsLabel);
                   return (
                     <>
                       {beforeHighlight}
-                      <span className="text-black dark:text-white">{"設定 → 通知設定"}</span>
-                      {afterHighlight.includes("開啟通知") ? (
+                      <span className="text-black dark:text-white">{settingsLabel}</span>
+                      {afterHighlight.includes(linkLabel) ? (
                         <>
-                          {afterHighlight.split("開啟通知")[0]}
+                          {afterHighlight.split(linkLabel)[0]}
                           <a href="#notifications" className="text-green-600 dark:text-green-400 underline underline-offset-2 ml-1">
                             {t("notifications.title")}
                           </a>
-                          {afterHighlight.split("開啟通知").slice(1).join("開啟通知")}
+                          {afterHighlight.split(linkLabel).slice(1).join(linkLabel)}
                         </>
                       ) : (
                         afterHighlight
@@ -228,7 +230,8 @@ export function DocsContent() {
               <p className="text-neutral-500 dark:text-neutral-600 font-light text-sm leading-relaxed">
                 {(() => {
                   const raw = t("faq.a3", { interpolation: { skipOnVariables: true } }).replace(/<\/?link>/g, "");
-                  const parts = raw.split("開啟通知");
+                  const linkLabel = "Enable Notifications";
+                  const parts = raw.split(linkLabel);
                   if (parts.length <= 1) return raw;
                   return (
                     <>
@@ -236,7 +239,7 @@ export function DocsContent() {
                       <a href="#notifications" className="text-green-600 dark:text-green-400 underline underline-offset-2">
                         {t("notifications.title")}
                       </a>
-                      {parts.slice(1).join("開啟通知")}
+                      {parts.slice(1).join(linkLabel)}
                     </>
                   );
                 })()}

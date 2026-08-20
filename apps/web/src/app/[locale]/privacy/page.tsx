@@ -9,14 +9,11 @@ interface Props {
 }
 
 const titles: Record<Locale, string> = {
-  "zh-TW": "隱私權政策 - Open Health",
-  en: "Privacy Policy - Open Health",
+  en: "Privacy Policy - Swastha",
 };
 
 const descriptions: Record<Locale, string> = {
-  "zh-TW":
-    "Open Health 隱私權政策——說明我們如何收集、使用與保護你的健康數據與個人資料。",
-  en: "Open Health Privacy Policy — how we collect, use, and protect your health data and personal information.",
+  en: "How Swastha collects, uses, and protects your health data and personal information.",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -28,10 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: descriptions[lang],
     alternates: {
       canonical: `${BASE_URL}/privacy`,
-      languages: {
-        "zh-TW": `${BASE_URL}/privacy`,
-        en: `${BASE_URL}/en/privacy`,
-      },
+      languages: { en: `${BASE_URL}/privacy` },
     },
   };
 }

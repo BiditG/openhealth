@@ -112,5 +112,5 @@ export function formatDuration(seconds: number): string {
 
 export function formatMinutes(seconds: number): string {
   const m = Math.floor(seconds / 60);
-  return `${m} 分鐘`;
+  return `${m} min`;
 }

@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 // Mock DB modules before importing plan.ts
 vi.mock("@/server/db", () => ({ db: {} }));
 vi.mock("@/server/db/schema", () => ({ users: {}, aiUsage: {} }));
-vi.mock("@/lib/date", () => ({ getTaiwanDate: () => "2024-01-01" }));
+vi.mock("@/lib/date", () => ({ getNepalDate: () => "2024-01-01" }));
 vi.mock("nanoid", () => ({ nanoid: () => "mock-id" }));
 
 import { resolveEffectivePlan, getAiLimit, canAccessFeature, requireFeature, ProRequiredError } from "./plan";

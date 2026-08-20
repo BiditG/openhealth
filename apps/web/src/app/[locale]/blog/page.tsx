@@ -15,13 +15,11 @@ interface Props {
 }
 
 const descriptions: Record<Locale, string> = {
-  "zh-TW": "營養科學、訓練方法、睡眠優化——來自 Open Health 的深度健康內容。",
-  en: "Nutrition science, training methods, sleep optimization — in-depth health content from Open Health.",
+  en: "Nutrition, fitness, sleep, preventive health, and Nepali food education from Swastha.",
 };
 
 const titles: Record<Locale, string> = {
-  "zh-TW": "部落格 — Open Health",
-  en: "Blog — Open Health",
+  en: "Learn — Swastha",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -33,10 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: descriptions[lang],
     alternates: {
       canonical: `${BASE_URL}/blog`,
-      languages: {
-        "zh-TW": `${BASE_URL}/blog`,
-        en: `${BASE_URL}/en/blog`,
-      },
+      languages: { en: `${BASE_URL}/blog` },
     },
   };
 }

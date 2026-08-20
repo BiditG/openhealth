@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { users, aiUsage } from "@/server/db/schema";
 import { PLAN_LIMITS } from "@open-health/shared/constants";
 import type { Plan, AiFeature } from "@open-health/shared/types";
-import { getTaiwanDate } from "@/lib/date";
+import { getNepalDate } from "@/lib/date";
 import { nanoid } from "nanoid";
 
 type UserPlanRow = {
@@ -41,7 +41,7 @@ export async function checkAndIncrementAiUsage(
   plan: Plan
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
   const limit = getAiLimit(plan, feature);
-  const today = getTaiwanDate();
+  const today = getNepalDate();
 
   // Unlimited
   if (!isFinite(limit)) {
@@ -90,7 +90,7 @@ export async function getAiUsage(
   plan: Plan
 ): Promise<{ used: number; limit: number }> {
   const limit = getAiLimit(plan, feature);
-  const today = getTaiwanDate();
+  const today = getNepalDate();
 
   const result = await db
     .select({ count: aiUsage.count })
@@ -131,7 +131,7 @@ export function requireFeature(
 export class ProRequiredError extends Error {
   public readonly feature: string;
   constructor(feature: string) {
-    super("此功能需要 Pro 方案");
+    super("This feature requires the Pro plan");
     this.name = "ProRequiredError";
     this.feature = feature;
   }

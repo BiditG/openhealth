@@ -24,10 +24,10 @@ export function ServiceWorkerRegister() {
               navigator.serviceWorker.controller
             ) {
               // New version available — prompt user to refresh
-              toast("有新版本可用", {
-                description: "點擊重新整理以更新",
+              toast("A new version is available", {
+                description: "Refresh to update",
                 action: {
-                  label: "重新整理",
+                  label: "Refresh",
                   onClick: () => {
                     newWorker.postMessage({ type: "SKIP_WAITING" });
                     window.location.reload();

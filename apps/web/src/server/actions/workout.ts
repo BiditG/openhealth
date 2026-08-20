@@ -63,7 +63,7 @@ export async function startWorkout(
     return { workoutId: active[0].id, alreadyActive: true };
   }
 
-  const name = validated.name || "訓練";
+  const name = validated.name || "Workout";
 
   const [workout] = await db
     .insert(workouts)
@@ -125,7 +125,7 @@ export async function addExerciseToWorkout(
     )
     .then((r) => r[0]);
 
-  if (!workout) throw new Error("找不到此訓練");
+  if (!workout) throw new Error("Workout not found");
 
   // Get max sort order
   const maxOrder = await db
@@ -173,7 +173,7 @@ export async function removeExerciseFromWorkout(
     )
     .then((r) => r[0]);
 
-  if (!we) throw new Error("找不到此運動");
+  if (!we) throw new Error("Exercise not found");
 
   await db
     .delete(workoutExercises)
@@ -201,7 +201,7 @@ export async function logSet(input: z.infer<typeof logSetSchema>) {
     )
     .then((r) => r[0]);
 
-  if (!we) throw new Error("找不到此運動");
+  if (!we) throw new Error("Exercise not found");
 
   // Upsert: update if same set number exists, insert otherwise
   const existing = await db
@@ -265,7 +265,7 @@ export async function removeSet(input: z.infer<typeof removeSetSchema>) {
     )
     .then((r) => r[0]);
 
-  if (!set) throw new Error("找不到此組");
+  if (!set) throw new Error("Set not found");
 
   await db.delete(workoutSets).where(eq(workoutSets.id, validated.setId));
 
@@ -288,7 +288,7 @@ export async function finishWorkout(
     )
     .then((r) => r[0]);
 
-  if (!workout) throw new Error("找不到此訓練");
+  if (!workout) throw new Error("Workout not found");
 
   const now = new Date();
   const durationSec = Math.floor(

@@ -1,9 +1,9 @@
 "use client";
 
-import { Plus, Minus, Trash2 } from "lucide-react";
+import { Minus, Moon, Plus, Sandwich, Soup, Sunrise, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { removeEntry, updateEntryServings } from "@/server/actions/diary";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ComponentType, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc-client";
 import posthog from "posthog-js";
@@ -11,11 +11,11 @@ import { useTranslation } from "react-i18next";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
-const mealIcons: Record<MealType, string> = {
-  breakfast: "\u{1F305}",
-  lunch: "\u{2600}\u{FE0F}",
-  dinner: "\u{1F319}",
-  snack: "\u{1F36A}",
+const mealIcons: Record<MealType, ComponentType<{ className?: string; strokeWidth?: number }>> = {
+  breakfast: Sunrise,
+  lunch: Soup,
+  dinner: Moon,
+  snack: Sandwich,
 };
 
 interface DiaryEntry {
@@ -42,12 +42,10 @@ interface MealSectionProps {
 
 export function MealSection({ mealType, entries, date, onRequireAuth, isAuthenticated }: MealSectionProps) {
   const { t } = useTranslation("diary");
-  const mealCalories = entries.reduce(
-    (sum, e) => sum + Number(e.calories || 0),
-    0
-  );
+  const mealCalories = entries.reduce((sum, e) => sum + Number(e.calories || 0), 0);
+  const Icon = mealIcons[mealType];
 
-  const handleAddClick = (e: React.MouseEvent) => {
+  const handleAddClick = (e: MouseEvent) => {
     if (!isAuthenticated && onRequireAuth) {
       e.preventDefault();
       onRequireAuth();
@@ -57,18 +55,20 @@ export function MealSection({ mealType, entries, date, onRequireAuth, isAuthenti
   const addHref = `/hub/food/search?date=${date}&meal=${mealType}`;
 
   return (
-    <div className="mx-4 mt-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm">{mealIcons[mealType]}</span>
-          <h3 className="text-sm font-light">{t(mealType)}</h3>
-          <span className="text-xs text-neutral-400 dark:text-neutral-600 tabular-nums">
-            {Math.round(mealCalories)} kcal
+    <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-primary">
+            <Icon className="h-5 w-5" strokeWidth={1.8} />
           </span>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">{t(mealType)}</h3>
+            <p className="text-sm text-muted-foreground">{Math.round(mealCalories)} kcal</p>
+          </div>
         </div>
         <Link href={addHref} onClick={handleAddClick}>
-          <button className="p-1.5 text-neutral-400 transition-all duration-300 hover:text-foreground">
-            <Plus className="h-4 w-4" strokeWidth={1.5} />
+          <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-primary" aria-label={`Add ${mealType}`}>
+            <Plus className="h-5 w-5" strokeWidth={1.8} />
           </button>
         </Link>
       </div>
@@ -77,18 +77,18 @@ export function MealSection({ mealType, entries, date, onRequireAuth, isAuthenti
         <Link
           href={addHref}
           onClick={handleAddClick}
-          className="block border-b border-dashed border-black/[0.06] dark:border-white/[0.06] py-3 text-center text-sm font-light text-neutral-400 transition-all duration-300 hover:text-primary"
+          className="block rounded-2xl border border-dashed border-border bg-background px-4 py-5 text-center text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:bg-secondary hover:text-primary"
         >
           {t("clickToAddFood")}
         </Link>
       ) : (
-        <div>
+        <div className="space-y-2">
           {entries.map((entry) => (
             <EntryRow key={entry.id} entry={entry} mealType={mealType} />
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -122,54 +122,55 @@ function EntryRow({ entry, mealType }: { entry: DiaryEntry; mealType: MealType }
     });
   };
 
-  // Compute display calories based on localQty vs stored qty
   const perServingCal = Number(entry.calories || 0) / Number(entry.servingQty || 1);
   const displayCal = Math.round(perServingCal * localQty);
 
   return (
-    <div
-      className={`flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.06] py-2.5 ${
-        isPending ? "opacity-30" : ""
-      }`}
-    >
-      <div className="flex-1 min-w-0">
-        <Link href={`/hub/food/${entry.foodId}`}>
-          <p className="text-sm font-light truncate">{entry.foodName}</p>
-        </Link>
-        <div className="flex items-center gap-1 mt-0.5">
-          <button
-            className="flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-            onClick={() => handleQtyChange(-1)}
-            disabled={isPending || localQty <= 1}
-          >
-            <Minus className="h-3 w-3" strokeWidth={2} />
-          </button>
-          <span className="text-xs tabular-nums font-medium min-w-[2rem] text-center">
-            {localQty}
-          </span>
-          <button
-            className="flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-            onClick={() => handleQtyChange(1)}
-            disabled={isPending}
-          >
-            <Plus className="h-3 w-3" strokeWidth={2} />
-          </button>
-          <span className="text-xs text-neutral-400 dark:text-neutral-600 ml-0.5">
-            × {entry.foodServingSize}{entry.foodServingUnit}
+    <div className={`rounded-2xl bg-background p-3 ${isPending ? "opacity-50" : ""}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <Link href={`/hub/food/${entry.foodId}`}>
+            <p className="truncate text-base font-semibold text-foreground">{entry.foodName}</p>
+          </Link>
+          <p className="mt-1 truncate text-sm text-muted-foreground">
+            {entry.foodServingSize}
+            {entry.foodServingUnit}
             {entry.foodBrand ? ` · ${entry.foodBrand}` : ""}
-          </span>
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-base font-semibold tabular-nums text-foreground">{displayCal}</p>
+          <p className="text-xs text-muted-foreground">kcal</p>
         </div>
       </div>
-      <div className="flex items-center gap-2 ml-2">
-        <span className="text-sm font-light tabular-nums text-neutral-500">
-          {displayCal}
-        </span>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground transition-colors hover:text-primary disabled:opacity-40 dark:bg-card"
+            onClick={() => handleQtyChange(-1)}
+            disabled={isPending || localQty <= 1}
+            aria-label="Decrease serving"
+          >
+            <Minus className="h-4 w-4" strokeWidth={1.8} />
+          </button>
+          <span className="min-w-10 text-center text-sm font-semibold tabular-nums text-foreground">{localQty}</span>
+          <button
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground transition-colors hover:text-primary disabled:opacity-40 dark:bg-card"
+            onClick={() => handleQtyChange(1)}
+            disabled={isPending}
+            aria-label="Increase serving"
+          >
+            <Plus className="h-4 w-4" strokeWidth={1.8} />
+          </button>
+        </div>
         <button
-          className="p-1 text-neutral-300 dark:text-neutral-700 transition-all duration-300 hover:text-destructive"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
           onClick={handleRemove}
           disabled={isPending}
+          aria-label="Remove food"
         >
-          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+          <Trash2 className="h-4 w-4" strokeWidth={1.8} />
         </button>
       </div>
     </div>

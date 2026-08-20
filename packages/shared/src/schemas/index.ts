@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MAX_STEPS } from "../constants";
 
-const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式需為 YYYY-MM-DD");
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date format must be YYYY-MM-DD");
 
 export const logFoodSchema = z.object({
   date: dateString,
@@ -69,6 +69,7 @@ export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100),
   sex: z.enum(["male", "female", "other"]).nullable(),
   heightCm: z.number().positive().max(300).nullable(),
+  currentWeightKg: z.number().positive().max(500).nullable().optional(),
   dateOfBirth: z.string().nullable(),
   activityLevel: z
     .enum([
@@ -79,6 +80,12 @@ export const updateProfileSchema = z.object({
       "extremely_active",
     ])
     .nullable(),
+  medicalConditions: z.array(z.string().min(1).max(80)).max(20).optional(),
+  medications: z.string().max(1000).nullable().optional(),
+  allergies: z.string().max(1000).nullable().optional(),
+  dietaryPreference: z.string().max(80).nullable().optional(),
+  primaryGoal: z.string().max(80).nullable().optional(),
+  onboardingCompleted: z.boolean().optional(),
 });
 
 export const updateGoalsSchema = z.object({
@@ -168,7 +175,7 @@ export const applyReferralCodeSchema = z.object({
     .string()
     .min(4)
     .max(12)
-    .regex(/^[A-Z0-9]+$/i, "推薦碼只能包含英文字母和數字"),
+    .regex(/^[A-Z0-9]+$/i, "Referral code can only contain letters and numbers"),
 });
 
 export const customizeReferralCodeSchema = z.object({
@@ -176,7 +183,7 @@ export const customizeReferralCodeSchema = z.object({
     .string()
     .min(4)
     .max(12)
-    .regex(/^[A-Z0-9]+$/i, "推薦碼只能包含英文字母和數字"),
+    .regex(/^[A-Z0-9]+$/i, "Referral code can only contain letters and numbers"),
 });
 
 export const logExerciseSchema = z.object({
@@ -199,7 +206,7 @@ export const connectToCoachSchema = z.object({
     .string()
     .min(4)
     .max(12)
-    .regex(/^[A-Z0-9]+$/i, "教練碼只能包含英文字母和數字"),
+    .regex(/^[A-Z0-9]+$/i, "Coach code can only contain letters and numbers"),
 });
 
 // Workout tracking schemas

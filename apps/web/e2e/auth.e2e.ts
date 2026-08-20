@@ -6,7 +6,7 @@ async function openLoginDialog(page: import("@playwright/test").Page) {
   const fab = page.getByTestId("add-entry-fab");
   await expect(fab).toBeVisible({ timeout: 15_000 });
   await fab.click();
-  await expect(page.getByText("登入以繼續")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Sign in to continue")).toBeVisible({ timeout: 10_000 });
 }
 
 // The mode toggle button is a <button> inside a <p> at the bottom of the dialog
@@ -22,8 +22,8 @@ test.describe("Authentication flow", () => {
   test("login dialog has email and password fields", async ({ page }) => {
     await openLoginDialog(page);
 
-    await expect(page.getByPlaceholder("電子郵件")).toBeVisible();
-    await expect(page.getByPlaceholder("密碼")).toBeVisible();
+    await expect(page.getByPlaceholder("Email")).toBeVisible();
+    await expect(page.getByPlaceholder("Password")).toBeVisible();
     await expect(page.locator("button[type='submit']")).toBeVisible();
   });
 
@@ -31,14 +31,14 @@ test.describe("Authentication flow", () => {
     await openLoginDialog(page);
 
     // Switch to register
-    await modeToggle(page, "還沒有帳號").click();
-    await expect(page.getByText("建立帳號")).toBeVisible();
-    await expect(page.getByPlaceholder("名稱")).toBeVisible();
-    await expect(page.getByPlaceholder("密碼 (至少 8 字元)")).toBeVisible();
+    await modeToggle(page, "No account yet").click();
+    await expect(page.getByText("Create account")).toBeVisible();
+    await expect(page.getByPlaceholder("Name")).toBeVisible();
+    await expect(page.getByPlaceholder("Password (at least 8 characters)")).toBeVisible();
 
     // Switch back to login
-    await modeToggle(page, "已有帳號").click();
-    await expect(page.getByText("登入以繼續")).toBeVisible();
+    await modeToggle(page, "Already have an account").click();
+    await expect(page.getByText("Sign in to continue")).toBeVisible();
   });
 
   test("shows Google and Apple OAuth buttons", async ({ page }) => {
@@ -51,8 +51,8 @@ test.describe("Authentication flow", () => {
   test("shows error for invalid credentials", async ({ page }) => {
     await openLoginDialog(page);
 
-    await page.getByPlaceholder("電子郵件").fill("nonexistent@test.com");
-    await page.getByPlaceholder("密碼").fill("wrongpassword123");
+    await page.getByPlaceholder("Email").fill("nonexistent@test.com");
+    await page.getByPlaceholder("Password").fill("wrongpassword123");
     await page.locator("button[type='submit']").click();
 
     // Better Auth returns error — dialog shows error div
@@ -62,9 +62,9 @@ test.describe("Authentication flow", () => {
   test("register form has minlength validation on password", async ({ page }) => {
     await openLoginDialog(page);
 
-    await modeToggle(page, "還沒有帳號").click();
+    await modeToggle(page, "No account yet").click();
 
-    const passwordInput = page.getByPlaceholder("密碼 (至少 8 字元)");
+    const passwordInput = page.getByPlaceholder("Password (at least 8 characters)");
     await expect(passwordInput).toHaveAttribute("minlength", "8");
   });
 });

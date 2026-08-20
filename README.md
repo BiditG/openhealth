@@ -3,7 +3,7 @@
   <p align="center">
     Your Open-Source Health AI Agent — mobile-first, personal, and truly yours.
     <br />
-    <a href="https://openhealth.blog">Live Demo</a> · <a href="https://openhealth.blog">官方網站</a> · <a href="#self-hosting">Self-Host Guide</a>
+    <a href="https://openhealth.blog">Live Demo</a> · <a href="https://openhealth.blog">Website</a> · <a href="#self-hosting">Self-Host Guide</a>
   </p>
 </p>
 
@@ -13,8 +13,6 @@
 </p>
 
 The first open-source, mobile-first personal health AI agent. It understands your nutrition, sleep, fitness, and weight — and becomes the health companion that knows you best.
-
-> **繁體中文** | Open Health 是第一個開源、行動優先的個人健康 AI Agent。理解你的飲食、睡眠、運動與體重，成為最認識你的健康小助手。
 
 ## Screenshots
 
@@ -34,24 +32,24 @@ The first open-source, mobile-first personal health AI agent. It understands you
 ## Features
 
 ### AI Agent
-- **AI Nutrition Chat** — personalized nutrition advice based on your diary, the agent that knows you best (最認識你的健康 AI)
+- **AI Nutrition Chat** — personalized nutrition advice based on your diary, the agent that knows you best
 - **AI Meal Estimate** — describe a meal, AI estimates calories & macros
-- **Nutrition Label Scanner** — take a photo, AI extracts nutrition data (AI 營養標籤掃描)
+- **Nutrition Label Scanner** — take a photo, AI extracts nutrition data
 
 ### Comprehensive Tracking
-- **Food Diary** — log meals with automatic calorie & macro calculation (自動計算卡路里與三大營養素)
+- **Food Diary** — log meals with automatic calorie & macro calculation
 - **Food Database** — search common foods, create custom foods, save favorites
-- **Water Intake** — daily water tracking with goals and history (飲水紀錄)
-- **Weight Tracking** — daily weight log with trend analysis (體重趨勢分析)
-- **Sleep Tracking** — bedtime, wake time, and sleep quality (睡眠追蹤)
-- **Intermittent Fasting** — timer with fasting history (間歇斷食計時器)
-- **Exercise** — cardio & strength training log (運動記錄)
+- **Water Intake** — daily water tracking with goals and history
+- **Weight Tracking** — daily weight log with trend analysis
+- **Sleep Tracking** — bedtime, wake time, and sleep quality
+- **Intermittent Fasting** — timer with fasting history
+- **Exercise** — cardio & strength training log
 
 ### Platform
 - **Progress Dashboard** — visualize calories, nutrients, and weight trends
 - **Dark Mode** — light and dark theme support
 - **PWA** — install to home screen with push notifications
-- **i18n** — English and Traditional Chinese (繁體中文)
+- **English-only UI** — focused, consistent product language
 - **Google / Apple OAuth** — social login support
 
 ## Tech Stack
@@ -60,9 +58,9 @@ The first open-source, mobile-first personal health AI agent. It understands you
 |-------|-----------|
 | Framework | [Next.js 15](https://nextjs.org/) (App Router), TypeScript, React 19 |
 | Styling | [Tailwind CSS v4](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/) |
-| Database | PostgreSQL + [Drizzle ORM](https://orm.drizzle.team/) |
+| Database | Supabase PostgreSQL + [Drizzle ORM](https://orm.drizzle.team/) |
 | API | [tRPC v11](https://trpc.io/) (reads) + Server Actions (writes) |
-| Auth | [Better Auth](https://www.better-auth.com/) (email/password + OAuth) |
+| Auth | [Supabase Auth](https://supabase.com/auth) (email/password + OAuth) |
 | AI | Google Gemini 3 Flash (OCR, chat, agent) |
 | Payments | Stripe |
 | Monorepo | [Turborepo](https://turbo.build/) + pnpm workspaces |
@@ -92,7 +90,7 @@ openhealth/
 
 - Node.js 22+
 - pnpm 10+
-- PostgreSQL 16+
+- Supabase project, or PostgreSQL 16+ for legacy local-only development
 
 ### Local Development
 
@@ -106,12 +104,38 @@ pnpm install
 
 # Set up environment variables
 cp .env.example apps/web/.env.local
-# Edit apps/web/.env.local with your DATABASE_URL and BETTER_AUTH_SECRET
+# Edit apps/web/.env.local with your Supabase URL, anon key, and DATABASE_URL
 
 # Start the dev server
 pnpm dev:web
 # Open http://localhost:3001
 ```
+
+### Supabase Setup
+
+1. Create a Supabase project.
+2. Open the Supabase SQL editor and run [`supabase/migrations/0001_swastha_foundation.sql`](supabase/migrations/0001_swastha_foundation.sql).
+3. In Supabase Auth, enable Email sign-in. Enable Google/Apple providers if needed.
+4. Add OAuth redirect URLs:
+
+```text
+http://localhost:3001/auth/callback
+https://your-production-domain.com/auth/callback
+```
+
+5. Set these values in `apps/web/.env.local`:
+
+```bash
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
+NEXT_PUBLIC_SUPABASE_URL=https://[YOUR-PROJECT-REF].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_APP_URL=http://localhost:3001
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` is server-only. Never expose it in browser code.
 
 ### Self-Hosting
 
@@ -134,10 +158,9 @@ That's it. The database migrations run automatically on startup.
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `BETTER_AUTH_SECRET` | Yes | Random string for session encryption |
-| `BETTER_AUTH_URL` | Yes | Your app's URL |
-| `GOOGLE_CLIENT_ID` / `SECRET` | No | Google OAuth login |
-| `APPLE_CLIENT_ID` / `SECRET` | No | Apple OAuth login |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase browser anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase server service role key |
 | `GOOGLE_AI_API_KEY` | No | Enables AI features (Gemini) |
 | `STRIPE_SECRET_KEY` | No | Enables payment / Pro plan |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | No | Enables push notifications |
@@ -146,10 +169,10 @@ See [`.env.example`](.env.example) for the full list.
 
 ## Roadmap
 
-- [ ] Proactive health insights & weekly AI reports (主動健康洞察)
-- [ ] Barcode scanning for packaged foods (條碼掃描)
-- [ ] Apple Health / Google Fit sync (第三方健康數據同步)
-- [ ] Multi-language expansion beyond EN/zh-TW
+- [ ] Proactive health insights & weekly AI reports
+- [ ] Barcode scanning for packaged foods
+- [ ] Apple Health / Google Fit sync
+- [ ] Region-specific food databases beyond Nepal
 
 ## Contributing
 
@@ -172,4 +195,4 @@ pnpm build
 
 ---
 
-Open-source Health AI Agent. Made in Taiwan.
+Open-source Health AI Agent, adapted for Supabase and Nepal-focused wellness workflows.

@@ -3,7 +3,7 @@
 import { Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { format, parseISO, isValid } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, Salad } from "lucide-react";
 import Link from "next/link";
 import { DateNavigator } from "@/components/diary/date-navigator";
 import { DailySummary } from "@/components/diary/daily-summary";
@@ -76,25 +76,36 @@ function DiaryContent() {
   };
 
   return (
-    <div className="pb-6">
+    <div className="space-y-6 px-4 py-6">
       <DateNavigator date={date} onDateChange={handleDateChange} />
 
-      <DailySummary
-        calories={data?.totals.calories ?? 0}
-        protein={data?.totals.protein ?? 0}
-        carbs={data?.totals.carbs ?? 0}
-        fat={data?.totals.fat ?? 0}
-        fiber={data?.totals.fiber ?? 0}
-        calorieTarget={calorieTarget}
-        proteinTarget={proteinTarget}
-        carbsTarget={carbsTarget}
-        fatTarget={fatTarget}
-        fiberTarget={fiberTarget}
-        date={dateStr}
-        trackedNutrientIds={Array.isArray(goals?.trackedNutrientIds) ? goals.trackedNutrientIds : []}
-      />
+      <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+        <div className="mb-5 flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-primary">
+            <Salad className="h-5 w-5" strokeWidth={1.8} />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Food journal</h1>
+            <p className="text-sm text-muted-foreground">Meals and nutrition for this day.</p>
+          </div>
+        </div>
+        <DailySummary
+          calories={data?.totals.calories ?? 0}
+          protein={data?.totals.protein ?? 0}
+          carbs={data?.totals.carbs ?? 0}
+          fat={data?.totals.fat ?? 0}
+          fiber={data?.totals.fiber ?? 0}
+          calorieTarget={calorieTarget}
+          proteinTarget={proteinTarget}
+          carbsTarget={carbsTarget}
+          fatTarget={fatTarget}
+          fiberTarget={fiberTarget}
+          date={dateStr}
+          trackedNutrientIds={Array.isArray(goals?.trackedNutrientIds) ? goals.trackedNutrientIds : []}
+        />
+      </section>
 
-      <div className="mt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
+      <div className="space-y-4">
         {mealTypes.map((meal) => (
           <MealSection
             key={meal}
@@ -105,18 +116,17 @@ function DiaryContent() {
             onRequireAuth={handleRequireAuth}
           />
         ))}
-
       </div>
 
       {/* Floating Action Button */}
       <Link
         href={`/hub/food/search?date=${dateStr}&meal=snack`}
-        className="fixed bottom-20 right-4 z-50"
+        className="fixed bottom-24 right-4 z-50 lg:right-[calc((100vw-1120px)/2+24px)]"
         onClick={handleFabClick}
         data-testid="add-entry-fab"
       >
-        <button className="flex h-12 w-12 items-center justify-center rounded-full border border-black/[0.06] dark:border-white/[0.06] bg-background text-foreground shadow-sm transition-all duration-300 hover:shadow-md hover:border-foreground/20">
-          <Plus className="h-5 w-5" strokeWidth={1.5} />
+        <button className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_8px_24px_rgba(23,107,87,0.22)] transition-all duration-200 hover:bg-[#125745]">
+          <Plus className="h-6 w-6" strokeWidth={1.8} />
         </button>
       </Link>
 
@@ -138,40 +148,40 @@ export default function DiaryPage() {
 
 function DiarySkeleton() {
   return (
-    <div className="pb-6">
+    <div className="space-y-4 px-4 py-6">
       {/* Date navigator skeleton */}
-      <div className="flex items-center justify-center gap-4 py-3 px-4">
-        <div className="h-8 w-8 rounded-full bg-neutral-100 dark:bg-neutral-900" />
-        <div className="h-5 w-20 rounded bg-neutral-100 dark:bg-neutral-900" />
-        <div className="h-8 w-8 rounded-full bg-neutral-100 dark:bg-neutral-900" />
+      <div className="flex items-center justify-center gap-4 rounded-2xl bg-muted p-4">
+        <div className="h-8 w-8 rounded-full bg-white/70" />
+        <div className="h-5 w-28 rounded bg-white/70" />
+        <div className="h-8 w-8 rounded-full bg-white/70" />
       </div>
       {/* Daily summary skeleton */}
-      <div className="mx-4 mt-2 space-y-3">
+      <div className="rounded-3xl bg-muted p-5">
         <div className="flex items-center justify-between">
-          <div className="h-4 w-16 rounded bg-neutral-100 dark:bg-neutral-900" />
-          <div className="h-8 w-32 rounded bg-neutral-100 dark:bg-neutral-900" />
+          <div className="h-4 w-16 rounded bg-white/70" />
+          <div className="h-8 w-32 rounded bg-white/70" />
         </div>
         <div className="flex justify-between">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex flex-col items-center gap-1">
-              <div className="h-3 w-8 rounded bg-neutral-100 dark:bg-neutral-900" />
-              <div className="h-1 w-16 rounded-full bg-neutral-100 dark:bg-neutral-900" />
+              <div className="h-3 w-8 rounded bg-white/70" />
+              <div className="h-2 w-16 rounded-full bg-white/70" />
             </div>
           ))}
         </div>
       </div>
       {/* Meal sections skeleton */}
-      <div className="mt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
+      <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="mx-4 mt-4">
+          <div key={i} className="rounded-3xl bg-muted p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <div className="h-4 w-4 rounded bg-neutral-100 dark:bg-neutral-900" />
-                <div className="h-4 w-10 rounded bg-neutral-100 dark:bg-neutral-900" />
-                <div className="h-3 w-12 rounded bg-neutral-100 dark:bg-neutral-900" />
+                <div className="h-4 w-4 rounded bg-white/70" />
+                <div className="h-4 w-10 rounded bg-white/70" />
+                <div className="h-3 w-12 rounded bg-white/70" />
               </div>
             </div>
-            <div className="h-10 rounded border border-dashed border-black/[0.06] dark:border-white/[0.06]" />
+            <div className="h-12 rounded-2xl border border-dashed border-white/70" />
           </div>
         ))}
       </div>

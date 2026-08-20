@@ -52,7 +52,7 @@ function friendlyError(err: { message: string }, t: (key: string, opts?: Record<
   return err.message || t("common:toast.errorRetry");
 }
 
-function formatTime(date: Date | string, locale = "zh-TW") {
+function formatTime(date: Date | string, locale = "en-US") {
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleString(locale, {
     month: "numeric",
@@ -186,7 +186,7 @@ export default function PosturePage() {
 
     // Send initial notification
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      new Notification("姿勢超時提醒 ⏰", {
+      new Notification("Posture overtime reminder", {
         body: activeSession.suggestedBreak ?? t("posture:overtimeAlert"),
         tag: "posture-overtime",
       });
@@ -194,7 +194,7 @@ export default function PosturePage() {
 
     const interval = setInterval(() => {
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        new Notification("姿勢超時提醒 ⏰", {
+        new Notification("Posture overtime reminder", {
           body: activeSession.suggestedBreak ?? t("posture:overtimeAlert"),
           tag: "posture-overtime",
         });
@@ -472,8 +472,8 @@ export default function PosturePage() {
                       )}
                     </p>
                     <p className="text-xs text-neutral-400 tabular-nums">
-                      {formatTime(log.startedAt, i18n.language === "en" ? "en-US" : "zh-TW")}
-                      {log.endedAt && ` — ${formatTime(log.endedAt, i18n.language === "en" ? "en-US" : "zh-TW")}`}
+                      {formatTime(log.startedAt, i18n.language === "en" ? "en-US" : "en-US")}
+                      {log.endedAt && ` — ${formatTime(log.endedAt, i18n.language === "en" ? "en-US" : "en-US")}`}
                     </p>
                   </div>
                 </div>

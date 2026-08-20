@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Save, X, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Camera, CheckCircle2, Pencil, Save, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -158,6 +159,126 @@ export default function FoodDetailPage() {
       nutrients: food.nutrients.filter((n) => n.category === cat),
     }))
     .filter((group) => group.nutrients.length > 0);
+
+  const foodMetadata = food.metadata as { imageUrl?: string } | null | undefined;
+  const imageUrl = typeof foodMetadata?.imageUrl === "string" ? foodMetadata.imageUrl : null;
+
+  if (!isEditing) {
+    const caloriesValue = Math.round(Number(food.calories ?? 0));
+    const mealRows = [
+      { label: "Serving", detail: `${food.servingSize}${food.servingUnit}${food.householdServing ? ` (${food.householdServing})` : ""}`, calories: `${caloriesValue} kcal` },
+      { label: t("common:macro.protein"), detail: `${Math.round(Number(proteinG ?? 0))}g`, calories: "Supports fullness" },
+      { label: t("common:macro.carbs"), detail: `${Math.round(Number(carbsG ?? 0))}g`, calories: "Meal energy" },
+      { label: t("common:macro.fat"), detail: `${Math.round(Number(fatG ?? 0))}g`, calories: "Adds satiety" },
+    ];
+
+    return (
+      <div className="mx-auto max-w-[960px] px-4 pb-28 pt-5 sm:px-6 lg:pb-10">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <button onClick={() => router.back()} className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-muted" aria-label="Go back">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          {isOwner && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={startEditing}>
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleDelete} disabled={deleteMutation.isPending} className="text-destructive hover:text-destructive">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <section className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
+          <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-[0_4px_24px_rgba(20,50,40,0.045)] dark:bg-card">
+            <div className="relative aspect-[4/3] bg-muted">
+              {imageUrl ? (
+                <img src={imageUrl} alt={food.name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="grid h-full place-items-center bg-secondary">
+                  <div className="text-center text-primary">
+                    <Camera className="mx-auto h-16 w-16" strokeWidth={1.5} />
+                    <p className="mt-4 text-lg font-bold">Meal photo</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="p-5 sm:p-7">
+              <p className="text-sm font-semibold text-muted-foreground">{food.brand || "Your meal"}</p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{food.name}</h1>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">Good balance of energy and macros.</p>
+            </div>
+          </div>
+
+          <aside className="rounded-3xl border border-border bg-white p-6 text-center shadow-[0_4px_24px_rgba(20,50,40,0.045)] dark:bg-card">
+            <div className="mx-auto grid h-32 w-32 place-items-center rounded-full border-[9px] border-secondary border-t-primary">
+              <div>
+                <p className="text-4xl font-bold tabular-nums text-foreground">82</p>
+                <p className="text-sm font-semibold text-primary">Balanced</p>
+              </div>
+            </div>
+            <p className="mt-5 text-3xl font-bold tabular-nums text-foreground">{caloriesValue}</p>
+            <p className="text-sm text-muted-foreground">{t("common:units.kcal")}</p>
+            <Link href="/hub/diary" className="mt-6 inline-flex min-h-[50px] w-full items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#0D8064]">
+              Save meal
+            </Link>
+          </aside>
+        </section>
+
+        <section className="mt-6 rounded-3xl border border-border bg-white p-5 shadow-[0_4px_24px_rgba(20,50,40,0.045)] sm:p-6 dark:bg-card">
+          <div className="grid grid-cols-4 gap-3 text-center">
+            <MacroItem label={t("common:macro.protein")} value={proteinG} unit="g" />
+            <MacroItem label={t("common:macro.carbs")} value={carbsG} unit="g" />
+            <MacroItem label={t("common:macro.fat")} value={fatG} unit="g" />
+            <MacroItem label={t("common:macro.fiber")} value={fiberG} unit="g" />
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_340px]">
+          <div className="rounded-3xl border border-border bg-white p-5 sm:p-6 dark:bg-card">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">What&apos;s in your meal</h2>
+            <div className="mt-5 divide-y divide-border">
+              {mealRows.map((row) => (
+                <div key={row.label} className="flex items-center justify-between gap-4 py-4">
+                  <div>
+                    <p className="font-semibold text-foreground">{row.label}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{row.detail}</p>
+                  </div>
+                  <p className="text-right text-sm font-medium text-muted-foreground">{row.calories}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border bg-secondary p-5 sm:p-6">
+            <CheckCircle2 className="h-6 w-6 text-primary" strokeWidth={1.8} />
+            <p className="mt-5 text-xs font-semibold uppercase text-primary">One thing to try</p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">Pair it with vegetables.</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">A little more fiber can make this meal feel more balanced.</p>
+          </div>
+        </section>
+
+        {nutrientsByCategory.length > 0 && (
+          <section className="mt-8 rounded-3xl border border-border bg-white p-5 sm:p-6 dark:bg-card">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">More nutrients</h2>
+            <div className="mt-5 divide-y divide-border">
+              {nutrientsByCategory.flatMap((group) => group.nutrients).slice(0, 10).map((nutrient, idx) => {
+                const amount = Number(nutrient.amount ?? 0);
+                return (
+                  <div key={`${nutrient.name}-${idx}`} className="flex items-center justify-between gap-4 py-3">
+                    <span className="text-sm text-muted-foreground">{NUTRIENT_I18N_KEY[nutrient.name] ? t(`nutrients:${NUTRIENT_I18N_KEY[nutrient.name]}`) : nutrient.name}</span>
+                    <span className="text-sm font-semibold tabular-nums text-foreground">{formatAmount(amount)} {nutrient.unit}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pb-8">

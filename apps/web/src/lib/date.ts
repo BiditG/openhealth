@@ -1,10 +1,10 @@
-export function getTaiwanDate(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+export function getNepalDate(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kathmandu" });
 }
 
-export function getTaipeiTodayStart(): Date {
-  const taipeiStr = new Date().toLocaleDateString("en-CA", {
-    timeZone: "Asia/Taipei",
+export function getKathmanduTodayStart(): Date {
+  const kathmanduDate = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Kathmandu",
   });
-  return new Date(`${taipeiStr}T00:00:00+08:00`);
+  return new Date(`${kathmanduDate}T00:00:00+05:45`);
 }

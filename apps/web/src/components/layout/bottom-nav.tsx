@@ -2,23 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, LayoutGrid, Settings2 } from "lucide-react";
+import { Bot, Camera, Home, LineChart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
 
 const navItems = [
-  { href: "/today", labelKey: "nav.today" as const, icon: CalendarDays },
-  { href: "/hub", labelKey: "nav.hub" as const, icon: LayoutGrid },
-  { href: "/settings", labelKey: "nav.settings" as const, icon: Settings2 },
+  { href: "/hub", label: "Home", icon: Home },
+  { href: "/hub/progress", label: "Progress", icon: LineChart },
+  { href: "/hub/food/scan", label: "Scan", icon: Camera, featured: true },
+  { href: "/hub/chat", label: "AI", icon: Bot },
+  { href: "/settings", label: "Profile", icon: User },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { t } = useTranslation();
 
   return (
-    <nav data-testid="bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 border-t border-black/[0.06] dark:border-white/[0.06] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto flex h-16 max-w-lg lg:max-w-3xl items-center justify-around">
+    <nav data-testid="bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-white/85 lg:hidden dark:bg-background/90">
+      <div className="mx-auto grid h-[70px] max-w-lg grid-cols-5 items-center px-2">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
@@ -26,14 +26,28 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-2 text-xs font-light transition-all duration-300",
-                isActive
-                  ? "text-primary"
-                  : "text-neutral-400 dark:text-neutral-600 hover:text-foreground"
+                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-2 text-xs font-medium transition-colors duration-200",
+                item.featured
+                  ? "-mt-6 text-primary"
+                  : isActive
+                    ? "text-primary"
+                    : "text-muted-foreground",
               )}
+              aria-label={item.label}
             >
-              <item.icon className="h-5 w-5" strokeWidth={1.5} />
-              <span>{t(item.labelKey)}</span>
+              <span
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-xl",
+                  item.featured
+                    ? "h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-[0_10px_28px_rgba(22,160,133,0.22)]"
+                    : isActive
+                      ? "bg-secondary"
+                      : "",
+                )}
+              >
+                <item.icon className="h-5 w-5" strokeWidth={1.8} />
+              </span>
+              <span>{item.label}</span>
             </Link>
           );
         })}

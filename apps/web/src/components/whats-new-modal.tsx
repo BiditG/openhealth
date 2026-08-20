@@ -12,7 +12,7 @@ import {
 const STORAGE_KEY = "oh-changelog-last-seen";
 
 export function WhatsNewModal() {
-  const { i18n, t } = useTranslation("common");
+  const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<ChangelogEntry[]>([]);
 
@@ -30,7 +30,7 @@ export function WhatsNewModal() {
     setOpen(false);
   }
 
-  const lang = i18n.language?.startsWith("en") ? "en" : "zh-TW";
+  const lang = "en";
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -53,14 +53,14 @@ export function WhatsNewModal() {
               </span>
             </div>
             <h3 className="mb-1.5 text-sm font-semibold">
-              {entry.title[lang] ?? entry.title["zh-TW"]}
+              {entry.title[lang]}
             </h3>
             <ul className="space-y-1.5">
               {entry.items.map((item, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
                   <span className="shrink-0">{item.emoji}</span>
                   <span className="text-muted-foreground">
-                    {item.text[lang] ?? item.text["zh-TW"]}
+                    {item.text[lang]}
                   </span>
                 </li>
               ))}

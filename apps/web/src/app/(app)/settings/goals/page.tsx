@@ -1,28 +1,27 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { useEffect, useState, useTransition, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ArrowLeft, Droplets, Loader2, Salad, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc-client";
 import { updateGoals } from "@/server/actions/goals";
-import posthog from "posthog-js";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 
 export default function GoalsPage() {
   const { t } = useTranslation(["settings", "common"]);
   const { data: goals, isLoading: goalsLoading } = trpc.user.getGoals.useQuery();
+  const { data: waterGoal } = trpc.water.getGoal.useQuery();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const { data: waterGoal } = trpc.water.getGoal.useQuery();
   const setWaterGoal = trpc.water.setGoal.useMutation({
-    onSuccess: () => {
-      toast.success(t("settings:goalsPage.goalsSaved"));
-    },
+    onSuccess: () => toast.success(t("settings:goalsPage.goalsSaved")),
   });
 
   const [calorieTarget, setCalorieTarget] = useState("");
@@ -31,8 +30,8 @@ export default function GoalsPage() {
   const [fatG, setFatG] = useState("");
   const [fiberG, setFiberG] = useState("");
   const [waterTargetMl, setWaterTargetMl] = useState("");
-
   const [initialized, setInitialized] = useState(false);
+
   useEffect(() => {
     if (!initialized && goals !== undefined) {
       if (goals) {
@@ -47,9 +46,7 @@ export default function GoalsPage() {
   }, [goals, initialized]);
 
   useEffect(() => {
-    if (waterGoal?.dailyTargetMl) {
-      setWaterTargetMl(String(waterGoal.dailyTargetMl));
-    }
+    if (waterGoal?.dailyTargetMl) setWaterTargetMl(String(waterGoal.dailyTargetMl));
   }, [waterGoal]);
 
   const handleSave = () => {
@@ -67,9 +64,7 @@ export default function GoalsPage() {
       }
       if (waterTargetMl) {
         const wml = parseInt(waterTargetMl, 10);
-        if (!isNaN(wml) && wml >= 500 && wml <= 10000) {
-          setWaterGoal.mutate({ dailyTargetMl: wml });
-        }
+        if (!isNaN(wml) && wml >= 500 && wml <= 10000) setWaterGoal.mutate({ dailyTargetMl: wml });
       }
       posthog.capture("goals_updated", { calorie_target: calorieTarget ? Number(calorieTarget) : null });
       toast.success(t("settings:goalsPage.goalsSaved"));
@@ -79,133 +74,127 @@ export default function GoalsPage() {
 
   if (goalsLoading) return <LoadingSpinner />;
 
+  const macroTotal =
+    calorieTarget && proteinG && carbsG && fatG
+      ? Math.round(Number(proteinG) * 4 + Number(carbsG) * 4 + Number(fatG) * 9)
+      : null;
+
   return (
-    <div className="px-4 py-6 space-y-6">
+    <div className="mx-auto max-w-[640px] space-y-6 px-4 py-6">
       <div className="flex items-center gap-3">
-        <Link
-          href="/settings"
-          className="p-2 text-neutral-400 transition-all duration-300 hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" strokeWidth={1.5} />
+        <Link href="/settings">
+          <Button variant="ghost" size="icon" aria-label="Back to settings">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
         </Link>
-        <h1 className="text-xl font-light tracking-wide">{t("settings:goals")}</h1>
-      </div>
-
-      {/* Calorie target */}
-      <div className="space-y-3">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-          {t("settings:goalsPage.calorieGoal")}
-        </p>
-        <div className="border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-light text-neutral-500">{t("settings:goalsPage.targetCalories")}</label>
-            <Input
-              type="number"
-              placeholder="2000"
-              value={calorieTarget}
-              onChange={(e) => setCalorieTarget(e.target.value)}
-              className="border-black/[0.06] dark:border-white/[0.06] font-light"
-            />
-          </div>
+        <div>
+          <p className="text-sm font-semibold text-primary">Health targets</p>
+          <h1 className="text-3xl font-semibold text-foreground">{t("settings:goals")}</h1>
         </div>
       </div>
 
-      {/* Macro targets */}
-      <div className="space-y-3">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-          {t("settings:goalsPage.macroGoals")}
-        </p>
-        <div className="border-t border-black/[0.06] dark:border-white/[0.06] pt-4 space-y-4">
-          <div className="grid grid-cols-4 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-light text-blue-500">{t("common:macro.protein")}</label>
-              <Input
-                type="number"
-                placeholder="150"
-                value={proteinG}
-                onChange={(e) => setProteinG(e.target.value)}
-                className="border-black/[0.06] dark:border-white/[0.06] font-light"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-light text-amber-500">{t("common:macro.carbs")}</label>
-              <Input
-                type="number"
-                placeholder="250"
-                value={carbsG}
-                onChange={(e) => setCarbsG(e.target.value)}
-                className="border-black/[0.06] dark:border-white/[0.06] font-light"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-light text-rose-500">{t("common:macro.fat")}</label>
-              <Input
-                type="number"
-                placeholder="67"
-                value={fatG}
-                onChange={(e) => setFatG(e.target.value)}
-                className="border-black/[0.06] dark:border-white/[0.06] font-light"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-light text-emerald-500">{t("common:macro.fiber")}</label>
-              <Input
-                type="number"
-                placeholder="28"
-                value={fiberG}
-                onChange={(e) => setFiberG(e.target.value)}
-                className="border-black/[0.06] dark:border-white/[0.06] font-light"
-              />
-            </div>
-          </div>
-          {calorieTarget && proteinG && carbsG && fatG && (
-            <p className="text-xs font-light text-neutral-400">
-              {t("settings:goalsPage.macroTotalCalc", {
-                total: Math.round(Number(proteinG) * 4 + Number(carbsG) * 4 + Number(fatG) * 9),
-                target: calorieTarget,
-              })}
-            </p>
-          )}
-        </div>
-      </div>
+      <GoalSection icon={Target} title={t("settings:goalsPage.calorieGoal")} description="Set the energy target you want to plan around.">
+        <Field label={t("settings:goalsPage.targetCalories")}>
+          <Input type="number" placeholder="2000" value={calorieTarget} onChange={(e) => setCalorieTarget(e.target.value)} />
+        </Field>
+      </GoalSection>
 
-      {/* Water target */}
-      <div className="space-y-3">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-          {t("settings:goalsPage.waterGoal")}
-        </p>
-        <div className="border-t border-black/[0.06] dark:border-white/[0.06] pt-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-light text-sky-500">{t("settings:goalsPage.waterAmount")}</label>
-            <Input
-              type="number"
-              placeholder="2000"
-              value={waterTargetMl}
-              onChange={(e) => setWaterTargetMl(e.target.value)}
-              min={500}
-              max={10000}
-              step={100}
-              className="border-black/[0.06] dark:border-white/[0.06] font-light"
-            />
-            <p className="text-xs font-light text-neutral-400">{t("settings:goalsPage.waterHint")}</p>
-          </div>
+      <GoalSection icon={Salad} title={t("settings:goalsPage.macroGoals")} description="Use simple macro goals to guide meal balance.">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <MacroField label={t("common:macro.protein")} value={proteinG} onChange={setProteinG} tone="green" placeholder="150" />
+          <MacroField label={t("common:macro.carbs")} value={carbsG} onChange={setCarbsG} tone="amber" placeholder="250" />
+          <MacroField label={t("common:macro.fat")} value={fatG} onChange={setFatG} tone="blue" placeholder="67" />
+          <MacroField label={t("common:macro.fiber")} value={fiberG} onChange={setFiberG} tone="green" placeholder="28" />
         </div>
-      </div>
+        {macroTotal !== null && (
+          <p className="rounded-xl bg-background px-4 py-3 text-sm text-muted-foreground">
+            {t("settings:goalsPage.macroTotalCalc", { total: macroTotal, target: calorieTarget })}
+          </p>
+        )}
+      </GoalSection>
 
-      <button
-        className="w-full py-2.5 text-sm font-light border border-black/[0.06] dark:border-white/[0.06] rounded-md transition-all duration-300 hover:border-foreground/20 disabled:opacity-30"
-        onClick={handleSave}
-        disabled={isPending}
-      >
+      <GoalSection icon={Droplets} title={t("settings:goalsPage.waterGoal")} description={t("settings:goalsPage.waterHint")}>
+        <Field label={t("settings:goalsPage.waterAmount")}>
+          <Input
+            type="number"
+            placeholder="2000"
+            value={waterTargetMl}
+            onChange={(e) => setWaterTargetMl(e.target.value)}
+            min={500}
+            max={10000}
+            step={100}
+          />
+        </Field>
+      </GoalSection>
+
+      <Button className="w-full" onClick={handleSave} disabled={isPending}>
         {isPending ? (
           <span className="flex items-center justify-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+            <Loader2 className="h-4 w-4 animate-spin" />
             {t("common:buttons.saving")}
           </span>
         ) : (
           t("settings:goalsPage.saveGoals")
         )}
-      </button>
+      </Button>
     </div>
+  );
+}
+
+function GoalSection({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+      <div className="mb-5 flex items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+          <Icon className="h-5 w-5" strokeWidth={1.8} />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <div className="space-y-4">{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-semibold text-foreground">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function MacroField({
+  label,
+  value,
+  onChange,
+  tone,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  tone: "green" | "amber" | "blue";
+  placeholder: string;
+}) {
+  const toneClass = tone === "green" ? "text-primary" : tone === "amber" ? "text-[#d99535]" : "text-[#3976b9]";
+  return (
+    <Field label={label}>
+      <Input type="number" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+      <p className={`text-xs font-semibold ${toneClass}`}>grams</p>
+    </Field>
   );
 }

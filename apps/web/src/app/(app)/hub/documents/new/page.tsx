@@ -14,6 +14,10 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { HEALTH_DOCUMENT_CATEGORIES } from "@open-health/shared/constants";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 interface UploadedFile {
   fileUrl: string;
@@ -51,7 +55,7 @@ export default function NewDocumentPage() {
 
         for (const file of Array.from(fileList)) {
           if (file.size > 10 * 1024 * 1024) {
-            alert(`${file.name} exceeds 10MB limit`);
+            toast.error(`${file.name} exceeds 10MB limit`);
             continue;
           }
 
@@ -66,7 +70,7 @@ export default function NewDocumentPage() {
 
           if (!res.ok) {
             const err = await res.json();
-            alert(err.error || "Upload failed");
+            toast.error(err.error || "Upload failed");
             continue;
           }
 
@@ -127,58 +131,58 @@ export default function NewDocumentPage() {
   };
 
   return (
-    <div className="px-4 py-6 space-y-6">
+    <div className="mx-auto max-w-[640px] space-y-6 px-4 py-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           href="/hub/documents"
-          className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          className="flex h-11 w-11 items-center justify-center rounded-xl transition-colors hover:bg-secondary"
+          aria-label="Back to reports"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-xl font-light tracking-wide">
-          {t("documents:newDocument")}
-        </h1>
+        <div>
+          <p className="text-sm font-semibold text-primary">Private report</p>
+          <h1 className="text-3xl font-semibold text-foreground">{t("documents:newDocument")}</h1>
+        </div>
       </div>
 
       {/* Form */}
-      <div className="space-y-5">
+      <div className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card space-y-5">
         {/* Title */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-neutral-500">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-foreground">
             {t("documents:documentTitle")}
           </label>
-          <input
+          <Input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t("documents:documentTitlePlaceholder")}
-            className="w-full rounded-lg border border-black/[0.06] dark:border-white/[0.06] bg-transparent px-3 py-2.5 text-sm outline-none transition-colors focus:border-foreground/30"
           />
         </div>
 
         {/* Date */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-neutral-500">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-foreground">
             {t("documents:documentDate")}
           </label>
-          <input
+          <Input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-lg border border-black/[0.06] dark:border-white/[0.06] bg-transparent px-3 py-2.5 text-sm outline-none transition-colors focus:border-foreground/30"
           />
         </div>
 
         {/* Category */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-neutral-500">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-foreground">
             {t("documents:category")}
           </label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as (typeof HEALTH_DOCUMENT_CATEGORIES)[number])}
-            className="w-full rounded-lg border border-black/[0.06] dark:border-white/[0.06] bg-transparent px-3 py-2.5 text-sm outline-none transition-colors focus:border-foreground/30"
+            className="flex min-h-12 w-full rounded-xl border border-input bg-white px-4 py-3 text-base outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-card"
           >
             {HEALTH_DOCUMENT_CATEGORIES.map((cat) => (
               <option key={cat} value={cat}>
@@ -189,22 +193,22 @@ export default function NewDocumentPage() {
         </div>
 
         {/* Note */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-neutral-500">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-foreground">
             {t("documents:note")}
           </label>
-          <textarea
+          <Textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder={t("documents:notePlaceholder")}
             rows={3}
-            className="w-full rounded-lg border border-black/[0.06] dark:border-white/[0.06] bg-transparent px-3 py-2.5 text-sm outline-none transition-colors focus:border-foreground/30 resize-none"
+            className="resize-none"
           />
         </div>
 
         {/* File Upload */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-neutral-500">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-foreground">
             {t("documents:attachments")}
           </label>
 
@@ -216,25 +220,25 @@ export default function NewDocumentPage() {
               document.getElementById("file-input")?.click()
             }
             className={cn(
-              "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 transition-colors",
-              "border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500",
+              "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed bg-background px-6 py-10 text-center transition-colors",
+              "border-border hover:border-primary/40 hover:bg-secondary/40",
               uploading && "pointer-events-none opacity-50",
             )}
           >
             {uploading ? (
               <>
-                <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
-                <span className="text-sm text-neutral-500">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="text-sm font-medium text-muted-foreground">
                   {t("documents:uploading")}
                 </span>
               </>
             ) : (
               <>
-                <Upload className="h-8 w-8 text-neutral-400" />
-                <span className="text-sm text-neutral-500">
+                <Upload className="h-8 w-8 text-primary" />
+                <span className="text-sm font-semibold text-foreground">
                   {t("documents:dragOrClick")}
                 </span>
-                <span className="text-xs text-neutral-400">
+                <span className="text-xs text-muted-foreground">
                   {t("documents:maxFileSize")}
                 </span>
               </>
@@ -255,7 +259,7 @@ export default function NewDocumentPage() {
               {files.map((f, i) => (
                 <div
                   key={f.fileKey}
-                  className="group relative aspect-square rounded-lg overflow-hidden border border-black/[0.06] dark:border-white/[0.06]"
+                  className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-background"
                 >
                   {f.preview ? (
                     <img
@@ -264,16 +268,16 @@ export default function NewDocumentPage() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-neutral-50 dark:bg-neutral-900">
-                      <FileText className="h-6 w-6 text-neutral-400" />
-                      <span className="text-[10px] text-neutral-400 truncate max-w-[80%] px-1">
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-background">
+                      <FileText className="h-6 w-6 text-primary" />
+                      <span className="max-w-[80%] truncate px-1 text-[10px] text-muted-foreground">
                         {f.fileName}
                       </span>
                     </div>
                   )}
                   <button
                     onClick={() => removeFile(i)}
-                    className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -285,17 +289,17 @@ export default function NewDocumentPage() {
       </div>
 
       {/* Submit */}
-      <button
+      <Button
         onClick={handleSubmit}
         disabled={!title.trim() || isPending}
-        className="w-full rounded-xl bg-primary py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full"
       >
         {isPending ? (
           <Loader2 className="mx-auto h-4 w-4 animate-spin" />
         ) : (
           t("documents:save")
         )}
-      </button>
+      </Button>
     </div>
   );
 }

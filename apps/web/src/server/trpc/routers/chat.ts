@@ -12,7 +12,7 @@ export const chatRouter = router({
         .insert(chatSessions)
         .values({
           userId: ctx.user.id,
-          title: input.title.slice(0, 50) || "新對話",
+          title: input.title.slice(0, 50) || "New conversation",
         })
         .returning({ id: chatSessions.id });
       return { id: session.id };

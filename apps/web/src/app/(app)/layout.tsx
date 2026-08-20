@@ -9,7 +9,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Header />
       <DeferredProviders />
       <PullToRefresh>
-        <main className="relative z-0 mx-auto max-w-lg lg:max-w-3xl pb-[calc(5rem+env(safe-area-inset-bottom))]">{children}</main>
+        <main className="relative z-0 mx-auto w-full max-w-[1120px] px-0 pb-[calc(5.75rem+env(safe-area-inset-bottom))] lg:px-6">
+          {children}
+        </main>
       </PullToRefresh>
       <BottomNav />
     </div>

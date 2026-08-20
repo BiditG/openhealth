@@ -9,14 +9,11 @@ interface Props {
 }
 
 const titles: Record<Locale, string> = {
-  "zh-TW": "使用指南 — Open Health",
-  en: "Documentation — Open Health",
+  en: "Documentation — Swastha",
 };
 
 const descriptions: Record<Locale, string> = {
-  "zh-TW":
-    "了解如何將 Open Health 安裝到你的裝置、開啟通知提醒。支援 iOS、Android 與桌面瀏覽器。",
-  en: "Learn how to install Open Health on your device and enable notifications. Supports iOS, Android, and desktop browsers.",
+  en: "Learn how to install Swastha on your device and enable notifications. Supports iOS, Android, and desktop browsers.",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -28,10 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: descriptions[lang],
     alternates: {
       canonical: `${BASE_URL}/docs`,
-      languages: {
-        "zh-TW": `${BASE_URL}/docs`,
-        en: `${BASE_URL}/en/docs`,
-      },
+      languages: { en: `${BASE_URL}/docs` },
     },
   };
 }

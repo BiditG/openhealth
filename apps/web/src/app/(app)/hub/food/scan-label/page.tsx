@@ -46,7 +46,7 @@ function compressImage(dataUrl: string, maxWidth = 1600, quality = 0.8): Promise
 function InferredBadge() {
   return (
     <span className="ml-1 inline-flex rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
-      AI 推斷
+      AI inferred
     </span>
   );
 }
@@ -203,17 +203,17 @@ function ScanLabelContent() {
 
     // Client-side validation (replaces HTML5 native validation which is invisible in PWA)
     if (!name.trim()) {
-      toast.error(t("food:foodName") + " " + t("common:validation.required", { defaultValue: "為必填欄位" }));
+      toast.error(t("food:foodName") + " " + t("common:validation.required", { defaultValue: "is required" }));
       return;
     }
     const parsedServing = parseFloat(servingSize);
     if (!parsedServing || parsedServing <= 0) {
-      toast.error(t("food:servingSizeLabel") + " " + t("common:validation.mustBePositive", { defaultValue: "必須大於 0" }));
+      toast.error(t("food:servingSizeLabel") + " " + t("common:validation.mustBePositive", { defaultValue: "must be greater than 0" }));
       return;
     }
     const parsedCalories = parseFloat(calories);
     if (isNaN(parsedCalories) || parsedCalories < 0) {
-      toast.error(t("food:caloriesKcalRequired") + " " + t("common:validation.mustBeNonNegative", { defaultValue: "必須大於等於 0" }));
+      toast.error(t("food:caloriesKcalRequired") + " " + t("common:validation.mustBeNonNegative", { defaultValue: "must be 0 or greater" }));
       return;
     }
 

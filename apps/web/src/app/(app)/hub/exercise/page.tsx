@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Search, X, Flame } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
@@ -18,7 +18,7 @@ import { useTranslation } from "react-i18next";
 
 function formatTime(date: Date | string) {
   const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 export default function ExercisePage() {
@@ -30,6 +30,7 @@ export default function ExercisePage() {
   const [logDialogOpen, setLogDialogOpen] = useState(false);
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [selectedExercise, setSelectedExercise] = useState<{
     id: string;
@@ -53,11 +54,19 @@ export default function ExercisePage() {
   );
   const { data: presets } = trpc.exercise.getPresets.useQuery(
     selectedCategory ? { category: selectedCategory as "cardio" | "strength" | "flexibility" | "sport" | "other" } : {},
-    { enabled: logDialogOpen }
+    { enabled: logDialogOpen && searchQuery.trim().length < 1, staleTime: 60_000, retry: false }
   );
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
   const { data: searchResults } = trpc.exercise.searchExercises.useQuery(
-    { query: searchQuery },
-    { enabled: logDialogOpen && searchQuery.length >= 1 }
+    { query: debouncedSearchQuery },
+    { enabled: logDialogOpen && debouncedSearchQuery.length >= 2, staleTime: 60_000, retry: false }
   );
 
   const logExercise = trpc.exercise.logExercise.useMutation({
@@ -141,7 +150,7 @@ export default function ExercisePage() {
     });
   };
 
-  const exerciseList = searchQuery.length >= 1 ? searchResults : presets;
+  const exerciseList = searchQuery.trim().length >= 1 ? searchResults : presets;
   const totalCalories = dayData?.totalCalories ?? 0;
 
   if (isLoading) return <LoadingSpinner />;

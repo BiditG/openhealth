@@ -6,6 +6,7 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { signIn, signUp } from "@/lib/auth-client";
+import { trpc } from "@/lib/trpc-client";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 
@@ -27,15 +28,52 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
   const [referralCode, setReferralCode] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  const [age, setAge] = useState("");
+  const [sex, setSex] = useState<"male" | "female" | "other" | "">("");
+  const [heightCm, setHeightCm] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+  const [activityLevel, setActivityLevel] = useState("moderately_active");
+  const [primaryGoal, setPrimaryGoal] = useState("maintain");
+  const [calorieTarget, setCalorieTarget] = useState("2050");
+  const [dietaryPreference, setDietaryPreference] = useState("");
+  const [medicalConditions, setMedicalConditions] = useState("");
+  const [medications, setMedications] = useState("");
+  const [allergies, setAllergies] = useState("");
+  const completeOnboarding = trpc.user.completeOnboarding.useMutation();
 
   const resetForm = () => {
     setName("");
     setEmail("");
     setPassword("");
     setReferralCode("");
+    setAge("");
+    setSex("");
+    setHeightCm("");
+    setWeightKg("");
+    setActivityLevel("moderately_active");
+    setPrimaryGoal("maintain");
+    setCalorieTarget("2050");
+    setDietaryPreference("");
+    setMedicalConditions("");
+    setMedications("");
+    setAllergies("");
     setError("");
     setLoading(false);
   };
+
+  const getDateOfBirthFromAge = () => {
+    const years = Number(age);
+    if (!Number.isFinite(years) || years <= 0) return null;
+    const dob = new Date();
+    dob.setFullYear(dob.getFullYear() - years);
+    return dob.toISOString().slice(0, 10);
+  };
+
+  const parseList = (value: string) =>
+    value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +100,38 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
           setError(result.error.message || t("auth.registerFailed"));
           setLoading(false);
           return;
+        }
+
+        if (result.data?.user) {
+          try {
+            await completeOnboarding.mutateAsync({
+              profile: {
+                name,
+                sex: sex || null,
+                heightCm: heightCm ? Number(heightCm) : null,
+                currentWeightKg: weightKg ? Number(weightKg) : null,
+                dateOfBirth: getDateOfBirthFromAge(),
+                activityLevel: activityLevel as "sedentary" | "lightly_active" | "moderately_active" | "very_active" | "extremely_active",
+                medicalConditions: parseList(medicalConditions),
+                medications: medications || null,
+                allergies: allergies || null,
+                dietaryPreference: dietaryPreference || null,
+                primaryGoal,
+                onboardingCompleted: true,
+              },
+              goals: {
+                calorieTarget: calorieTarget ? Number(calorieTarget) : null,
+                proteinG: null,
+                carbsG: null,
+                fatG: null,
+                fiberG: null,
+              },
+            });
+          } catch {
+            setError("Account created. Please complete health details from Profile.");
+            setLoading(false);
+            return;
+          }
         }
         posthog.capture("user_signed_up", { method: "email" });
 
@@ -198,12 +268,99 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
       <form onSubmit={handleSubmit} className="space-y-3">
 
         {mode === "register" && (
-          <Input
-            placeholder={t("auth.namePlaceholder")}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
+          <div className="space-y-3 rounded-2xl border border-border bg-muted p-4">
+            <Input
+              placeholder={t("auth.namePlaceholder")}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                type="number"
+                placeholder="Age"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                min={1}
+                max={120}
+                required
+              />
+              <select
+                value={sex}
+                onChange={(e) => setSex(e.target.value as typeof sex)}
+                className="min-h-[50px] rounded-xl border border-input bg-white px-4 text-base dark:bg-card"
+                required
+              >
+                <option value="">Sex</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+              <Input
+                type="number"
+                placeholder="Height cm"
+                value={heightCm}
+                onChange={(e) => setHeightCm(e.target.value)}
+                required
+              />
+              <Input
+                type="number"
+                placeholder="Weight kg"
+                value={weightKg}
+                onChange={(e) => setWeightKg(e.target.value)}
+                required
+              />
+            </div>
+            <select
+              value={activityLevel}
+              onChange={(e) => setActivityLevel(e.target.value)}
+              className="min-h-[50px] w-full rounded-xl border border-input bg-white px-4 text-base dark:bg-card"
+            >
+              <option value="sedentary">Mostly sitting</option>
+              <option value="lightly_active">Lightly active</option>
+              <option value="moderately_active">Moderately active</option>
+              <option value="very_active">Very active</option>
+              <option value="extremely_active">Athlete level</option>
+            </select>
+            <div className="grid grid-cols-2 gap-3">
+              <select
+                value={primaryGoal}
+                onChange={(e) => setPrimaryGoal(e.target.value)}
+                className="min-h-[50px] rounded-xl border border-input bg-white px-4 text-base dark:bg-card"
+              >
+                <option value="lose">Lose weight</option>
+                <option value="maintain">Maintain</option>
+                <option value="gain">Gain muscle</option>
+                <option value="manage_health">Manage health</option>
+              </select>
+              <Input
+                type="number"
+                placeholder="Daily kcal"
+                value={calorieTarget}
+                onChange={(e) => setCalorieTarget(e.target.value)}
+              />
+            </div>
+            <Input
+              placeholder="Diet preference, e.g. vegetarian"
+              value={dietaryPreference}
+              onChange={(e) => setDietaryPreference(e.target.value)}
+            />
+            <Input
+              placeholder="Medical conditions, comma separated"
+              value={medicalConditions}
+              onChange={(e) => setMedicalConditions(e.target.value)}
+            />
+            <Input
+              placeholder="Medications"
+              value={medications}
+              onChange={(e) => setMedications(e.target.value)}
+            />
+            <Input
+              placeholder="Allergies"
+              value={allergies}
+              onChange={(e) => setAllergies(e.target.value)}
+            />
+          </div>
         )}
 
         <Input

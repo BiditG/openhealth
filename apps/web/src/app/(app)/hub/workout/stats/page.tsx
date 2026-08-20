@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Trophy, TrendingUp, Search } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
@@ -32,6 +32,7 @@ export default function WorkoutStatsPage() {
     "3m"
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
     string | undefined
   >();
@@ -48,14 +49,22 @@ export default function WorkoutStatsPage() {
             | "other",
         }
       : {},
-    { enabled: isAuthenticated }
+    { enabled: isAuthenticated && searchQuery.trim().length < 1, staleTime: 60_000, retry: false }
   );
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
   const { data: searchResults } = trpc.exercise.searchExercises.useQuery(
-    { query: searchQuery },
-    { enabled: isAuthenticated && searchQuery.length >= 1 }
+    { query: debouncedSearchQuery },
+    { enabled: isAuthenticated && debouncedSearchQuery.length >= 2, staleTime: 60_000, retry: false }
   );
 
-  const exerciseList = searchQuery.length >= 1 ? searchResults : presets;
+  const exerciseList = searchQuery.trim().length >= 1 ? searchResults : presets;
   const selectedExercise = exerciseList?.find(
     (e) => e.id === selectedExerciseId
   );
@@ -80,7 +89,7 @@ export default function WorkoutStatsPage() {
 
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
-    return d.toLocaleDateString("zh-TW", {
+    return d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     });

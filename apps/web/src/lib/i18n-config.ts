@@ -1,8 +1,8 @@
 // Server-safe locale configuration (no browser APIs)
 // Used by middleware, layouts, and server components
 
-export const defaultLocale = "zh-TW" as const;
-export const locales = ["zh-TW", "en"] as const;
+export const defaultLocale = "en" as const;
+export const locales = ["en"] as const;
 export type Locale = (typeof locales)[number];
 
 export function isValidLocale(locale: string): locale is Locale {
@@ -11,8 +11,9 @@ export function isValidLocale(locale: string): locale is Locale {
 
 /**
  * Get the path prefix for a locale.
- * Default locale (zh-TW) has no prefix, others get /{locale} prefix.
+ * English is the only public locale, so public links stay unprefixed.
  */
 export function getLocalePrefix(locale: Locale): string {
-  return locale === defaultLocale ? "" : `/${locale}`;
+  void locale;
+  return "";
 }

@@ -91,7 +91,7 @@ export default function WorkoutPage() {
 
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
-    return d.toLocaleDateString("zh-TW", {
+    return d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       weekday: "short",

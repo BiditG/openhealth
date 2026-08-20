@@ -75,7 +75,7 @@ async function exportDiary(userId: string) {
     .orderBy(diaryEntries.date, diaryEntries.loggedAt);
 
   return toCsv(
-    ["日期", "餐別", "食物名稱", "品牌", "份量", "份量單位", "熱量(kcal)", "蛋白質(g)", "碳水(g)", "脂肪(g)", "纖維(g)", "記錄時間"],
+    ["Date", "Meal Type", "Food Name", "Brand", "Serving Quantity", "Serving Unit", "Calories (kcal)", "Protein (g)", "Carbs (g)", "Fat (g)", "Fiber (g)", "Logged At"],
     rows.map((r) => [
       r.date,
       r.mealType,
@@ -111,7 +111,7 @@ async function exportExercise(userId: string) {
     .orderBy(exerciseLogs.date);
 
   return toCsv(
-    ["日期", "運動名稱", "類別", "時間(分鐘)", "消耗熱量(kcal)", "強度", "備註", "記錄時間"],
+    ["Date", "Exercise Name", "Category", "Duration (min)", "Calories Burned (kcal)", "Intensity", "Note", "Created At"],
     rows.map((r) => [
       r.date,
       r.exerciseName,
@@ -133,7 +133,7 @@ async function exportWorkout(userId: string) {
     .where(eq(workouts.userId, userId))
     .orderBy(workouts.startedAt);
 
-  if (userWorkouts.length === 0) return toCsv(["訓練名稱", "日期", "動作", "組數", "重量(kg)", "次數", "RPE", "暖身", "遞減", "PR", "完成時間"], []);
+  if (userWorkouts.length === 0) return toCsv(["Workout Name", "Date", "Exercise", "Set", "Weight (kg)", "Reps", "RPE", "Warmup", "Dropset", "PR", "Completed At"], []);
 
   const workoutIds = userWorkouts.map((w) => w.id);
   const wExercises = await db
@@ -189,7 +189,7 @@ async function exportWorkout(userId: string) {
   }
 
   return toCsv(
-    ["訓練名稱", "日期", "動作", "組數", "重量(kg)", "次數", "RPE", "暖身", "遞減", "PR", "完成時間"],
+    ["Workout Name", "Date", "Exercise", "Set", "Weight (kg)", "Reps", "RPE", "Warmup", "Dropset", "PR", "Completed At"],
     csvRows
   );
 }
@@ -202,7 +202,7 @@ async function exportWeight(userId: string) {
     .orderBy(weightLogs.date);
 
   return toCsv(
-    ["日期", "體重(kg)", "備註"],
+    ["Date", "Weight (kg)", "Note"],
     rows.map((r) => [r.date, r.weightKg, r.note])
   );
 }
@@ -215,7 +215,7 @@ async function exportBodyMeasurements(userId: string) {
     .orderBy(bodyMeasurements.date);
 
   return toCsv(
-    ["日期", "腰圍(cm)", "臀圍(cm)", "胸圍(cm)", "臂圍(cm)", "腿圍(cm)", "頸圍(cm)", "體脂率(%)", "備註"],
+    ["Date", "Waist (cm)", "Hip (cm)", "Chest (cm)", "Arm (cm)", "Thigh (cm)", "Neck (cm)", "Body Fat (%)", "Note"],
     rows.map((r) => [
       r.date,
       r.waistCm,
@@ -238,7 +238,7 @@ async function exportSteps(userId: string) {
     .orderBy(stepLogs.date);
 
   return toCsv(
-    ["日期", "步數", "備註"],
+    ["Date", "Steps", "Note"],
     rows.map((r) => [r.date, r.steps, r.note])
   );
 }
@@ -251,7 +251,7 @@ async function exportWater(userId: string) {
     .orderBy(waterLogs.date, waterLogs.loggedAt);
 
   return toCsv(
-    ["日期", "水量(ml)", "記錄時間"],
+    ["Date", "Water (ml)", "Logged At"],
     rows.map((r) => [r.date, String(r.amountMl), r.loggedAt.toISOString()])
   );
 }
@@ -264,7 +264,7 @@ async function exportFasting(userId: string) {
     .orderBy(fastingLogs.startedAt);
 
   return toCsv(
-    ["開始時間", "結束時間", "計畫時數", "實際時數", "完成", "備註"],
+    ["Started At", "Ended At", "Planned Hours", "Actual Hours", "Completed", "Note"],
     rows.map((r) => [
       r.startedAt.toISOString(),
       r.endedAt?.toISOString() ?? "",
@@ -295,7 +295,7 @@ async function exportPosture(userId: string) {
     .orderBy(postureSessions.startedAt);
 
   return toCsv(
-    ["姿勢", "開始時間", "結束時間", "時長(分鐘)", "被提醒"],
+    ["Posture", "Started At", "Ended At", "Duration (min)", "Reminded"],
     rows.map((r) => [
       `${r.emoji} ${r.postureName}`,
       r.startedAt.toISOString(),
@@ -319,15 +319,15 @@ const exporters: Record<ExportCategory, (userId: string) => Promise<string>> = {
 };
 
 const categoryFileNames: Record<ExportCategory, string> = {
-  diary: "飲食記錄",
-  exercise: "運動記錄",
-  workout: "重訓記錄",
-  weight: "體重紀錄",
-  body_measurements: "身體測量",
-  steps: "步數紀錄",
-  water: "水分紀錄",
-  fasting: "斷食紀錄",
-  posture: "姿勢紀錄",
+  diary: "Food_Diary",
+  exercise: "Exercise",
+  workout: "Workout",
+  weight: "Weight",
+  body_measurements: "Body_Measurements",
+  steps: "Steps",
+  water: "Water",
+  fasting: "Fasting",
+  posture: "Posture",
 };
 
 export async function GET(request: NextRequest) {

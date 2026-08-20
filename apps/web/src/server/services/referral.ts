@@ -9,10 +9,10 @@ export async function grantAchievement(userId: string, achievementName: string) 
     .values({
       name: achievementName,
       description:
-        achievementName === "推薦達人"
-          ? "成功推薦一位朋友加入"
-          : "透過推薦碼加入",
-      icon: achievementName === "推薦達人" ? "users" : "star",
+        achievementName === "Referral Builder"
+          ? "Successfully referred a friend"
+          : "Joined with a referral code",
+      icon: achievementName === "Referral Builder" ? "users" : "star",
       category: "referral",
       requirement: { type: "referral" },
     })

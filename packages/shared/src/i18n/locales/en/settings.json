@@ -22,7 +22,6 @@
   "deleteAccountSuccess": "Account deleted",
   "deleteAccountError": "Failed to delete account, please try again later",
   "language": "Language",
-  "languageZhTW": "繁體中文",
   "languageEn": "English",
   "profilePage": {
     "basicInfo": "Basic Info",

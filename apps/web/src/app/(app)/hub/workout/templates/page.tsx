@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -48,6 +48,7 @@ export default function WorkoutTemplatesPage() {
   >([]);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
     string | undefined
   >();
@@ -65,14 +66,22 @@ export default function WorkoutTemplatesPage() {
             | "other",
         }
       : {},
-    { enabled: showExercisePicker }
+    { enabled: showExercisePicker && searchQuery.trim().length < 1, staleTime: 60_000, retry: false }
   );
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
   const { data: searchResults } = trpc.exercise.searchExercises.useQuery(
-    { query: searchQuery },
-    { enabled: showExercisePicker && searchQuery.length >= 1 }
+    { query: debouncedSearchQuery },
+    { enabled: showExercisePicker && debouncedSearchQuery.length >= 2, staleTime: 60_000, retry: false }
   );
 
-  const exerciseList = searchQuery.length >= 1 ? searchResults : presets;
+  const exerciseList = searchQuery.trim().length >= 1 ? searchResults : presets;
 
   const handleAddExercise = (ex: { id: string; name: string }) => {
     setSelectedExercises((prev) => [

@@ -32,7 +32,7 @@ function formatDuration(ms: number): { hours: string; minutes: string; seconds: 
 
 function formatDateTime(date: Date | string) {
   const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleString("zh-TW", {
+  return d.toLocaleString("en-US", {
     month: "numeric",
     day: "numeric",
     hour: "2-digit",

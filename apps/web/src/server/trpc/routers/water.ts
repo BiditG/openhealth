@@ -63,7 +63,7 @@ export const waterRouter = router({
         .limit(1);
 
       if (lastLog.length === 0) {
-        return { success: false, error: "沒有可復原的記錄" };
+        return { success: false, error: "No water log to undo" };
       }
 
       await ctx.db.delete(waterLogs).where(eq(waterLogs.id, lastLog[0].id));
@@ -159,7 +159,7 @@ export const waterRouter = router({
           .where(eq(waterContainers.userId, ctx.user.id));
 
         if (existing.length >= 4) {
-          throw new Error("最多只能建立 4 個自訂容器");
+          throw new Error("You can create up to 4 custom containers");
         }
 
         await ctx.db.insert(waterContainers).values({

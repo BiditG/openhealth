@@ -1,10 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import { useLocalePath } from "@/hooks/use-locale-path";
+import Link from "next/link";
+import {
+  ArrowRight,
+  Bot,
+  Camera,
+  CheckCircle2,
+  Droplets,
+  FileText,
+  HeartPulse,
+  Lock,
+  Salad,
+  ShieldCheck,
+  TrendingUp,
+  Upload,
+} from "lucide-react";
 
 interface BlogPost {
   id: string;
@@ -17,415 +28,294 @@ interface BlogPost {
   createdAt: Date;
 }
 
-function Hero() {
-  const { t } = useTranslation("landing");
-  const [deferredPrompt, setDeferredPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
-  const [installed, setInstalled] = useState(false);
-  const [showIOSGuide, setShowIOSGuide] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-
-    if (isIOSSafari()) {
-      setShowIOSGuide(true);
-    }
-
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      window.location.replace("/hub");
-      return;
-    }
-
-    setMounted(true);
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  const handlePwaInstall = useCallback(async () => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setInstalled(true);
-    }
-    setDeferredPrompt(null);
-  }, [deferredPrompt]);
-
-  return (
-    <section className="min-h-screen flex flex-col items-center justify-center px-6 relative">
-      {/* Enso Circle */}
-      <div
-        className="animate-fade-in-up"
-        style={{ animationDelay: "0.2s" }}
-      >
-        <svg
-          width="120"
-          height="120"
-          viewBox="0 0 120 120"
-          fill="none"
-          aria-hidden="true"
-        >
-          <circle
-            cx="60"
-            cy="60"
-            r="50"
-            className="stroke-black dark:stroke-white animate-draw-enso"
-            strokeWidth="1.5"
-            strokeDasharray="314"
-            strokeDashoffset="30"
-            strokeLinecap="round"
-          />
-        </svg>
-      </div>
-
-      <h1
-        className="mt-12 text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-black dark:text-white animate-fade-in-up"
-        style={{ animationDelay: "0.5s" }}
-      >
-        Open Health
-      </h1>
-
-      <p
-        className="mt-6 text-lg md:text-xl font-light text-neutral-500 dark:text-neutral-400 tracking-wide animate-fade-in-up"
-        style={{ animationDelay: "0.7s" }}
-      >
-        Your Open-Source Health AI Agent
-      </p>
-
-      <p
-        className="mt-4 text-sm text-neutral-400 dark:text-neutral-600 font-light max-w-md text-center animate-fade-in-up"
-        style={{ animationDelay: "0.9s" }}
-      >
-        {t("hero.subtitle")}
-      </p>
-
-      {/* Download cards */}
-      <div
-        className="mt-14 w-full max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 animate-fade-in-up"
-        style={{ animationDelay: "1.1s" }}
-      >
-        {/* App Store */}
-        <a
-          href="https://apps.apple.com/app/openhealth/id6759960309"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="border border-black/[0.06] dark:border-white/[0.06] hover:border-black/20 dark:hover:border-white/20 p-4 md:p-5 transition-colors duration-300 relative block"
-        >
-          <span className="absolute top-2 right-2 text-[8px] tracking-[0.15em] uppercase text-green-600 dark:text-green-400 border border-green-300 dark:border-green-800 px-1.5 py-0.5">
-            {t("install.available")}
-          </span>
-          <svg className="w-6 h-6 text-green-600 dark:text-green-400 mb-3" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-          </svg>
-          <p className="text-xs font-light text-black dark:text-white">App Store</p>
-        </a>
-
-        {/* Google Play */}
-        <div className="border border-black/[0.06] dark:border-white/[0.06] p-4 md:p-5 relative">
-          <span className="absolute top-2 right-2 text-[8px] tracking-[0.15em] uppercase text-neutral-400 dark:text-neutral-600 border border-neutral-200 dark:border-neutral-800 px-1.5 py-0.5">
-            {t("install.comingSoon")}
-          </span>
-          <svg className="w-6 h-6 text-neutral-300 dark:text-neutral-700 mb-3" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3.18 23.48c-.27-.2-.48-.55-.48-1.07V1.59c0-.52.21-.87.48-1.07l.12-.07L14.5 11.7v.25L3.3 23.2l-.12-.07zM18.47 15.71l-3.97-3.98v-.25l3.97-3.98.09.05 4.7 2.67c1.34.76 1.34 2.01 0 2.77l-4.7 2.67-.09.05zM14.5 11.7L3.3.55C3.72.15 4.42.09 5.2.53l9.3 5.27-4 3.9v2zM14.5 12.2v-.25l4 3.9-9.3 5.27c-.78.44-1.48.38-1.9-.02L14.5 12.2z"/>
-          </svg>
-          <p className="text-xs font-light text-black dark:text-white">Google Play</p>
-        </div>
-
-        {/* PWA */}
-        <div className="border border-black/[0.06] dark:border-white/[0.06] hover:border-black/20 dark:hover:border-white/20 p-4 md:p-5 transition-colors duration-300 relative">
-          <span className="absolute top-2 right-2 text-[8px] tracking-[0.15em] uppercase text-green-600 dark:text-green-400 border border-green-300 dark:border-green-800 px-1.5 py-0.5">
-            {t("install.available")}
-          </span>
-          <svg className="w-6 h-6 text-green-600 dark:text-green-400 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M2 12h20"/>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-          </svg>
-          <p className="text-xs font-light text-black dark:text-white mb-2">PWA</p>
-          {!mounted ? null : installed ? (
-            <p className="text-[10px] text-green-600 dark:text-green-400 font-light">
-              {t("install.pwaInstalled")}
-            </p>
-          ) : deferredPrompt ? (
-            <button
-              onClick={handlePwaInstall}
-              className="text-[10px] tracking-wider text-green-600 dark:text-green-400 border border-green-600 dark:border-green-400 px-3 py-1 hover:bg-green-600 hover:text-white dark:hover:bg-green-400 dark:hover:text-black transition-all duration-300"
-            >
-              {t("install.pwaInstallButton")}
-            </button>
-          ) : showIOSGuide ? (
-            <p className="text-[10px] text-neutral-500 font-light">
-              {t("install.ios02")}
-            </p>
-          ) : (
-            <p className="text-[10px] text-neutral-500 font-light">
-              {t("install.android02")}
-            </p>
-          )}
-        </div>
-
-        {/* Web */}
-        <Link
-          href="/hub"
-          className="border border-black/[0.06] dark:border-white/[0.06] hover:border-black/20 dark:hover:border-white/20 p-4 md:p-5 transition-colors duration-300 relative block"
-        >
-          <span className="absolute top-2 right-2 text-[8px] tracking-[0.15em] uppercase text-green-600 dark:text-green-400 border border-green-300 dark:border-green-800 px-1.5 py-0.5">
-            {t("install.available")}
-          </span>
-          <svg className="w-6 h-6 text-green-600 dark:text-green-400 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <path d="M8 21h8"/>
-            <path d="M12 17v4"/>
-          </svg>
-          <p className="text-xs font-light text-black dark:text-white mb-2">Web</p>
-          <p className="text-[10px] text-green-600 dark:text-green-400 font-light">
-            {t("install.webCta")}
-          </p>
-        </Link>
-      </div>
-
-      {/* Scroll indicator */}
-      <div
-        className="absolute bottom-12 animate-fade-in-up"
-        style={{ animationDelay: "1.5s" }}
-      >
-        <div className="w-[1px] h-16 bg-gradient-to-b from-transparent via-neutral-300 dark:via-neutral-700 to-transparent animate-pulse" />
-      </div>
-    </section>
-  );
-}
-
-function Philosophy() {
-  const { t } = useTranslation("landing");
-
-  return (
-    <section className="max-w-3xl mx-auto px-6 py-32 md:py-40 text-center">
-      <p className="text-[10px] tracking-[0.4em] text-neutral-400 dark:text-neutral-600 uppercase mb-16">
-        Philosophy
-      </p>
-
-      <blockquote className="text-2xl md:text-3xl lg:text-4xl font-extralight text-black dark:text-white leading-relaxed">
-        {t("philosophy.quote1")}
-        <br />
-        {t("philosophy.quote2")}
-      </blockquote>
-
-      <div className="w-8 h-[1px] bg-neutral-200 dark:bg-neutral-800 mx-auto my-12" />
-
-      <p className="text-neutral-500 font-light leading-loose max-w-xl mx-auto text-sm md:text-base">
-        {t("philosophy.desc1")}
-        <br className="hidden md:block" />
-        {t("philosophy.desc2")}
-      </p>
-
-      <p className="mt-6 text-neutral-300 dark:text-neutral-700 font-light text-xs md:text-sm tracking-wide">
-        {t("philosophy.tagline")}
-      </p>
-    </section>
-  );
-}
-
-// ── Feature rows with screenshots ───────────────────────────────
-type FeatureRow = {
-  featureNum: string;
-  en: string;
-  screenshot: { "zh-TW": string; en: string };
-};
-
-const featureRows: FeatureRow[] = [
+const tools = [
   {
-    featureNum: "01",
-    en: "Personal Health AI",
-    screenshot: { "zh-TW": "/screenshots/03-ai-chat.png", en: "/screenshots/en/03-ai-chat.png" },
+    href: "/hub/food/scan",
+    title: "Scan Food",
+    body: "Understand calories and nutrition.",
+    icon: Camera,
   },
   {
-    featureNum: "02",
-    en: "Comprehensive Tracking",
-    screenshot: { "zh-TW": "/screenshots/10-today.png", en: "/screenshots/en/02-today.png" },
+    href: "/hub/chat",
+    title: "Ask Health AI",
+    body: "Get simple wellness explanations.",
+    icon: Bot,
   },
   {
-    featureNum: "03",
-    en: "Data Visualization",
-    screenshot: { "zh-TW": "/screenshots/17-progress.png", en: "/screenshots/en/09-progress.png" },
+    href: "/hub/documents",
+    title: "Upload Report",
+    body: "Read lab values in plain language.",
+    icon: Upload,
   },
   {
-    featureNum: "04",
-    en: "Open Source",
-    screenshot: { "zh-TW": "/screenshots/01-diary.png", en: "/screenshots/en/05-diary.png" },
+    href: "/today",
+    title: "Track Health",
+    body: "See your food, water, and trends.",
+    icon: HeartPulse,
   },
 ];
 
-function FeatureShowcase() {
-  const { t, i18n } = useTranslation("landing");
-  const lang = i18n.language === "en" ? "en" : "zh-TW";
-
+function ProductPhone() {
   return (
-    <section id="features" className="max-w-5xl mx-auto px-6 py-24 md:py-32">
-      <p className="text-[10px] tracking-[0.4em] text-neutral-400 dark:text-neutral-600 uppercase mb-20">
-        Features
-      </p>
-
-      <div className="space-y-24 md:space-y-32">
-        {featureRows.map((f, index) => {
-          const isReversed = index % 2 === 1;
-
-          return (
-            <div
-              key={f.featureNum}
-              className={`flex flex-col ${isReversed ? "md:flex-row-reverse" : "md:flex-row"} items-center gap-12 md:gap-16 lg:gap-20`}
-            >
-              {/* Phone mockup */}
-              <div className="w-[220px] md:w-[260px] flex-shrink-0">
-                <div className="relative bg-neutral-950 dark:bg-neutral-900 rounded-[2.5rem] p-[6px] shadow-2xl shadow-black/15 dark:shadow-black/40">
-                  {/* Notch */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80px] h-[20px] bg-neutral-950 dark:bg-neutral-900 rounded-b-2xl z-10" />
-                  {/* Screen */}
-                  <div className="relative rounded-[2.2rem] overflow-hidden bg-white aspect-[9/19.5]">
-                    <Image
-                      src={f.screenshot[lang]}
-                      alt={t(`features.title${f.featureNum}`)}
-                      fill
-                      className="object-cover object-top"
-                      sizes="260px"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Text content */}
-              <div className="flex-1 text-center md:text-left">
-                <span className="text-xs font-mono text-neutral-300 dark:text-neutral-700">
-                  {f.featureNum}
-                </span>
-                <h3 className="mt-3 text-2xl md:text-3xl font-light text-black dark:text-white leading-snug">
-                  {t(`features.title${f.featureNum}`)}
-                </h3>
-                <p className="text-[10px] tracking-[0.2em] text-neutral-300 dark:text-neutral-700 mt-2 font-mono uppercase">
-                  {f.en}
-                </p>
-                <p className="mt-6 text-neutral-500 font-light leading-relaxed text-sm md:text-base max-w-md mx-auto md:mx-0">
-                  {t(`features.desc${f.featureNum}`)}
-                </p>
-              </div>
+    <div className="mx-auto w-full max-w-[320px] rounded-2xl border border-border bg-[#17211d] p-2.5">
+      <div className="overflow-hidden rounded-xl bg-[#fafaf7]">
+        <div className="flex items-center justify-between border-b border-border bg-white px-5 py-4">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Today</p>
+            <p className="text-base font-semibold text-foreground">Dal Bhat Tarkari</p>
+          </div>
+          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">Meal score</span>
+        </div>
+        <div className="p-5">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[#ddf3eb]">
+            <Image
+              src="/screenshots/en/04-food-search.png"
+              alt="Swastha food analysis preview"
+              fill
+              className="object-cover object-top"
+              priority
+            />
+          </div>
+          <div className="mt-5 flex items-end justify-between">
+            <div>
+              <p className="text-4xl font-semibold leading-none text-primary">82</p>
+              <p className="mt-1 text-sm font-medium text-muted-foreground">Great balance</p>
             </div>
-          );
-        })}
+            <div className="text-right">
+              <p className="text-xl font-semibold text-foreground">620</p>
+              <p className="text-sm text-muted-foreground">kcal</p>
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            {[
+              ["Protein", "21g"],
+              ["Carbs", "89g"],
+              ["Fiber", "12g"],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-border bg-white p-3">
+                <p className="text-base font-semibold text-foreground">{value}</p>
+                <p className="text-xs text-muted-foreground">{label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 rounded-xl bg-muted p-4">
+            <p className="text-sm font-semibold text-primary">Try this</p>
+            <p className="mt-1 text-sm leading-6 text-[#315149]">Add a little more vegetables to balance the rice portion.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="px-4 pb-20 pt-24 sm:px-6 lg:pb-24 lg:pt-28">
+      <div className="mx-auto grid max-w-[1120px] items-center gap-14 lg:grid-cols-[1fr_380px]">
+        <div>
+          <p className="text-xs font-semibold uppercase text-primary">Personal health, food, and wellness for Nepal</p>
+          <h1 className="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-foreground sm:text-4xl lg:text-5xl">
+            Understand your health, one day at a time.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
+            Scan your meals, track your health, understand your reports, and get simple AI-powered guidance.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/hub/food/scan"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#125745]"
+            >
+              <Camera className="h-4 w-4" strokeWidth={1.8} />
+              Scan My Food
+            </Link>
+            <Link
+              href="/hub"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-white px-5 text-sm font-medium text-primary transition-colors hover:bg-muted dark:bg-card"
+            >
+              Explore Health Tools
+              <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
+            </Link>
+          </div>
+          <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+            {["Private by design", "Nepali food friendly", "Educational, not diagnostic"].map((item) => (
+              <div key={item} className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <CheckCircle2 className="h-5 w-5 text-primary" strokeWidth={1.8} />
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+        <ProductPhone />
       </div>
     </section>
   );
 }
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
-
-function isIOSSafari(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const isIOS =
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const isSafari =
-    /Safari/.test(navigator.userAgent) &&
-    !/CriOS|FxiOS/.test(navigator.userAgent);
-  return isIOS && isSafari;
-}
-
-function BlogPreview({ posts }: { posts: BlogPost[] }) {
-  const { t, i18n } = useTranslation("landing");
-  const lp = useLocalePath();
-  const dateLocale = i18n.language === "en" ? "en-US" : "zh-TW";
-
+function ValueStatement() {
   return (
-    <section className="max-w-4xl mx-auto px-6 py-32">
-      <p className="text-[10px] tracking-[0.4em] text-neutral-400 dark:text-neutral-600 uppercase mb-4">
-        Journal
-      </p>
-      <h2 className="text-3xl md:text-4xl font-extralight text-black dark:text-white mb-4">
-        {t("blog.title")}
-      </h2>
-      <p className="text-neutral-400 dark:text-neutral-600 font-light mb-16 text-sm">
-        {t("blog.subtitle")}
-      </p>
+    <section className="border-y border-border bg-white px-4 py-12 sm:px-6 dark:bg-card">
+      <div className="mx-auto max-w-[920px] text-center">
+        <p className="text-xl font-semibold leading-snug text-foreground sm:text-2xl">
+          A health companion for everyday decisions, not a dashboard you have to manage.
+        </p>
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+          Open Swastha, understand what matters today, and take one small next step.
+        </p>
+      </div>
+    </section>
+  );
+}
 
-      {posts.length === 0 ? (
-        <div className="border border-black/[0.06] dark:border-white/[0.06] p-12 md:p-20 flex flex-col items-center">
-          <svg
-            width="40"
-            height="40"
-            viewBox="0 0 120 120"
-            fill="none"
-            aria-hidden="true"
-            className="mb-8 opacity-20"
-          >
-            <circle
-              cx="60"
-              cy="60"
-              r="50"
-              className="stroke-black dark:stroke-white"
-              strokeWidth="1.5"
-              strokeDasharray="314"
-              strokeDashoffset="30"
-              strokeLinecap="round"
-            />
-          </svg>
-          <p className="text-neutral-400 dark:text-neutral-600 font-light text-sm">
-            {t("blog.comingSoon")}
-          </p>
+function ToolCards() {
+  return (
+    <section className="px-4 py-20 sm:px-6">
+      <div className="mx-auto max-w-[1120px]">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <h2 className="text-2xl font-semibold text-foreground">What can you do?</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Start with the task that matters right now.</p>
+          </div>
         </div>
-      ) : (
-        <div className="space-y-px">
-          {posts.map((post) => (
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {tools.map(({ href, title, body, icon: Icon }) => (
             <Link
-              key={post.id}
-              href={lp(`/blog/${post.slug}`)}
-              className="group block border border-black/[0.06] dark:border-white/[0.06] hover:border-black/[0.12] dark:hover:border-white/[0.12] transition-colors duration-300"
+              key={title}
+              href={href}
+              className="group rounded-2xl border border-border bg-white p-6 transition-colors duration-200 hover:border-primary/30 dark:bg-card"
             >
-              <div className="flex flex-col md:flex-row">
-                {post.thumbnailUrl && (
-                  <div className="md:w-56 md:flex-shrink-0 aspect-video md:aspect-auto relative overflow-hidden">
-                    <Image
-                      src={post.thumbnailUrl}
-                      alt={post.title}
-                      fill
-                      className="object-cover opacity-90 group-hover:opacity-100 dark:opacity-90 dark:group-hover:opacity-100 transition-opacity duration-300"
-                      sizes="(max-width: 768px) 100vw, 224px"
-                    />
-                  </div>
-                )}
-                <div className="p-5 md:p-6 flex flex-col justify-center min-w-0">
-                  <time className="text-[10px] tracking-[0.3em] text-neutral-400 dark:text-neutral-600 uppercase mb-2">
-                    {new Date(post.videoPublishedAt ?? post.createdAt).toLocaleDateString(dateLocale, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </time>
-                  <h3 className="text-base font-light mb-2 group-hover:text-black/80 dark:group-hover:text-white/90 transition-colors line-clamp-2">
-                    {post.title}
-                  </h3>
-                  <p className="text-xs text-neutral-500 font-light line-clamp-2">
-                    {post.summary?.slice(0, 120)}
-                    {(post.summary?.length ?? 0) > 120 ? "..." : ""}
-                  </p>
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-primary">
+                <Icon className="h-5 w-5" strokeWidth={1.8} />
+              </div>
+              <div className="mt-6 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">{title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{body}</p>
                 </div>
+                <ArrowRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
               </div>
             </Link>
           ))}
         </div>
-      )}
+      </div>
+    </section>
+  );
+}
 
-      <div className="mt-10">
+function ExampleSections() {
+  return (
+    <section className="bg-background px-4 py-20 sm:px-6 dark:bg-background">
+      <div className="mx-auto grid max-w-[1120px] gap-5 lg:grid-cols-3">
+        {[
+          {
+            icon: Salad,
+            title: "Food scanner example",
+            body: "See calories, protein, carbs, fat, and one gentle improvement idea after scanning a meal.",
+          },
+          {
+            icon: TrendingUp,
+            title: "Health dashboard example",
+            body: "Track the basics without tiny widgets: water, weight, meals, steps, and recent changes.",
+          },
+          {
+            icon: Bot,
+            title: "AI assistant example",
+            body: "Ask common questions like HbA1c, ghee, protein, or blood pressure in simple language.",
+          },
+        ].map(({ icon: Icon, title, body }) => (
+          <div key={title} className="rounded-2xl border border-border bg-white p-6 dark:bg-card">
+            <Icon className="h-6 w-6 text-primary" strokeWidth={1.8} />
+            <h3 className="mt-6 text-lg font-semibold text-foreground">{title}</h3>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">{body}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TrustSection() {
+  return (
+    <section className="px-4 py-20 sm:px-6">
+      <div className="mx-auto grid max-w-[1120px] gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+        <div>
+          <h2 className="text-2xl font-semibold text-foreground">Built for trust.</h2>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            Health data is personal. Swastha keeps explanations calm, privacy visible, and medical claims limited.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            [ShieldCheck, "General wellness information, not diagnosis."],
+            [Lock, "Your reports and health data stay private."],
+            [FileText, "Reference ranges stay visible where available."],
+            [Droplets, "Delete your information anytime."],
+          ].map(([Icon, text]) => (
+            <div key={text as string} className="flex gap-3 rounded-xl border border-border bg-white p-4 dark:bg-card">
+              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" strokeWidth={1.8} />
+              <p className="text-sm leading-6 text-muted-foreground">{text as string}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BlogPreview({ posts }: { posts: BlogPost[] }) {
+  return (
+    <section className="bg-muted px-4 py-20 sm:px-6">
+      <div className="mx-auto max-w-[1120px]">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <h2 className="text-2xl font-semibold text-foreground">Learn in plain language.</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Short explanations for everyday health choices.</p>
+          </div>
+          <Link href="/learn" className="inline-flex items-center gap-2 font-semibold text-primary">
+            Explore courses
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        {posts.length === 0 ? (
+          <div className="mt-8 rounded-2xl border border-border bg-white p-6 text-muted-foreground">
+            Articles will appear here once your content database is connected.
+          </div>
+        ) : (
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {posts.slice(0, 3).map((post) => (
+              <Link key={post.id} href={`/blog/${post.slug}`} className="overflow-hidden rounded-2xl border border-border bg-white">
+                {post.thumbnailUrl && (
+                  <div className="relative aspect-video overflow-hidden">
+                    <Image src={post.thumbnailUrl} alt={post.title} fill className="object-cover" />
+                  </div>
+                )}
+                <div className="p-5">
+                  <h3 className="line-clamp-2 text-base font-semibold text-foreground">{post.title}</h3>
+                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{post.summary}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function FinalCta() {
+  return (
+    <section className="px-4 py-20 sm:px-6">
+      <div className="mx-auto max-w-[760px] text-center">
+        <h2 className="text-2xl font-semibold text-foreground">Start with your next meal.</h2>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          A small, clear health habit is easier to keep than a complicated dashboard.
+        </p>
         <Link
-          href={lp("/blog")}
-          className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-black dark:hover:text-white transition-colors duration-300 tracking-wider"
+          href="/hub/food/scan"
+          className="mt-6 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#125745]"
         >
-          {t("blog.goToBlog")}
+          Scan My Food
+          <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     </section>
@@ -433,67 +323,23 @@ function BlogPreview({ posts }: { posts: BlogPost[] }) {
 }
 
 function Footer() {
-  const { t } = useTranslation("landing");
-  const lp = useLocalePath();
-
   return (
-    <footer className="max-w-4xl mx-auto px-6 py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
-      <div className="flex flex-col md:flex-row justify-between gap-12">
-        <div>
-          <p className="text-base font-light tracking-[0.3em] text-black dark:text-white">
-            OH
-          </p>
-          <p className="text-xs text-neutral-300 dark:text-neutral-700 mt-3 font-light">
-            &copy; {new Date().getFullYear()} Open Health
-          </p>
+    <footer className="border-t border-border bg-white px-4 py-10 sm:px-6 dark:bg-card">
+      <div className="mx-auto flex max-w-[1120px] flex-col justify-between gap-6 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-primary">
+            <HeartPulse className="h-4.5 w-4.5" />
+          </span>
+          <div>
+            <p className="font-semibold text-foreground">Swastha</p>
+            <p className="text-sm text-muted-foreground">Understand your health, one day at a time.</p>
+          </div>
         </div>
-
-        <div className="flex gap-16 text-sm">
-          <div className="space-y-4">
-            <p className="text-[10px] text-neutral-400 dark:text-neutral-600 uppercase tracking-[0.2em]">
-              {t("footer.product")}
-            </p>
-            <Link
-              href="/hub"
-              className="block text-neutral-500 hover:text-black dark:hover:text-white transition-colors duration-300 text-xs"
-            >
-              {t("footer.getStarted")}
-            </Link>
-            <Link
-              href={lp("/docs")}
-              className="block text-neutral-500 hover:text-black dark:hover:text-white transition-colors duration-300 text-xs"
-            >
-              {t("footer.installGuide")}
-            </Link>
-            <Link
-              href={lp("/privacy")}
-              className="block text-neutral-500 hover:text-black dark:hover:text-white transition-colors duration-300 text-xs"
-            >
-              {t("footer.privacyPolicy")}
-            </Link>
-          </div>
-          <div className="space-y-4">
-            <p className="text-[10px] text-neutral-400 dark:text-neutral-600 uppercase tracking-[0.2em]">
-              {t("footer.community")}
-            </p>
-            <Link
-              href="https://line.me/ti/g2/yoiSxP0jx7pJDEFjQtFLu87dwRsKIGnFIIkV3g?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-neutral-500 hover:text-black dark:hover:text-white transition-colors duration-300 text-xs"
-            >
-              {t("footer.lineCommunity")}
-            </Link>
-            <span className="block text-neutral-500 text-xs">
-              {t("footer.githubComingSoon")}
-            </span>
-            <Link
-              href={lp("/blog")}
-              className="block text-neutral-500 hover:text-black dark:hover:text-white transition-colors duration-300 text-xs"
-            >
-              {t("footer.blog")}
-            </Link>
-          </div>
+        <div className="flex flex-wrap gap-4 text-sm font-medium text-muted-foreground">
+          <Link href="/hub/food/scan">Food</Link>
+          <Link href="/hub/chat">AI Assistant</Link>
+          <Link href="/hub/documents">Reports</Link>
+          <Link href="/privacy">Privacy</Link>
         </div>
       </div>
     </footer>
@@ -504,12 +350,12 @@ export function LandingContent({ posts }: { posts: BlogPost[] }) {
   return (
     <>
       <Hero />
-
-      <div className="w-12 h-[1px] bg-black/[0.06] dark:bg-white/[0.06] mx-auto" />
-
-      <Philosophy />
-      <FeatureShowcase />
+      <ValueStatement />
+      <ToolCards />
+      <ExampleSections />
+      <TrustSection />
       <BlogPreview posts={posts} />
+      <FinalCta />
       <Footer />
     </>
   );

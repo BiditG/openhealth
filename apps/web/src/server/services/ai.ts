@@ -4,88 +4,233 @@ import type { NutritionRecognitionResult } from "@open-health/shared/types";
 const nutritionLabelSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
-    foodName: { type: SchemaType.STRING, description: "食品名稱" },
-    brand: { type: SchemaType.STRING, description: "品牌名稱", nullable: true },
-    servingSize: { type: SchemaType.NUMBER, description: "每份份量數值" },
-    servingUnit: { type: SchemaType.STRING, description: "份量單位 (g/ml/個)" },
-    calories: { type: SchemaType.NUMBER, description: "熱量 kcal" },
-    proteinG: { type: SchemaType.NUMBER, description: "蛋白質 g" },
-    fatG: { type: SchemaType.NUMBER, description: "脂肪 g" },
-    carbsG: { type: SchemaType.NUMBER, description: "碳水化合物 g" },
-    sodiumMg: { type: SchemaType.NUMBER, description: "鈉 mg", nullable: true },
-    sugarG: { type: SchemaType.NUMBER, description: "糖 g", nullable: true },
-    fiberG: { type: SchemaType.NUMBER, description: "膳食纖維 g", nullable: true },
-    saturatedFatG: { type: SchemaType.NUMBER, description: "飽和脂肪 g", nullable: true },
-    transFatG: { type: SchemaType.NUMBER, description: "反式脂肪 g", nullable: true },
-    cholesterolMg: { type: SchemaType.NUMBER, description: "膽固醇 mg", nullable: true },
-    calciumMg: { type: SchemaType.NUMBER, description: "鈣 mg", nullable: true },
-    ironMg: { type: SchemaType.NUMBER, description: "鐵 mg", nullable: true },
-    potassiumMg: { type: SchemaType.NUMBER, description: "鉀 mg", nullable: true },
-    vitaminAMcg: { type: SchemaType.NUMBER, description: "維生素A mcg (RAE)", nullable: true },
-    vitaminCMg: { type: SchemaType.NUMBER, description: "維生素C mg", nullable: true },
-    vitaminDMcg: { type: SchemaType.NUMBER, description: "維生素D mcg", nullable: true },
-    notes: { type: SchemaType.STRING, description: "標籤上的額外資訊，如過敏原警告、素食標示、產地、保存方式等", nullable: true },
+    foodName: { type: SchemaType.STRING, description: "Food name" },
+    brand: { type: SchemaType.STRING, description: "Brand name", nullable: true },
+    servingSize: { type: SchemaType.NUMBER, description: "Serving size number" },
+    servingUnit: { type: SchemaType.STRING, description: "Serving unit such as g, ml, piece, cup, or plate" },
+    calories: { type: SchemaType.NUMBER, description: "Calories in kcal" },
+    proteinG: { type: SchemaType.NUMBER, description: "Protein in grams" },
+    fatG: { type: SchemaType.NUMBER, description: "Fat in grams" },
+    carbsG: { type: SchemaType.NUMBER, description: "Carbohydrates in grams" },
+    sodiumMg: { type: SchemaType.NUMBER, description: "Sodium in mg", nullable: true },
+    sugarG: { type: SchemaType.NUMBER, description: "Sugar in grams", nullable: true },
+    fiberG: { type: SchemaType.NUMBER, description: "Fiber in grams", nullable: true },
+    saturatedFatG: { type: SchemaType.NUMBER, description: "Saturated fat in grams", nullable: true },
+    transFatG: { type: SchemaType.NUMBER, description: "Trans fat in grams", nullable: true },
+    cholesterolMg: { type: SchemaType.NUMBER, description: "Cholesterol in mg", nullable: true },
+    calciumMg: { type: SchemaType.NUMBER, description: "Calcium in mg", nullable: true },
+    ironMg: { type: SchemaType.NUMBER, description: "Iron in mg", nullable: true },
+    potassiumMg: { type: SchemaType.NUMBER, description: "Potassium in mg", nullable: true },
+    vitaminAMcg: { type: SchemaType.NUMBER, description: "Vitamin A in mcg RAE", nullable: true },
+    vitaminCMg: { type: SchemaType.NUMBER, description: "Vitamin C in mg", nullable: true },
+    vitaminDMcg: { type: SchemaType.NUMBER, description: "Vitamin D in mcg", nullable: true },
+    notes: { type: SchemaType.STRING, description: "Extra label details such as allergens, vegetarian marks, origin, or storage instructions", nullable: true },
     inferredFields: {
       type: SchemaType.ARRAY,
       items: { type: SchemaType.STRING },
-      description: "哪些欄位是 AI 根據食品知識推斷的（不是從標籤上直接讀到的）。欄位名稱使用 camelCase，例如 proteinG, fatG, carbsG, calories 等",
+      description: "Fields inferred by AI from food knowledge instead of read directly from the label. Use camelCase field names.",
     },
   },
   required: ["foodName", "servingSize", "servingUnit", "calories", "proteinG", "fatG", "carbsG", "inferredFields"],
 };
 
-const LABEL_SYSTEM_PROMPT = `你是一個台灣食品營養標籤辨識專家。請分析圖片中的營養標示，提取以下資訊：
+const LABEL_SYSTEM_PROMPT = `You are a nutrition label extraction assistant for consumer health tracking.
 
-規則：
-1. 優先讀取「每份」的營養數值。如果只有「每100g/ml」的數值，則以 100 為 servingSize。
-2. 食品名稱請從包裝上辨識，如果看不到名稱就填「未知食品」。
-3. 品牌請從包裝上辨識，找不到可以為 null。
-4. servingUnit 通常是 "g" 或 "ml"。
-5. 所有數值請轉換為正確的單位：熱量為 kcal、蛋白質/脂肪/碳水為 g、鈉/鈣/鐵/鉀為 mg、維生素A/D 為 mcg、維生素C 為 mg。
-6. 如果標示上寫的是 kJ（千焦），請轉換為 kcal（除以 4.184）。
-7. 找不到的可選欄位請設為 null。
-8. 台灣營養標示常見格式：每份、每100公克、每日參考值百分比。請優先使用「每份」數值。
-9. notes 欄位：如果標籤上有過敏原警告、素食/純素標示、產地、保存方式等額外資訊，整理成一段簡短文字。沒有就設為 null。
-10. **AI 推斷規則**：如果營養標籤上缺少某些營養素數值（例如只有熱量但沒有蛋白質/脂肪/碳水，或某些數值明顯不合理如雞胸肉 0g 蛋白質），請根據食品名稱和你的營養學知識推斷合理的數值填入。將所有你推斷（而非直接從標籤讀取）的欄位名稱列在 inferredFields 陣列中。如果所有數值都是從標籤直接讀取的，inferredFields 設為空陣列 []。`;
+Rules:
+1. Prefer per-serving nutrition values. If only per-100g/ml values are available, use 100 as servingSize.
+2. Read the food name from the package. If it is not visible, use "Unknown food".
+3. Read the brand from the package when visible; otherwise use null.
+4. servingUnit is usually "g", "ml", "piece", "cup", or "plate".
+5. Convert values to the correct units: kcal for calories, g for protein/fat/carbs/fiber/sugar, mg for sodium/calcium/iron/potassium/cholesterol, mcg for vitamins A/D, and mg for vitamin C.
+6. If energy is shown as kJ, convert to kcal by dividing by 4.184.
+7. Optional fields that cannot be read should be null.
+8. For labels from Nepal, India, or other South Asian markets, carefully handle per-serving, per-100g, and daily value formats.
+9. notes should briefly capture allergens, vegetarian/vegan marks, origin, storage instructions, or preparation notes. Use null if none are present.
+10. If some nutrients are missing or clearly impossible, infer reasonable values from food knowledge and list inferred field names in inferredFields. If all values are directly read from the label, inferredFields must be [].`;
 
-const ESTIMATION_SYSTEM_PROMPT = `你是一個台灣營養學專家。使用者會用文字描述他吃了什麼食物、大概的份量或重量，請根據你的知識估算該食物的營養成分。
+const ESTIMATION_SYSTEM_PROMPT = `You are a nutrition estimation assistant for Nepal and South Asian meals. Users may describe food in English, Nepali Unicode, or Romanized Nepali such as "dal bhat tarkari", "2 plate momo", "dherai bhat khaye", or "chiura ra masu".
 
-規則：
-1. 根據食物描述推算合理的份量（如果使用者有提供重量就用使用者提供的）。
-2. servingSize 為該份食物的總重量（g）或容量（ml），servingUnit 通常是 "g" 或 "ml"。
-3. 所有營養數值都是針對使用者描述的這一份食物的總量。
-4. 熱量為 kcal、蛋白質/脂肪/碳水為 g、鈉/鈣/鐵/鉀為 mg、膽固醇為 mg、維生素A/D 為 mcg、維生素C 為 mg。
-5. 盡量估算所有欄位，如果真的無法推測的可選欄位可以設為 null。
-6. 食品名稱請用繁體中文，簡潔描述（例如：「涼麵」「雞腿便當」）。
-7. 如果使用者描述不清楚，用台灣常見的份量來估算。
-8. notes 欄位：將使用者描述的食材、份量、做法等整理成一段簡短備註。例如使用者說「雞胸肉200g、花椰菜150g、橄欖油10ml炒的」，notes 就寫「雞胸肉 200g、花椰菜 150g、橄欖油 10ml，炒」。如果使用者只說了食物名稱沒有額外細節，notes 設為 null。
+Rules:
+1. Estimate a reasonable portion from the user's description. If the user provides weight or volume, use that.
+2. servingSize is the total estimated weight or volume for the described portion. servingUnit is usually "g", "ml", "piece", "cup", "bowl", or "plate".
+3. Nutrition values are totals for the user's described portion.
+4. Use kcal for calories, g for protein/fat/carbs/fiber/sugar, mg for sodium/calcium/iron/potassium/cholesterol, mcg for vitamins A/D, and mg for vitamin C.
+5. Estimate fields when reasonable; optional fields that cannot be estimated should be null.
+6. Return foodName in English or Romanized Nepali, concise and user-friendly.
+7. If the description is vague, use common Nepal/South Asian household portions.
+8. notes should summarize ingredients, portion, and preparation when available. Use null if no details are available.
+9. Nutrition estimates are not medically precise and can vary by portion size and preparation.
 
-請回傳嚴格的 JSON 格式（不要有多餘文字），欄位如下：
+Return strict JSON only, with no extra text:
 {
-  "foodName": "食品名稱（繁體中文）",
+  "foodName": "Food name",
   "brand": null,
-  "servingSize": 數字（克或毫升）,
-  "servingUnit": "g" 或 "ml",
-  "calories": 數字（kcal）,
-  "proteinG": 數字（g）,
-  "fatG": 數字（g）,
-  "carbsG": 數字（g）,
-  "sodiumMg": 數字或null（mg）,
-  "sugarG": 數字或null（g）,
-  "fiberG": 數字或null（g）,
-  "saturatedFatG": 數字或null（g）,
-  "transFatG": 數字或null（g）,
-  "cholesterolMg": 數字或null（mg）,
-  "calciumMg": 數字或null（mg）,
-  "ironMg": 數字或null（mg）,
-  "potassiumMg": 數字或null（mg）,
-  "vitaminAMcg": 數字或null（mcg）,
-  "vitaminCMg": 數字或null（mg）,
-  "vitaminDMcg": 數字或null（mcg）,
-  "notes": "食材與做法備註，或 null"
+  "servingSize": number,
+  "servingUnit": "g",
+  "calories": number,
+  "proteinG": number,
+  "fatG": number,
+  "carbsG": number,
+  "sodiumMg": number or null,
+  "sugarG": number or null,
+  "fiberG": number or null,
+  "saturatedFatG": number or null,
+  "transFatG": number or null,
+  "cholesterolMg": number or null,
+  "calciumMg": number or null,
+  "ironMg": number or null,
+  "potassiumMg": number or null,
+  "vitaminAMcg": number or null,
+  "vitaminCMg": number or null,
+  "vitaminDMcg": number or null,
+  "notes": "Ingredient and preparation notes, or null"
 }
 
-只回傳 JSON，不要有任何其他文字。`;
+Return JSON only.`;
+
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.1";
+
+function getOllamaHeaders() {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.OLLAMA_API_KEY) {
+    headers.Authorization = `Bearer ${process.env.OLLAMA_API_KEY}`;
+  }
+  return headers;
+}
+
+function extractJsonObject(text: string) {
+  let jsonStr = text.trim();
+  const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1].trim();
+  }
+  const objectStart = jsonStr.indexOf("{");
+  const arrayStart = jsonStr.indexOf("[");
+  const start =
+    objectStart === -1
+      ? arrayStart
+      : arrayStart === -1
+        ? objectStart
+        : Math.min(objectStart, arrayStart);
+  const objectEnd = jsonStr.lastIndexOf("}");
+  const arrayEnd = jsonStr.lastIndexOf("]");
+  const end = Math.max(objectEnd, arrayEnd);
+  if (start >= 0 && end > start) {
+    jsonStr = jsonStr.slice(start, end + 1);
+  }
+  return JSON.parse(jsonStr);
+}
+
+async function callOllamaJson(
+  system: string,
+  user: string,
+  images?: string[]
+) {
+  const response = await fetch(`${OLLAMA_BASE_URL.replace(/\/$/, "")}/api/chat`, {
+    method: "POST",
+    headers: getOllamaHeaders(),
+    body: JSON.stringify({
+      model: OLLAMA_MODEL,
+      stream: false,
+      format: "json",
+      options: { temperature: 0.2 },
+      messages: [
+        { role: "system", content: system },
+        {
+          role: "user",
+          content: user,
+          ...(images?.length ? { images } : {}),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Ollama request failed (${response.status}): ${errorText}`);
+  }
+
+  const result = await response.json();
+  const content = result.message?.content ?? result.response;
+  if (!content) {
+    throw new Error("Ollama did not return a response");
+  }
+  return extractJsonObject(content);
+}
+
+function normalizeNutritionData(data: unknown): NutritionRecognitionResult | null {
+  if (Array.isArray(data)) {
+    if (data.length === 0) return null;
+    if (data.length === 1) return normalizeNutritionData(data[0]);
+
+    const rows = data.filter((item): item is Record<string, unknown> => !!item && typeof item === "object");
+    const names = rows.map((d) => d.foodName).filter(Boolean);
+    const notes = rows.map((d) => d.notes).filter(Boolean).join("; ");
+    const sumNum = (key: string) => {
+      const vals = rows
+        .map((d) => d[key])
+        .filter((v: unknown): v is number => typeof v === "number" && Number.isFinite(v));
+      return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) : null;
+    };
+
+    return {
+      foodName: names.join(" + ") || "Mixed meal",
+      brand: null,
+      servingSize: sumNum("servingSize") ?? 100,
+      servingUnit: String(rows[0]?.servingUnit || "g"),
+      calories: sumNum("calories") ?? 0,
+      proteinG: sumNum("proteinG") ?? 0,
+      fatG: sumNum("fatG") ?? 0,
+      carbsG: sumNum("carbsG") ?? 0,
+      sodiumMg: sumNum("sodiumMg"),
+      sugarG: sumNum("sugarG"),
+      fiberG: sumNum("fiberG"),
+      saturatedFatG: sumNum("saturatedFatG"),
+      transFatG: sumNum("transFatG"),
+      cholesterolMg: sumNum("cholesterolMg"),
+      calciumMg: sumNum("calciumMg"),
+      ironMg: sumNum("ironMg"),
+      potassiumMg: sumNum("potassiumMg"),
+      vitaminAMcg: sumNum("vitaminAMcg"),
+      vitaminCMg: sumNum("vitaminCMg"),
+      vitaminDMcg: sumNum("vitaminDMcg"),
+      notes: notes || null,
+      inferredFields: [
+        ...new Set(rows.flatMap((d) => (Array.isArray(d.inferredFields) ? d.inferredFields : []))),
+      ] as string[],
+    };
+  }
+
+  if (!data || typeof data !== "object") return null;
+  const row = data as Record<string, unknown>;
+  if (!row.foodName || row.calories == null) return null;
+
+  return {
+    foodName: String(row.foodName),
+    brand: row.brand ? String(row.brand) : null,
+    servingSize: Number(row.servingSize ?? 100),
+    servingUnit: String(row.servingUnit ?? "g"),
+    calories: Number(row.calories ?? 0),
+    proteinG: Number(row.proteinG ?? 0),
+    fatG: Number(row.fatG ?? 0),
+    carbsG: Number(row.carbsG ?? 0),
+    sodiumMg: row.sodiumMg == null ? null : Number(row.sodiumMg),
+    sugarG: row.sugarG == null ? null : Number(row.sugarG),
+    fiberG: row.fiberG == null ? null : Number(row.fiberG),
+    saturatedFatG: row.saturatedFatG == null ? null : Number(row.saturatedFatG),
+    transFatG: row.transFatG == null ? null : Number(row.transFatG),
+    cholesterolMg: row.cholesterolMg == null ? null : Number(row.cholesterolMg),
+    calciumMg: row.calciumMg == null ? null : Number(row.calciumMg),
+    ironMg: row.ironMg == null ? null : Number(row.ironMg),
+    potassiumMg: row.potassiumMg == null ? null : Number(row.potassiumMg),
+    vitaminAMcg: row.vitaminAMcg == null ? null : Number(row.vitaminAMcg),
+    vitaminCMg: row.vitaminCMg == null ? null : Number(row.vitaminCMg),
+    vitaminDMcg: row.vitaminDMcg == null ? null : Number(row.vitaminDMcg),
+    notes: row.notes ? String(row.notes) : null,
+    inferredFields: Array.isArray(row.inferredFields) ? row.inferredFields.map(String) : [],
+  };
+}
 
 export type NutritionLabelResult =
   | { success: true; data: NutritionRecognitionResult }
@@ -98,9 +243,23 @@ export type NutritionEstimationResult =
 export async function recognizeNutritionLabel(
   base64Image: string
 ): Promise<NutritionLabelResult> {
+  try {
+    const data = await callOllamaJson(
+      LABEL_SYSTEM_PROMPT,
+      "Extract nutrition facts from this image and return strict JSON matching the requested schema.",
+      [base64Image]
+    );
+    const normalized = normalizeNutritionData(data);
+    if (normalized) {
+      return { success: true, data: normalized };
+    }
+  } catch (error) {
+    console.warn("Ollama nutrition label recognition failed, checking fallback:", error);
+  }
+
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
-    return { success: false, error: "未設定 Google AI API Key" };
+    return { success: false, error: "Ollama is unavailable and no fallback vision API key is configured" };
   }
 
   try {
@@ -131,7 +290,7 @@ export async function recognizeNutritionLabel(
     console.error("Nutrition label recognition error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "辨識失敗，請重試",
+      error: error instanceof Error ? error.message : "Recognition failed. Please try again.",
     };
   }
 }
@@ -139,13 +298,24 @@ export async function recognizeNutritionLabel(
 export async function estimateNutritionFromText(
   description: string
 ): Promise<NutritionEstimationResult> {
-  const apiKey = process.env.MINIMAX_API_KEY;
-  if (!apiKey) {
-    return { success: false, error: "未設定 MiniMax API Key" };
+  if (!description.trim()) {
+    return { success: false, error: "Please enter a food description" };
   }
 
-  if (!description.trim()) {
-    return { success: false, error: "請輸入食物描述" };
+  try {
+    const data = await callOllamaJson(ESTIMATION_SYSTEM_PROMPT, description);
+    const normalized = normalizeNutritionData(data);
+    if (!normalized) {
+      return { success: false, error: "AI returned an incomplete format" };
+    }
+    return { success: true, data: normalized };
+  } catch (error) {
+    console.warn("Ollama food estimation failed, checking fallback:", error);
+  }
+
+  const apiKey = process.env.MINIMAX_API_KEY;
+  if (!apiKey) {
+    return { success: false, error: "Ollama is unavailable and no fallback text AI key is configured" };
   }
 
   try {
@@ -172,7 +342,7 @@ export async function estimateNutritionFromText(
     if (!response.ok) {
       const errorText = await response.text();
       console.error("MiniMax API error:", response.status, errorText);
-      return { success: false, error: `API 請求失敗 (${response.status})` };
+      return { success: false, error: `API request failed (${response.status})` };
     }
 
     const result = await response.json();
@@ -181,79 +351,18 @@ export async function estimateNutritionFromText(
       console.error("MiniMax API error:", result.base_resp);
       return {
         success: false,
-        error: `AI 服務錯誤: ${result.base_resp?.status_msg || "未知錯誤"}`,
+        error: `AI service error: ${result.base_resp?.status_msg || "Unknown error"}`,
       };
     }
 
     const content = result.choices?.[0]?.message?.content;
     if (!content) {
-      return { success: false, error: "AI 未回傳結果" };
+      return { success: false, error: "AI did not return a result" };
     }
 
-    let jsonStr = content.trim();
-    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1].trim();
-    }
-
-    let data = JSON.parse(jsonStr);
-
-    // MiniMax may return an array when user describes multiple foods — merge into one
-    if (Array.isArray(data)) {
-      if (data.length === 0) {
-        return { success: false, error: "AI 回傳格式不完整" };
-      }
-      if (data.length === 1) {
-        data = data[0];
-      } else {
-        // Merge multiple items into a combined food entry
-        const names = data.map((d: Record<string, unknown>) => d.foodName).filter(Boolean);
-        const notes = data
-          .map((d: Record<string, unknown>) => d.notes)
-          .filter(Boolean)
-          .join("；");
-        const sumNum = (key: string) => {
-          const vals = data
-            .map((d: Record<string, unknown>) => d[key])
-            .filter((v: unknown): v is number => typeof v === "number");
-          return vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) : null;
-        };
-        data = {
-          foodName: names.join(" + "),
-          brand: null,
-          servingSize: sumNum("servingSize") ?? 100,
-          servingUnit: data[0].servingUnit || "g",
-          calories: sumNum("calories"),
-          proteinG: sumNum("proteinG"),
-          fatG: sumNum("fatG"),
-          carbsG: sumNum("carbsG"),
-          sodiumMg: sumNum("sodiumMg"),
-          sugarG: sumNum("sugarG"),
-          fiberG: sumNum("fiberG"),
-          saturatedFatG: sumNum("saturatedFatG"),
-          transFatG: sumNum("transFatG"),
-          cholesterolMg: sumNum("cholesterolMg"),
-          calciumMg: sumNum("calciumMg"),
-          ironMg: sumNum("ironMg"),
-          potassiumMg: sumNum("potassiumMg"),
-          vitaminAMcg: sumNum("vitaminAMcg"),
-          vitaminCMg: sumNum("vitaminCMg"),
-          vitaminDMcg: sumNum("vitaminDMcg"),
-          notes: notes || null,
-          inferredFields: [
-            ...new Set(
-              data.flatMap(
-                (d: Record<string, unknown>) =>
-                  (d.inferredFields as string[]) ?? []
-              )
-            ),
-          ],
-        };
-      }
-    }
-
-    if (!data.foodName || data.calories == null) {
-      return { success: false, error: "AI 回傳格式不完整" };
+    const data = normalizeNutritionData(extractJsonObject(content));
+    if (!data) {
+      return { success: false, error: "AI returned an incomplete format" };
     }
 
     return { success: true, data };
@@ -261,7 +370,7 @@ export async function estimateNutritionFromText(
     console.error("Food estimation error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "估算失敗，請重試",
+      error: error instanceof Error ? error.message : "Estimation failed. Please try again.",
     };
   }
 }

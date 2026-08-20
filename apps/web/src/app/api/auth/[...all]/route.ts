@@ -1,4 +1,10 @@
-import { auth } from "@/server/auth";
-import { toNextJsHandler } from "better-auth/next-js";
+import { NextResponse } from "next/server";
 
-export const { GET, POST } = toNextJsHandler(auth);
+export function GET() {
+  return NextResponse.json(
+    { error: "Better Auth routes were replaced by Supabase Auth." },
+    { status: 410 },
+  );
+}
+
+export const POST = GET;

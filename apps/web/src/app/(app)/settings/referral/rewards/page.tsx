@@ -212,7 +212,7 @@ export default function RewardsPage() {
                         {statusLabel(reward.status, t)}
                       </p>
                       <p className="text-xs text-neutral-400">
-                        {new Date(reward.createdAt).toLocaleDateString("zh-TW")}
+                        {new Date(reward.createdAt).toLocaleDateString("en-US")}
                       </p>
                     </div>
                   </div>

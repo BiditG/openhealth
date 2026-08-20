@@ -47,10 +47,31 @@ export const NUTRIENT_IDS = {
   vitaminA: 12,
   vitaminC: 13,
   vitaminD: 14,
+  vitaminE: 15,
+  vitaminK: 16,
+  vitaminB1: 17,
+  vitaminB2: 18,
+  vitaminB3: 19,
+  vitaminB5: 20,
+  vitaminB6: 21,
+  biotin: 22,
+  folate: 23,
+  vitaminB12: 24,
+  choline: 25,
   calcium: 26,
   iron: 27,
+  magnesium: 28,
+  phosphorus: 29,
   potassium: 30,
   sodium: 31,
+  zinc: 32,
+  copper: 33,
+  manganese: 34,
+  selenium: 35,
+  chromium: 36,
+  molybdenum: 37,
+  iodine: 38,
+  water: 39,
 } as const;
 
 // Macro nutrient IDs already shown in the daily summary (protein, fat, carbs, fiber)
@@ -62,10 +83,10 @@ export const MACRO_NUTRIENT_IDS: readonly number[] = [
 ];
 
 export const NUTRIENT_CATEGORY_LABELS: Record<string, string> = {
-  macro: "巨量營養素",
-  vitamin: "維生素",
-  mineral: "礦物質",
-  other: "其他",
+  macro: "Macros",
+  vitamin: "Vitamins",
+  mineral: "Minerals",
+  other: "Other",
 };
 
 // DB nutrient name → i18n key mapping (for use with nutrients.json translations)
@@ -113,55 +134,6 @@ export const NUTRIENT_I18N_KEY: Record<string, string> = {
   Alcohol: "alcohol",
 };
 
-// Nutrient name translations (English → Traditional Chinese)
-export const NUTRIENT_NAME_ZH: Record<string, string> = {
-  // 巨量營養素
-  Protein: "蛋白質",
-  "Total Fat": "總脂肪",
-  "Total Carbohydrate": "總碳水化合物",
-  "Dietary Fiber": "膳食纖維",
-  "Total Sugars": "總糖",
-  "Added Sugars": "添加糖",
-  "Saturated Fat": "飽和脂肪",
-  "Trans Fat": "反式脂肪",
-  "Monounsaturated Fat": "單元不飽和脂肪",
-  "Polyunsaturated Fat": "多元不飽和脂肪",
-  Cholesterol: "膽固醇",
-  // 維生素
-  "Vitamin A": "維生素 A",
-  "Vitamin C": "維生素 C",
-  "Vitamin D": "維生素 D",
-  "Vitamin E": "維生素 E",
-  "Vitamin K": "維生素 K",
-  "Thiamin (B1)": "硫胺素 (B1)",
-  "Riboflavin (B2)": "核黃素 (B2)",
-  "Niacin (B3)": "菸鹼素 (B3)",
-  "Pantothenic Acid (B5)": "泛酸 (B5)",
-  "Vitamin B6": "維生素 B6",
-  "Biotin (B7)": "生物素 (B7)",
-  "Folate (B9)": "葉酸 (B9)",
-  "Vitamin B12": "維生素 B12",
-  Choline: "膽鹼",
-  // 礦物質
-  Calcium: "鈣",
-  Iron: "鐵",
-  Magnesium: "鎂",
-  Phosphorus: "磷",
-  Potassium: "鉀",
-  Sodium: "鈉",
-  Zinc: "鋅",
-  Copper: "銅",
-  Manganese: "錳",
-  Selenium: "硒",
-  Chromium: "鉻",
-  Molybdenum: "鉬",
-  Iodine: "碘",
-  // 其他
-  Water: "水分",
-  Caffeine: "咖啡因",
-  Alcohol: "酒精",
-};
-
 export const DEFAULT_SERVING_SIZE = 100;
 
 export const PLANS = ["free", "pro"] as const;
@@ -206,17 +178,17 @@ export const DEFAULT_EXERCISE_CALORIE_GOAL = 300;
 export const DEFAULT_WEIGHT_KG = 70;
 
 export const EXERCISE_CATEGORY_LABELS: Record<string, string> = {
-  cardio: "有氧",
-  strength: "肌力",
-  flexibility: "柔軟度",
-  sport: "運動",
-  other: "其他",
+  cardio: "Cardio",
+  strength: "Strength",
+  flexibility: "Flexibility",
+  sport: "Sport",
+  other: "Other",
 };
 
 export const EXERCISE_INTENSITY_LABELS: Record<string, string> = {
-  low: "低",
-  moderate: "中",
-  high: "高",
+  low: "Low",
+  moderate: "Moderate",
+  high: "High",
 };
 
 // Workout tracking
@@ -225,9 +197,9 @@ export const PR_TYPES = ["weight", "1rm", "volume", "reps"] as const;
 export const SET_TYPES = ["normal", "warmup", "dropset"] as const;
 
 export const SET_TYPE_LABELS: Record<string, string> = {
-  normal: "正式組",
-  warmup: "暖身組",
-  dropset: "遞減組",
+  normal: "Working set",
+  warmup: "Warmup",
+  dropset: "Drop set",
 };
 
 export const APP_NAME = "Open Health";
@@ -270,10 +242,10 @@ export type RewardStatus = (typeof REWARD_STATUSES)[keyof typeof REWARD_STATUSES
 
 // Fasting protocols
 export const FASTING_PROTOCOLS = [
-  { value: "16_8" as const, label: "16:8", fasting: 16, eating: 8, desc: "16 小時斷食 / 8 小時進食" },
-  { value: "18_6" as const, label: "18:6", fasting: 18, eating: 6, desc: "18 小時斷食 / 6 小時進食" },
-  { value: "20_4" as const, label: "20:4", fasting: 20, eating: 4, desc: "20 小時斷食 / 4 小時進食" },
-  { value: "omad" as const, label: "OMAD", fasting: 23, eating: 1, desc: "每天只吃一餐" },
+  { value: "16_8" as const, label: "16:8", fasting: 16, eating: 8, desc: "16 hours fasting / 8 hours eating" },
+  { value: "18_6" as const, label: "18:6", fasting: 18, eating: 6, desc: "18 hours fasting / 6 hours eating" },
+  { value: "20_4" as const, label: "20:4", fasting: 20, eating: 4, desc: "20 hours fasting / 4 hours eating" },
+  { value: "omad" as const, label: "OMAD", fasting: 23, eating: 1, desc: "One meal a day" },
 ] as const;
 
 export type FastingProtocol = (typeof FASTING_PROTOCOLS)[number]["value"];
@@ -283,9 +255,9 @@ export const SLEEP_PHASES = ["awake", "light", "deep", "rem"] as const;
 export const SLEEP_DETECTION_METHODS = ["accelerometer", "microphone", "both"] as const;
 
 export const SLEEP_PHASE_LABELS: Record<string, string> = {
-  awake: "清醒",
-  light: "淺睡",
-  deep: "深睡",
+  awake: "Awake",
+  light: "Light sleep",
+  deep: "Deep sleep",
   rem: "REM",
 };
 
@@ -297,17 +269,17 @@ export const SLEEP_PHASE_COLORS: Record<string, string> = {
 };
 
 export const SLEEP_FACTORS = [
-  { id: "caffeine", label: "\u5496\u5561\u56e0", icon: "\u2615" },
-  { id: "alcohol", label: "\u9152\u7cbe", icon: "\ud83c\udf77" },
-  { id: "exercise", label: "\u904b\u52d5", icon: "\ud83c\udfc3" },
-  { id: "stress", label: "\u58d3\u529b\u5927", icon: "\ud83d\ude30" },
-  { id: "late_meal", label: "\u5403\u592a\u665a", icon: "\ud83c\udf7d\ufe0f" },
-  { id: "screen_time", label: "\u9577\u6642\u9593\u7528\u624b\u6a5f", icon: "\ud83d\udcf1" },
-  { id: "reading", label: "\u95b1\u8b80", icon: "\ud83d\udcd6" },
-  { id: "meditation", label: "\u51a5\u60f3", icon: "\ud83e\uddd8" },
-  { id: "medication", label: "\u85e5\u7269", icon: "\ud83d\udc8a" },
-  { id: "sick", label: "\u8eab\u9ad4\u4e0d\u9069", icon: "\ud83e\udd27" },
-  { id: "travel", label: "\u51fa\u5dee/\u65c5\u884c", icon: "\u2708\ufe0f" },
+  { id: "caffeine", label: "Caffeine", icon: "\u2615" },
+  { id: "alcohol", label: "Alcohol", icon: "\ud83c\udf77" },
+  { id: "exercise", label: "Exercise", icon: "\ud83c\udfc3" },
+  { id: "stress", label: "Stress", icon: "\ud83d\ude30" },
+  { id: "late_meal", label: "Late meal", icon: "\ud83c\udf7d\ufe0f" },
+  { id: "screen_time", label: "Screen time", icon: "\ud83d\udcf1" },
+  { id: "reading", label: "Reading", icon: "\ud83d\udcd6" },
+  { id: "meditation", label: "Meditation", icon: "\ud83e\uddd8" },
+  { id: "medication", label: "Medication", icon: "\ud83d\udc8a" },
+  { id: "sick", label: "Unwell", icon: "\ud83e\udd27" },
+  { id: "travel", label: "Travel", icon: "\u2708\ufe0f" },
 ] as const;
 
 export type SleepFactorId = (typeof SLEEP_FACTORS)[number]["id"];
@@ -323,26 +295,26 @@ export const MEDITATION_TYPES = [
 ] as const;
 
 export const MEDITATION_TYPE_LABELS: Record<string, string> = {
-  mindfulness: "正念冥想",
-  breathing: "呼吸練習",
-  body_scan: "身體掃描",
+  mindfulness: "Mindfulness",
+  breathing: "Breathing",
+  body_scan: "Body scan",
 };
 
 export const MEDITATION_SESSION_MODES = ["guided", "unguided", "timer"] as const;
 
 export const MEDITATION_SESSION_MODE_LABELS: Record<string, string> = {
-  guided: "引導式",
-  unguided: "自由練習",
-  timer: "計時器",
+  guided: "Guided",
+  unguided: "Unguided",
+  timer: "Timer",
 };
 
 export const MOOD_LEVELS = [1, 2, 3, 4, 5] as const;
 export const MOOD_LEVEL_LABELS: Record<number, string> = {
-  1: "非常差",
-  2: "不好",
-  3: "一般",
-  4: "不錯",
-  5: "非常好",
+  1: "Very low",
+  2: "Low",
+  3: "Okay",
+  4: "Good",
+  5: "Excellent",
 };
 
 export const FEELING_TAGS = [
@@ -367,24 +339,24 @@ export const FEELING_TAGS = [
 ] as const;
 
 export const FEELING_TAG_LABELS: Record<string, string> = {
-  anxious: "焦慮",
-  stressed: "壓力大",
-  sad: "難過",
-  angry: "生氣",
-  tired: "疲倦",
-  restless: "不安",
-  scattered: "心散",
-  overwhelmed: "壓力爆表",
-  calm: "平靜",
-  happy: "開心",
-  grateful: "感恩",
-  focused: "專注",
-  energized: "有活力",
-  peaceful: "祥和",
-  hopeful: "充滿希望",
-  content: "滿足",
-  relaxed: "放鬆",
-  clear: "清晰",
+  anxious: "Anxious",
+  stressed: "Stressed",
+  sad: "Sad",
+  angry: "Angry",
+  tired: "Tired",
+  restless: "Restless",
+  scattered: "Scattered",
+  overwhelmed: "Overwhelmed",
+  calm: "Calm",
+  happy: "Happy",
+  grateful: "Grateful",
+  focused: "Focused",
+  energized: "Energized",
+  peaceful: "Peaceful",
+  hopeful: "Hopeful",
+  content: "Content",
+  relaxed: "Relaxed",
+  clear: "Clear",
 };
 
 export const MEDITATION_DURATION_PRESETS = [300, 600, 900, 1200, 1800] as const; // 5, 10, 15, 20, 30 min
@@ -399,11 +371,11 @@ export const THROAT_EXERCISE_TARGETS = [
 ] as const;
 
 export const THROAT_EXERCISE_TARGET_LABELS: Record<string, string> = {
-  tongue: "舌頭",
-  soft_palate: "軟顎",
-  jaw: "下顎",
-  cheek: "臉頰",
-  throat: "喉嚨",
+  tongue: "Tongue",
+  soft_palate: "Soft palate",
+  jaw: "Jaw",
+  cheek: "Cheek",
+  throat: "Throat",
 };
 
 export interface ThroatExerciseDefinition {
@@ -454,10 +426,10 @@ export const EYE_EXERCISE_TARGETS = [
 ] as const;
 
 export const EYE_EXERCISE_TARGET_LABELS: Record<string, string> = {
-  extraocular: "外眼肌",
-  ciliary: "睫狀肌",
-  convergence: "輻輳",
-  relaxation: "放鬆",
+  extraocular: "Extraocular",
+  ciliary: "Ciliary",
+  convergence: "Convergence",
+  relaxation: "Relaxation",
 };
 
 export interface EyeExerciseDefinition {

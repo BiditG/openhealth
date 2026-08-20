@@ -147,6 +147,46 @@ export const diaryRouter = router({
       }));
     }),
 
+  getNutrientSummary: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.string(),
+        endDate: z.string(),
+        nutrientIds: z.array(z.number()).min(1).max(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const results = await ctx.db
+        .select({
+          date: diaryEntries.date,
+          nutrientId: foodNutrients.nutrientId,
+          name: nutrientDefinitions.name,
+          unit: nutrientDefinitions.unit,
+          totalAmount: sql<string>`sum(cast(${foodNutrients.amount} as numeric) * cast(${diaryEntries.servingQty} as numeric))`,
+        })
+        .from(diaryEntries)
+        .innerJoin(foodNutrients, eq(foodNutrients.foodId, diaryEntries.foodId))
+        .innerJoin(nutrientDefinitions, eq(nutrientDefinitions.id, foodNutrients.nutrientId))
+        .where(
+          and(
+            eq(diaryEntries.userId, ctx.user.id),
+            sql`${diaryEntries.date} >= ${input.startDate}`,
+            sql`${diaryEntries.date} <= ${input.endDate}`,
+            inArray(foodNutrients.nutrientId, input.nutrientIds)
+          )
+        )
+        .groupBy(diaryEntries.date, foodNutrients.nutrientId, nutrientDefinitions.name, nutrientDefinitions.unit)
+        .orderBy(diaryEntries.date);
+
+      return results.map((r) => ({
+        date: r.date,
+        nutrientId: r.nutrientId,
+        name: r.name,
+        unit: r.unit,
+        totalAmount: Number(r.totalAmount || 0),
+      }));
+    }),
+
   copyMealToDate: protectedProcedure
     .input(copyMealSchema)
     .mutation(async ({ ctx, input }) => {

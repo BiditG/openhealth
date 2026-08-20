@@ -29,7 +29,7 @@ export const blogPosts = pgTable(
     youtubeChannel: varchar("youtube_channel", { length: 255 }),
     videoPublishedAt: timestamp("video_published_at", { withTimezone: true }),
     tags: jsonb("tags").$type<string[]>().default([]),
-    locale: varchar("locale", { length: 10 }).default("zh-TW").notNull(),
+    locale: varchar("locale", { length: 10 }).default("en").notNull(),
     status: blogStatusEnum("status").default("draft").notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     createdAt: timestamp("created_at", { withTimezone: true })

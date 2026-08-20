@@ -2896,7 +2896,7 @@
           "type": "varchar(10)",
           "primaryKey": false,
           "notNull": true,
-          "default": "'zh-TW'"
+          "default": "'en'"
         },
         "status": {
           "name": "status",

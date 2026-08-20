@@ -115,8 +115,8 @@ export function useMeditationAudio() {
     // Fire a notification as fallback (user may have screen locked in PWA)
     if ("Notification" in window && Notification.permission === "granted") {
       try {
-        new Notification("冥想時間到", {
-          body: "您的冥想計時已完成",
+        new Notification("Meditation complete", {
+          body: "Your meditation timer has finished",
           tag: "meditation-bell",
           requireInteraction: true,
         });

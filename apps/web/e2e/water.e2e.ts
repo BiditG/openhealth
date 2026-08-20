@@ -12,7 +12,7 @@ test.describe("Water tracking page", () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
     await page.goto("/hub/water");
-    await expect(page.locator("text=水分追蹤")).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator("text=Water Tracking")).toBeVisible({ timeout: 10_000 });
   });
 
   test("renders water tracking page with progress ring", async ({ page }) => {
@@ -21,13 +21,13 @@ test.describe("Water tracking page", () => {
     // Goal text is clickable
     await expect(page.locator("button", { hasText: /\/ .* ml/ })).toBeVisible();
     // Quick add buttons
-    await expect(page.locator("text=快速新增")).toBeVisible();
+    await expect(page.locator("text=Quick Add")).toBeVisible();
     await expect(page.getByRole("button", { name: "150 ml", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "250 ml", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "350 ml", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "500 ml", exact: true })).toBeVisible();
     // Log history section
-    await expect(page.locator("text=今日紀錄")).toBeVisible();
+    await expect(page.locator("text=Today's Records")).toBeVisible();
   });
 
   test("quick add creates entry visible in log history", async ({ page }) => {
@@ -55,7 +55,7 @@ test.describe("Water tracking page", () => {
     }).toPass({ timeout: 10_000 });
 
     // Click undo
-    await page.locator("button", { hasText: "復原上一筆" }).click();
+    await page.locator("button", { hasText: "Undo Last" }).click();
 
     // Wait for total to go back to original
     await expect(async () => {
@@ -67,37 +67,37 @@ test.describe("Water tracking page", () => {
   test("goal setting dialog opens and validates input", async ({ page }) => {
     await page.locator("button", { hasText: /\/ .* ml/ }).click();
 
-    await expect(page.locator("text=設定每日目標")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("text=Set Daily Goal")).toBeVisible({ timeout: 5_000 });
     await expect(page.locator("input[type='number']")).toBeVisible();
 
     // Invalid value
     await page.locator("input[type='number']").fill("100");
-    await expect(page.locator("text=請輸入 500 - 10000 之間的數值")).toBeVisible();
-    const saveBtn = page.locator("button", { hasText: "儲存" });
+    await expect(page.locator("text=Please enter a value between 500 and 10000")).toBeVisible();
+    const saveBtn = page.locator("button", { hasText: "Save" });
     await expect(saveBtn).toBeDisabled();
 
     // Valid value
     await page.locator("input[type='number']").fill("3000");
-    await expect(page.locator("text=請輸入 500 - 10000 之間的數值")).not.toBeVisible();
+    await expect(page.locator("text=Please enter a value between 500 and 10000")).not.toBeVisible();
     await expect(saveBtn).toBeEnabled();
   });
 
   test("can save a new goal", async ({ page }) => {
     await page.locator("button", { hasText: /\/ .* ml/ }).click();
-    await expect(page.locator("text=設定每日目標")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("text=Set Daily Goal")).toBeVisible({ timeout: 5_000 });
 
     // Set to 3000
     await page.locator("input[type='number']").fill("3000");
-    await page.locator("button", { hasText: "儲存" }).click();
+    await page.locator("button", { hasText: "Save" }).click();
 
-    await expect(page.locator("text=設定每日目標")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("text=Set Daily Goal")).not.toBeVisible({ timeout: 5_000 });
     await expect(page.locator("button", { hasText: "/ 3000 ml" })).toBeVisible({ timeout: 5_000 });
 
     // Reset to 2500
     await page.locator("button", { hasText: "/ 3000 ml" }).click();
-    await expect(page.locator("text=設定每日目標")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("text=Set Daily Goal")).toBeVisible({ timeout: 5_000 });
     await page.locator("input[type='number']").fill("2500");
-    await page.locator("button", { hasText: "儲存" }).click();
+    await page.locator("button", { hasText: "Save" }).click();
     await expect(page.locator("button", { hasText: "/ 2500 ml" })).toBeVisible({ timeout: 5_000 });
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
@@ -11,29 +12,37 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
-  if (!open) return null;
+  const [mounted, setMounted] = React.useState(false);
 
-  return (
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50">
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
+      <div className="fixed inset-0 flex min-h-dvh items-center justify-center overflow-y-auto px-4 py-6 sm:px-6">
         <div
-          className="relative w-full max-w-sm rounded-lg border bg-background p-6 shadow-lg"
+          className="animate-modal-in relative max-h-[calc(100dvh-3rem)] w-full max-w-sm overflow-y-auto rounded-3xl border bg-background p-5 shadow-[0_24px_80px_rgba(17,26,23,0.22)] sm:max-h-[calc(100dvh-4rem)] sm:p-6"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={() => onOpenChange(false)}
-            className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100"
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            aria-label="Close dialog"
           >
             <X className="h-4 w-4" />
           </button>
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

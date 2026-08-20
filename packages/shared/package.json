@@ -12,7 +12,6 @@
     "./types": "./src/types/index.ts",
     "./utils": "./src/utils/index.ts",
     "./i18n": "./src/i18n/index.ts",
-    "./i18n/zh-TW": "./src/i18n/zh-TW.ts",
     "./i18n/en": "./src/i18n/en.ts",
     "./posture": "./src/posture/index.ts",
     "./water-milestone": "./src/water-milestone/index.ts",

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, Loader2 } from "lucide-react";
+import { Camera, Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc-client";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
@@ -18,21 +19,33 @@ const infiniteOpts = {
 export default function FoodBrowsePage() {
   const { t } = useTranslation("food");
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedQuery(query.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [query]);
+
+  const hasSearchInput = query.trim().length >= 1;
+  const canSearchServer = debouncedQuery.length >= 2;
+
   const searchQuery = trpc.food.search.useInfiniteQuery(
-    { query, limit: PAGE_SIZE },
-    { enabled: query.length >= 1, ...infiniteOpts }
+    { query: debouncedQuery, limit: PAGE_SIZE },
+    { enabled: canSearchServer, staleTime: 60_000, retry: false, ...infiniteOpts }
   );
 
   const globalPopularQuery = trpc.food.getGlobalPopular.useInfiniteQuery(
     { limit: PAGE_SIZE },
-    { staleTime: 10 * 60 * 1000, ...infiniteOpts }
+    { enabled: !hasSearchInput, staleTime: 10 * 60 * 1000, retry: false, ...infiniteOpts }
   );
 
-  const activeQuery = query.length >= 1 ? searchQuery : globalPopularQuery;
+  const activeQuery = hasSearchInput ? searchQuery : globalPopularQuery;
   const displayFoods = activeQuery.data?.pages.flat() ?? [];
-  const isLoadingInitial = activeQuery.isLoading;
+  const isLoadingInitial = hasSearchInput ? canSearchServer && searchQuery.isLoading : activeQuery.isLoading;
 
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = activeQuery;
   const handleObserver = useCallback(
@@ -53,71 +66,88 @@ export default function FoodBrowsePage() {
     return () => observer.disconnect();
   }, [handleObserver]);
 
-  const sectionLabel = query.length >= 1 ? t("searchResults") : t("popularFoods");
+  const sectionLabel = hasSearchInput ? t("searchResults") : t("popularFoods");
 
   return (
-    <div className="px-4 py-6 pb-4">
-      <h1 className="text-xl font-light tracking-wide mb-4">{t("title")}</h1>
+    <div className="mx-auto max-w-[760px] space-y-5 px-4 py-6">
+      <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-sm font-semibold text-primary">Food</p>
+          <h1 className="mt-1 text-3xl font-semibold text-foreground">{t("title")}</h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Search foods, compare calories, or scan your next meal.</p>
+        </div>
+        <Link href="/hub/food/scan">
+          <Button>
+            <Camera className="h-4 w-4" />
+            Scan Food
+          </Button>
+        </Link>
+      </section>
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" strokeWidth={1.5} />
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.8} />
         <Input
           placeholder={t("searchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="pl-10 border-black/[0.06] dark:border-white/[0.06] font-light"
+          className="pl-12"
           autoFocus
         />
       </div>
 
-      <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600 mb-3">
-        {sectionLabel}
-      </p>
+      <h2 className="text-lg font-semibold text-foreground">{sectionLabel}</h2>
 
       {isLoadingInitial ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-900" />
+            <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted" />
           ))}
         </div>
       ) : displayFoods.length > 0 ? (
-        <div className="border-t border-black/[0.06] dark:border-white/[0.06]">
+        <div className="space-y-2">
           {displayFoods.map((food) => (
             <Link
               key={food.id}
               href={`/hub/food/${food.id}`}
-              className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04] transition-all duration-200 hover:pl-1"
+              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-2xl border border-border bg-white p-4 transition-all duration-200 hover:border-primary/30 hover:bg-secondary/40 dark:bg-card"
             >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-light truncate">{food.name}</p>
-                <p className="text-xs font-light text-neutral-400">
+              <div className="min-w-0 overflow-hidden">
+                <p className="truncate text-base font-semibold text-foreground">{food.name}</p>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
                   {food.servingSize}
                   {food.servingUnit}
                   {food.brand ? ` · ${food.brand}` : ""}
                 </p>
               </div>
-              <div className="ml-3 text-right">
-                <p className="text-sm font-light tabular-nums">
+              <div className="shrink-0 rounded-xl bg-background px-3 py-2 text-right">
+                <p className="text-base font-semibold tabular-nums text-foreground">
                   {Math.round(Number(food.calories))}
                 </p>
-                <p className="text-[10px] text-neutral-400">kcal</p>
+                <p className="text-xs text-muted-foreground">kcal</p>
               </div>
             </Link>
           ))}
 
           <div ref={sentinelRef} className="flex justify-center py-4">
             {isFetchingNextPage && (
-              <Loader2 className="h-5 w-5 animate-spin text-neutral-400" strokeWidth={1.5} />
+              <Loader2 className="h-5 w-5 animate-spin text-primary" strokeWidth={1.8} />
             )}
           </div>
         </div>
-      ) : query.length >= 1 ? (
-        <div className="text-center py-8">
-          <p className="text-sm font-light text-neutral-400">{t("notFoundQuery", { query })}</p>
+      ) : hasSearchInput && query.trim().length < 2 ? (
+        <div className="rounded-3xl border border-dashed border-border bg-white p-8 text-center dark:bg-card">
+          <Search className="mx-auto h-8 w-8 text-primary" />
+          <p className="mt-3 text-sm font-medium text-muted-foreground">Enter at least two letters to search.</p>
+        </div>
+      ) : hasSearchInput ? (
+        <div className="rounded-3xl border border-dashed border-border bg-white p-8 text-center dark:bg-card">
+          <Search className="mx-auto h-8 w-8 text-primary" />
+          <p className="mt-3 text-sm font-medium text-muted-foreground">{t("notFoundQuery", { query })}</p>
         </div>
       ) : (
-        <div className="text-center py-8">
-          <p className="text-sm font-light text-neutral-400">{t("noFoodData")}</p>
+        <div className="rounded-3xl border border-dashed border-border bg-white p-8 text-center dark:bg-card">
+          <Search className="mx-auto h-8 w-8 text-primary" />
+          <p className="mt-3 text-sm font-medium text-muted-foreground">{t("noFoodData")}</p>
         </div>
       )}
     </div>

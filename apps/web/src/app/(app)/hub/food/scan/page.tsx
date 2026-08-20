@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, RotateCcw, Loader2, Keyboard } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, Keyboard, Loader2, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -260,45 +260,55 @@ function ScanContent() {
   };
 
   return (
-    <div className="px-4 py-4">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="mx-auto max-w-[860px] px-4 pb-28 pt-6 sm:px-6">
+      <div className="mb-8 flex items-center gap-3">
         <Link href={`/hub/food/search?date=${date}&meal=${meal}`}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <h1 className="font-semibold">{t("food:scanBarcode")}</h1>
+        <span className="text-sm font-medium text-muted-foreground">Back</span>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="mb-5 rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
       {/* Stage 1: Scanning */}
       {stage === "scanning" && (
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="p-0 overflow-hidden rounded-lg">
+        <div className="space-y-8">
+          <section>
+            <p className="text-sm font-semibold text-primary">Food scanner</p>
+            <h1 className="mt-2 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">What&apos;s on your plate?</h1>
+            <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+              Scan a barcode and we&apos;ll pull nutrition details for your diary.
+            </p>
+          </section>
+
+          <section className="relative overflow-hidden rounded-3xl border border-border bg-[#F1F6F3] p-4 shadow-[0_4px_24px_rgba(20,50,40,0.045)]">
+            <div className="pointer-events-none absolute left-6 top-6 h-8 w-8 border-l-2 border-t-2 border-primary/60" />
+            <div className="pointer-events-none absolute right-6 top-6 h-8 w-8 border-r-2 border-t-2 border-primary/60" />
+            <div className="pointer-events-none absolute bottom-6 left-6 h-8 w-8 border-b-2 border-l-2 border-primary/60" />
+            <div className="pointer-events-none absolute bottom-6 right-6 h-8 w-8 border-b-2 border-r-2 border-primary/60" />
+            <div className="overflow-hidden rounded-[1.4rem] bg-white">
               <div
                 id="barcode-scanner"
                 ref={scannerRef}
-                className="w-full min-h-[300px]"
+                className="min-h-[360px] w-full"
               />
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
-          <p className="text-sm text-muted-foreground text-center">
-            {t("food:alignBarcodeHint")}
-          </p>
+          <p className="text-center text-sm text-muted-foreground">{t("food:alignBarcodeHint")}</p>
 
           {/* Manual barcode input toggle */}
           <div className="text-center">
             <button
               type="button"
               onClick={() => setShowManualInput(!showManualInput)}
-              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline cursor-pointer"
+              className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-primary"
             >
               <Keyboard className="h-4 w-4" />
               {t("food:manualBarcodeInput")}
@@ -306,7 +316,7 @@ function ScanContent() {
           </div>
 
           {showManualInput && (
-            <form onSubmit={handleManualSubmit} className="flex gap-2">
+            <form onSubmit={handleManualSubmit} className="grid gap-3 rounded-2xl border border-border bg-white p-4 sm:grid-cols-[1fr_auto] dark:bg-card">
               <Input
                 value={manualBarcode}
                 onChange={(e) => setManualBarcode(e.target.value)}
@@ -324,24 +334,38 @@ function ScanContent() {
 
       {/* Stage 2: Searching */}
       {stage === "searching" && (
-        <div className="flex flex-col items-center gap-3 py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">
-            {t("food:searchingBarcode", { barcode })}
-          </p>
+        <div className="space-y-8">
+          <section>
+            <p className="text-sm font-semibold text-primary">Scanning</p>
+            <h1 className="mt-2 text-4xl font-bold tracking-tight text-foreground">Looking at your meal...</h1>
+          </section>
+          <section className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-border bg-[#F1F6F3] shadow-[0_4px_24px_rgba(20,50,40,0.045)]">
+            <div className="absolute inset-6 rounded-[1.4rem] border border-white bg-white/70" />
+            <div className="absolute left-8 right-8 top-1/2 h-1 animate-pulse rounded-full bg-primary" />
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="text-center">
+                <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                <p className="mt-5 text-lg font-semibold text-foreground">Identifying foods...</p>
+                <p className="mt-2 text-sm text-muted-foreground">{t("food:searchingBarcode", { barcode })}</p>
+              </div>
+            </div>
+          </section>
         </div>
       )}
 
       {/* Not found */}
       {stage === "not_found" && (
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="flex flex-col items-center gap-4 py-8">
-              <p className="text-lg font-medium">{t("food:productNotFound")}</p>
-              <p className="text-sm text-muted-foreground text-center">
+        <div className="space-y-6">
+          <Card className="rounded-3xl">
+            <CardContent className="flex flex-col items-center gap-5 py-10 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-secondary text-primary">
+                <Camera className="h-8 w-8" strokeWidth={1.8} />
+              </div>
+              <p className="text-2xl font-bold">{t("food:productNotFound")}</p>
+              <p className="max-w-sm text-sm leading-6 text-muted-foreground">
                 {t("food:barcodeNotFoundDesc", { barcode })}
               </p>
-              <div className="flex gap-2">
+              <div className="grid w-full max-w-sm gap-3 sm:grid-cols-2">
                 <Button variant="outline" onClick={handleReset}>
                   <RotateCcw className="h-4 w-4 mr-1" />
                   {t("food:rescan")}
@@ -357,15 +381,15 @@ function ScanContent() {
 
       {/* Stage 3: Edit & Confirm */}
       {stage === "edit" && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {existingFoodId && (
-            <div className="rounded-lg bg-green-50 dark:bg-green-950/30 px-4 py-2 text-sm text-green-700 dark:text-green-400">
+            <div className="rounded-2xl bg-secondary px-4 py-3 text-sm font-medium text-primary">
               {t("food:existsInLocal")}
             </div>
           )}
 
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">{t("food:barcodeLabel")}：{barcode}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">{t("food:barcodeLabel")}: {barcode}</p>
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RotateCcw className="h-4 w-4 mr-1" />
               {t("food:rescan")}
@@ -373,13 +397,25 @@ function ScanContent() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Card>
+            <Card className="overflow-hidden rounded-3xl">
+              <div className="relative aspect-[4/3] bg-muted">
+                {offImageUrl ? (
+                  <img src={offImageUrl} alt={name || "Scanned food"} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="grid h-full place-items-center bg-secondary">
+                    <div className="text-center text-primary">
+                      <CheckCircle2 className="mx-auto h-14 w-14" strokeWidth={1.6} />
+                      <p className="mt-4 text-lg font-bold">Here&apos;s what we found</p>
+                    </div>
+                  </div>
+                )}
+              </div>
               <CardHeader>
-                <CardTitle className="text-base">{t("common:labels.basicInfo")}</CardTitle>
+                <CardTitle className="text-2xl">Your {meal}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-5">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium">{t("food:foodName")} *</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t("food:foodName")} *</label>
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -388,7 +424,7 @@ function ScanContent() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium">{t("food:brand")}</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t("food:brand")}</label>
                   <Input
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
@@ -397,7 +433,7 @@ function ScanContent() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">{t("food:servingSizeLabel")} *</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("food:servingSizeLabel")} *</label>
                     <Input
                       type="number"
                       value={servingSize}
@@ -406,9 +442,9 @@ function ScanContent() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">{t("food:unitLabel")} *</label>
+                    <label className="text-sm font-medium text-muted-foreground">{t("food:unitLabel")} *</label>
                     <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="flex h-[50px] w-full rounded-xl border border-input bg-white px-4 py-3 text-base dark:bg-card"
                       value={servingUnit}
                       onChange={(e) => setServingUnit(e.target.value)}
                     >
@@ -423,24 +459,25 @@ function ScanContent() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-3xl">
               <CardHeader>
-                <CardTitle className="text-base">{t("common:labels.nutritionInfoPerServing")}</CardTitle>
+                <CardTitle className="text-2xl">Nutrition</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">{t("food:caloriesKcalRequired")} *</label>
+              <CardContent className="space-y-5">
+                <div className="space-y-2 text-center">
+                  <label className="text-sm font-medium text-muted-foreground">{t("food:caloriesKcalRequired")} *</label>
                   <Input
                     type="number"
                     value={calories}
                     onChange={(e) => setCalories(e.target.value)}
                     placeholder="0"
                     required
+                    className="mx-auto max-w-[180px] text-center text-4xl font-bold tabular-nums"
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 rounded-2xl bg-muted p-4 text-center">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-blue-500">{t("common:macro.protein")} (g)</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t("common:macro.protein")}</label>
                     <Input
                       type="number"
                       step="0.1"
@@ -450,7 +487,7 @@ function ScanContent() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-amber-500">{t("common:macro.carbs")} (g)</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t("common:macro.carbs")}</label>
                     <Input
                       type="number"
                       step="0.1"
@@ -460,7 +497,7 @@ function ScanContent() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-rose-500">{t("common:macro.fat")} (g)</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t("common:macro.fat")}</label>
                     <Input
                       type="number"
                       step="0.1"
@@ -471,7 +508,7 @@ function ScanContent() {
                   </div>
                 </div>
 
-                <div className="border-t pt-3 mt-3">
+                <div className="mt-5 border-t border-border pt-5">
                   <p className="text-xs text-muted-foreground mb-2">{t("common:labels.otherNutrients")}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
@@ -539,9 +576,11 @@ function ScanContent() {
               </CardContent>
             </Card>
 
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 rounded-2xl border border-border bg-white/95 p-3 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:p-0 dark:bg-card/95">
+              <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? t("common:buttons.creating") : existingFoodId ? t("food:confirmAndAdd") : t("food:saveAndAdd")}
-            </Button>
+              </Button>
+            </div>
           </form>
         </div>
       )}

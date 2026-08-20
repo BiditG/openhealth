@@ -23,7 +23,7 @@ interface BlogPost {
 export function BlogPostContent({ post }: { post: BlogPost }) {
   const { t, i18n } = useTranslation("blog");
   const lp = useLocalePath();
-  const dateLocale = i18n.language === "en" ? "en-US" : "zh-TW";
+  const dateLocale = i18n.language === "en" ? "en-US" : "en-US";
 
   return (
     <main className="max-w-3xl mx-auto px-6 pt-28 pb-16 md:pt-32 md:pb-24">

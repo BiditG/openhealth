@@ -7,11 +7,10 @@
  * Usage:
  *   cd apps/web
  *   LOCALE=en pnpm exec playwright test e2e/screenshots.e2e.ts
- *   LOCALE=zh-TW pnpm exec playwright test e2e/screenshots.e2e.ts
  *
  * Prerequisites:
  *   - Dev server running on localhost:3001
- *   - Demo account exists (demo-en@openhealth.dev / demo-zh@openhealth.dev)
+ *   - Demo account exists (demo-en@openhealth.dev)
  *
  * Output:
  *   public/screenshots/{locale}/01-hub.png, 02-today.png, ...
@@ -25,7 +24,6 @@ const LOCALE = process.env.LOCALE ?? "en";
 
 const ACCOUNTS: Record<string, { email: string; password: string }> = {
   en: { email: "demo-en@openhealth.dev", password: "demopass123" },
-  "zh-TW": { email: "test2@openhealth.dev", password: "testpass123" },
 };
 
 // iPhone 14 Pro — 2x scale for retina-quality screenshots
@@ -277,7 +275,7 @@ async function seedWeightData(page: Page) {
 /**
  * Capture the AI chat page.
  * Shows the clean landing state with quick-prompt buttons and chat history,
- * since the AI system prompt is hardcoded in Chinese and we want a clean EN screenshot.
+ * since the AI system prompt is hardcoded in English and we want a clean EN screenshot.
  */
 async function captureChat(page: Page) {
   console.log("\nCapturing AI chat page...");
@@ -333,7 +331,7 @@ test.describe(`Blog screenshots [${LOCALE}]`, () => {
     await page.goto("/today");
     await waitForStable(page);
     await expect(
-      page.locator("text=CONSUMED").or(page.locator("text=已攝取"))
+      page.locator("text=CONSUMED").or(page.locator("text=CONSUMED"))
     ).toBeVisible({ timeout: 10_000 });
     // Wait for tRPC data to load (calorie/macro/water/weight)
     await page.waitForTimeout(3000);
@@ -341,7 +339,7 @@ test.describe(`Blog screenshots [${LOCALE}]`, () => {
     await page.reload();
     await waitForStable(page);
     await expect(
-      page.locator("text=CONSUMED").or(page.locator("text=已攝取"))
+      page.locator("text=CONSUMED").or(page.locator("text=CONSUMED"))
     ).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(2000);
     await snap(page, "02-today");
@@ -357,10 +355,10 @@ test.describe(`Blog screenshots [${LOCALE}]`, () => {
     await page.goto("/hub/food/search");
     await waitForStable(page);
     const searchInput = page.locator(
-      'input[type="search"], input[placeholder*="earch"], input[placeholder*="搜尋"]'
+      'input[type="search"], input[placeholder*="earch"], input[placeholder*="Search"]'
     );
     if (await searchInput.isVisible()) {
-      await searchInput.fill(LOCALE === "en" ? "chicken" : "雞");
+      await searchInput.fill("chicken");
       await page.waitForTimeout(1500);
     }
     await snap(page, "04-food-search");
@@ -380,10 +378,10 @@ test.describe(`Blog screenshots [${LOCALE}]`, () => {
     await page.goto("/hub/food/search");
     await waitForStable(page);
     const searchInput = page.locator(
-      'input[type="search"], input[placeholder*="earch"], input[placeholder*="搜尋"]'
+      'input[type="search"], input[placeholder*="earch"], input[placeholder*="Search"]'
     );
     if (await searchInput.isVisible()) {
-      await searchInput.fill(LOCALE === "en" ? "Chicken breast" : "雞胸肉");
+      await searchInput.fill("Chicken breast");
       await page.waitForTimeout(1500);
     }
     const firstResult = page

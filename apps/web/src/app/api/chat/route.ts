@@ -1,4 +1,5 @@
 import { streamText, tool, convertToModelMessages, stepCountIs } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { minimax } from "vercel-minimax-ai-provider";
 import { z } from "zod";
 import { headers } from "next/headers";
@@ -19,9 +20,10 @@ import {
   workouts,
   workoutExercises,
   workoutSets,
+  userProfiles,
 } from "@/server/db/schema";
 import { and, eq, ilike, desc, sql, gte } from "drizzle-orm";
-import { getTaiwanDate } from "@/lib/date";
+import { getNepalDate } from "@/lib/date";
 import { users } from "@/server/db/schema";
 import {
   resolveEffectivePlan,
@@ -30,6 +32,173 @@ import {
 import { estimateNutritionFromText } from "@/server/services/ai";
 import { calculateNutrition } from "@/server/services/nutrition";
 import { NUTRIENT_IDS } from "@open-health/shared/constants";
+
+const ollama = createOpenAICompatible({
+  name: "ollama",
+  baseURL: `${(process.env.OLLAMA_BASE_URL ?? "http://localhost:11434").replace(/\/$/, "")}/v1`,
+  apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
+});
+
+function getCoachModel() {
+  if (process.env.AI_PROVIDER === "minimax") {
+    return minimax("MiniMax-M2.7");
+  }
+  return ollama.chatModel(process.env.OLLAMA_MODEL ?? "llama3.1");
+}
+
+function getAge(dateOfBirth: string | Date | null | undefined) {
+  if (!dateOfBirth) return null;
+  const birthDate = new Date(dateOfBirth);
+  if (Number.isNaN(birthDate.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDelta = today.getMonth() - birthDate.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+  return age;
+}
+
+function inferMealType() {
+  const hour = Number(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kathmandu",
+    hour: "numeric",
+    hour12: false,
+  }).format(new Date()));
+
+  if (hour < 10) return "breakfast" as const;
+  if (hour < 15) return "lunch" as const;
+  if (hour < 20) return "dinner" as const;
+  return "snack" as const;
+}
+
+async function getCurrentAiContext(userId: string) {
+  const today = getNepalDate();
+
+  const [
+    user,
+    profile,
+    goals,
+    diaryRows,
+    weight,
+    waterRows,
+    waterGoal,
+    exerciseRows,
+  ] = await Promise.all([
+    db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { name: true, email: true, timezone: true, unitSystem: true },
+    }),
+    db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) }),
+    db.query.userGoals.findFirst({ where: eq(userGoals.userId, userId) }),
+    db
+      .select({
+        mealType: diaryEntries.mealType,
+        foodName: foods.name,
+        calories: diaryEntries.calories,
+        proteinG: diaryEntries.proteinG,
+        carbsG: diaryEntries.carbsG,
+        fatG: diaryEntries.fatG,
+        fiberG: diaryEntries.fiberG,
+      })
+      .from(diaryEntries)
+      .innerJoin(foods, eq(diaryEntries.foodId, foods.id))
+      .where(and(eq(diaryEntries.userId, userId), eq(diaryEntries.date, today)))
+      .orderBy(diaryEntries.mealType, diaryEntries.sortOrder),
+    db.query.weightLogs.findFirst({
+      where: and(eq(weightLogs.userId, userId), eq(weightLogs.date, today)),
+    }),
+    db
+      .select({ amountMl: waterLogs.amountMl })
+      .from(waterLogs)
+      .where(and(eq(waterLogs.userId, userId), eq(waterLogs.date, today))),
+    db.query.waterGoals.findFirst({ where: eq(waterGoals.userId, userId) }),
+    db
+      .select({
+        exerciseName: exercises.name,
+        durationMin: exerciseLogs.durationMin,
+        caloriesBurned: exerciseLogs.caloriesBurned,
+      })
+      .from(exerciseLogs)
+      .innerJoin(exercises, eq(exerciseLogs.exerciseId, exercises.id))
+      .where(and(eq(exerciseLogs.userId, userId), eq(exerciseLogs.date, today))),
+  ]);
+
+  const totals = diaryRows.reduce(
+    (acc, row) => ({
+      calories: acc.calories + Number(row.calories || 0),
+      proteinG: acc.proteinG + Number(row.proteinG || 0),
+      carbsG: acc.carbsG + Number(row.carbsG || 0),
+      fatG: acc.fatG + Number(row.fatG || 0),
+      fiberG: acc.fiberG + Number(row.fiberG || 0),
+    }),
+    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, fiberG: 0 }
+  );
+  const waterTotalMl = waterRows.reduce((sum, row) => sum + row.amountMl, 0);
+  const exerciseCalories = exerciseRows.reduce((sum, row) => sum + Number(row.caloriesBurned || 0), 0);
+  const calorieTarget = goals?.calorieTarget ?? null;
+  const netCalories = Math.max(0, Math.round(totals.calories - exerciseCalories));
+
+  return {
+    today,
+    user: {
+      name: user?.name ?? null,
+      email: user?.email ?? null,
+      timezone: user?.timezone ?? "Asia/Kathmandu",
+      unitSystem: user?.unitSystem ?? "metric",
+    },
+    profile: profile
+      ? {
+          age: getAge(profile.dateOfBirth),
+          sex: profile.sex,
+          heightCm: profile.heightCm ? Number(profile.heightCm) : null,
+          currentWeightKg: profile.currentWeightKg ? Number(profile.currentWeightKg) : null,
+          todayWeightKg: weight?.weightKg ? Number(weight.weightKg) : null,
+          activityLevel: profile.activityLevel,
+          primaryGoal: profile.primaryGoal,
+          dietaryPreference: profile.dietaryPreference,
+          medicalConditions: profile.medicalConditions ?? [],
+          medications: profile.medications,
+          allergies: profile.allergies,
+        }
+      : null,
+    goals: goals
+      ? {
+          goalType: goals.goalType,
+          calorieTarget,
+          targetWeightKg: goals.targetWeightKg ? Number(goals.targetWeightKg) : null,
+          proteinG: goals.proteinG ? Number(goals.proteinG) : null,
+          carbsG: goals.carbsG ? Number(goals.carbsG) : null,
+          fatG: goals.fatG ? Number(goals.fatG) : null,
+          fiberG: goals.fiberG ? Number(goals.fiberG) : null,
+        }
+      : null,
+    todaySummary: {
+      caloriesIn: Math.round(totals.calories),
+      exerciseCalories,
+      netCalories,
+      calorieTarget,
+      calorieBalance: calorieTarget == null ? null : netCalories - calorieTarget,
+      proteinG: Math.round(totals.proteinG),
+      carbsG: Math.round(totals.carbsG),
+      fatG: Math.round(totals.fatG),
+      fiberG: Math.round(totals.fiberG),
+      waterMl: waterTotalMl,
+      waterTargetMl: waterGoal?.dailyTargetMl ?? 2500,
+      mealCount: diaryRows.length,
+      meals: diaryRows.slice(0, 8).map((row) => ({
+        mealType: row.mealType,
+        foodName: row.foodName,
+        calories: Math.round(Number(row.calories || 0)),
+      })),
+      exercises: exerciseRows.map((row) => ({
+        name: row.exerciseName,
+        durationMin: row.durationMin,
+        caloriesBurned: Number(row.caloriesBurned || 0),
+      })),
+    },
+  };
+}
 
 export async function POST(req: Request) {
   const reqHeaders = await headers();
@@ -58,7 +227,7 @@ export async function POST(req: Request) {
   const usage = await checkAndIncrementAiUsage(userId, "chat", plan);
   if (!usage.allowed) {
     return Response.json(
-      { error: `已達每日訊息上限（${usage.limit} 則）` },
+      { error: `Daily message limit reached (${usage.limit} messages)` },
       { status: 429 }
     );
   }
@@ -79,7 +248,7 @@ export async function POST(req: Request) {
   // Get or create session (fallback if client didn't pre-create)
   let chatSessionId: string = sessionId;
   if (!chatSessionId) {
-    const title = userMsgText.slice(0, 50) || "新對話";
+    const title = userMsgText.slice(0, 50) || "New conversation";
     const [newSession] = await db
       .insert(chatSessions)
       .values({ userId, title })
@@ -99,38 +268,103 @@ export async function POST(req: Request) {
   }
 
   const messages = await convertToModelMessages(uiMessages);
+  const currentContext = await getCurrentAiContext(userId);
 
   const result = streamText({
-    model: minimax("MiniMax-M2.7"),
-    system: `你是一位專業的台灣健康顧問，名叫「小健」。你的任務是根據使用者的健康數據（飲食、體重、運動、重訓、水分），提供個人化的健康建議。
+    model: getCoachModel(),
+    system: `You are Swastha's educational health and wellness assistant for users in Nepal. Your role is to explain health, food, nutrition, and wellness concepts simply and help users understand their own tracking data when available.
 
-規則：
-1. 一律使用繁體中文回應。
-2. 回應簡潔實用，避免過長的說教。
-3. 當使用者詢問健康相關問題時，主動使用工具查詢他們的數據（飲食紀錄、營養目標、體重趨勢、運動紀錄、水分攝取等）。
-4. 根據實際數據提供具體建議，而非泛泛而談。
-5. 使用台灣常見的食物和料理舉例。
-6. 適當使用 markdown 格式（粗體、列表等）讓回應更易讀。
-7. 今天的日期是 ${getTaiwanDate()}，現在時間約 ${new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour: "2-digit", minute: "2-digit", hour12: false })}。
-8. 當使用者要求記錄食物時（例如「幫我記錄…」「我剛吃了…」「新增…」「記一下…」），使用 createFood 工具。
-9. 推測餐別：根據對話上下文或當前時間（05-10 點 breakfast、10-14 點 lunch、14-17 點 snack、17-21 點 dinner、其他 snack）。使用者明確說了餐別就用使用者說的。
-10. 日期預設為今天，除非使用者明確提到其他日期。
-11. 使用 createFood 後，簡短告知使用者估算結果（不需重複所有數字），提醒他們可以在卡片上確認或編輯。
-12. 當使用者要求記錄體重時（例如「我現在 70 公斤」「體重 65.5」「記一下體重…」），使用 logWeight 工具。
-13. 當使用者要求記錄喝水時（例如「我喝了一杯水」「喝了 500ml」「記一下水…」），使用 logWater 工具。常見容量推測：一杯水 250ml、一瓶水 600ml、一大杯 500ml。
-14. 當使用者詢問體重趨勢、運動紀錄、重訓歷史、水分攝取等，主動使用對應的查詢工具。
-15. 綜合分析時，可以同時查詢多個面向的數據（例如飲食 + 體重 + 運動），給出整合性的建議。
-16. 當提供營養或健康建議時，必須附上資訊來源。常見來源包括：衛福部國民健康署「每日飲食指南」、衛福部「國人膳食營養素參考攝取量（DRIs）」、USDA FoodData Central、WHO 飲食指引等。在回應末尾以「📖 參考來源：」格式列出，附上來源名稱。
-17. 你提供的建議僅供健康參考，不構成醫療診斷或治療建議。如有疾病或特殊健康狀況，應諮詢醫師或營養師。`,
+Current user context snapshot:
+${JSON.stringify(currentContext, null, 2)}
+
+Rules:
+1. Respond in English by default. If the user writes in Nepali Unicode or Romanized Nepali, respond naturally in the same style when appropriate.
+2. Be concise, warm, practical, and non-judgmental.
+3. This is educational wellness support, not diagnosis, emergency care, prescriptions, or medication-change advice.
+4. Never claim certainty about a user's medical condition. Encourage a qualified health professional when appropriate.
+5. If the user mentions urgent symptoms such as chest pain, difficulty breathing, stroke symptoms, loss of consciousness, severe bleeding, or self-harm, advise urgent professional help instead of treating it like a normal wellness question.
+6. Use the current context snapshot for personalization. If the user asks about today's calories, macros, water, weight, exercise, goals, or current status, use getCurrentHealthContext when the snapshot may be stale.
+7. For personalized nutrition, training, allergy, diet preference, or medical-context answers, use the profile context and call getHealthProfile if more detail is needed.
+8. Prefer Nepal and South Asian food examples such as dal bhat, tarkari, momo, dhido, gundruk, chiura, sel roti, thukpa, aloo tama, sukuti, and milk tea.
+9. Use markdown for readability.
+10. Today's date is ${getNepalDate()}, current local time is approximately ${new Date().toLocaleString("en-US", { timeZone: "Asia/Kathmandu", hour: "2-digit", minute: "2-digit", hour12: false })}.
+11. Act like a professional nutritionist: practical, evidence-aware, portion-focused, culturally relevant, and clear about uncertainty.
+12. When a user asks calories/macros for a food or asks to log/add food, use createFood. This returns an estimate card with an Add to diary button in the chat UI. Infer meal type from context or current time unless the user specifies it.
+13. When a user asks to log weight, use logWeight.
+14. When a user asks to log water, use logWater. Common guesses: one glass 250ml, one bottle 600ml, large glass 500ml.
+15. When giving nutrition or health guidance, include a short "Sources:" line with general sources such as WHO, USDA FoodData Central, or national public-health guidance where relevant.
+16. Remind users that nutrition values are estimates and may vary by portion size and preparation.`,
     messages,
     tools: {
+      getCurrentHealthContext: tool({
+        description:
+          "Fetch the latest user profile, goals, today's calories/macros, weight, water, exercise burn, net calories, and calorie balance for Hub/Progress personalization.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          try {
+            return await getCurrentAiContext(userId);
+          } catch {
+            return { error: "Could not fetch current health context." };
+          }
+        },
+      }),
+      getHealthProfile: tool({
+        description:
+          "Fetch the user's health profile for personalization, including age inputs, sex, height, weight, medical notes, allergies, activity level, and goals.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          try {
+            const profile = await db.query.userProfiles.findFirst({
+              where: eq(userProfiles.userId, userId),
+            });
+            const goals = await db.query.userGoals.findFirst({
+              where: eq(userGoals.userId, userId),
+            });
+
+            if (!profile && !goals) {
+              return { message: "The user has not completed a health profile yet." };
+            }
+
+            return {
+              profile: profile
+                ? {
+                    dateOfBirth: profile.dateOfBirth,
+                    sex: profile.sex,
+                    heightCm: profile.heightCm ? Number(profile.heightCm) : null,
+                    currentWeightKg: profile.currentWeightKg ? Number(profile.currentWeightKg) : null,
+                    activityLevel: profile.activityLevel,
+                    primaryGoal: profile.primaryGoal,
+                    dietaryPreference: profile.dietaryPreference,
+                    medicalConditions: profile.medicalConditions ?? [],
+                    medications: profile.medications,
+                    allergies: profile.allergies,
+                  }
+                : null,
+              goals: goals
+                ? {
+                    goalType: goals.goalType,
+                    targetWeightKg: goals.targetWeightKg ? Number(goals.targetWeightKg) : null,
+                    weeklyRateKg: goals.weeklyRateKg ? Number(goals.weeklyRateKg) : null,
+                    calorieTarget: goals.calorieTarget,
+                    proteinG: goals.proteinG ? Number(goals.proteinG) : null,
+                    carbsG: goals.carbsG ? Number(goals.carbsG) : null,
+                    fatG: goals.fatG ? Number(goals.fatG) : null,
+                    fiberG: goals.fiberG ? Number(goals.fiberG) : null,
+                  }
+                : null,
+            };
+          } catch {
+            return { error: "Could not fetch health profile." };
+          }
+        },
+      }),
       getDailyFood: tool({
         description:
-          "查詢使用者指定日期的飲食紀錄，包含每餐吃了什麼、各項營養素攝取量",
+          "Fetch the user's food diary for a specific date, including meals and nutrient totals.",
         inputSchema: z.object({
           date: z
             .string()
-            .describe("要查詢的日期，格式 YYYY-MM-DD，例如 2025-01-15"),
+            .describe("Date to query in YYYY-MM-DD format, for example 2025-01-15"),
         }),
         execute: async ({ date }) => {
           try {
@@ -169,41 +403,45 @@ export async function POST(req: Request) {
 
             return { date, entries, totals };
           } catch {
-            return { error: "查詢飲食紀錄時發生錯誤，請稍後再試" };
+            return { error: "Could not fetch food diary. Please try again later." };
           }
         },
       }),
       getUserGoals: tool({
-        description: "查詢使用者設定的營養目標（每日熱量、蛋白質、碳水、脂肪目標）",
+        description: "Fetch the user's nutrition goals, including calories and macro targets.",
         inputSchema: z.object({}),
         execute: async () => {
           try {
             const goals = await db.query.userGoals.findFirst({
               where: eq(userGoals.userId, userId),
             });
-            return goals ?? { message: "使用者尚未設定營養目標" };
+            return goals ?? { message: "The user has not set nutrition goals yet." };
           } catch {
-            return { error: "查詢營養目標時發生錯誤，請稍後再試" };
+            return { error: "Could not fetch nutrition goals. Please try again later." };
           }
         },
       }),
       createFood: tool({
         description:
-          "根據使用者描述的食物，估算營養成分並建立食物資料。當使用者說要記錄、新增、或提到剛吃了什麼食物時使用此工具。",
+          "Estimate calories and nutrition from a user's food description, create a draft food record, and return an add-to-diary action card. Use when the user asks calories/macros for a food or asks to log/add food.",
         inputSchema: z.object({
           description: z
             .string()
             .describe(
-              "使用者描述的食物，包含名稱和份量，例如：一碗滷肉飯、兩片吐司加花生醬"
+              "User food description with name and portion, for example: one plate dal bhat tarkari or 2 plates momo"
             ),
           mealType: z
             .enum(["breakfast", "lunch", "dinner", "snack"])
-            .describe("餐別，根據對話上下文或當前時間推測"),
+            .optional()
+            .describe("Meal type, inferred from conversation context or current time"),
           date: z
             .string()
-            .describe("日期 YYYY-MM-DD，預設今天"),
+            .optional()
+            .describe("Date in YYYY-MM-DD format. Defaults to today."),
         }),
-        execute: async ({ description, mealType, date }) => {
+        execute: async ({ description, mealType: mealTypeInput, date: dateInput }) => {
+          const mealType = mealTypeInput ?? inferMealType();
+          const date = dateInput ?? getNepalDate();
           try {
             const estimation = await estimateNutritionFromText(description);
             if (!estimation.success) {
@@ -298,19 +536,19 @@ export async function POST(req: Request) {
             };
           } catch (error) {
             console.error("createFood tool error:", error);
-            return { error: "建立食物時發生錯誤，請稍後再試" };
+            return { error: "Could not create the food record. Please try again later." };
           }
         },
       }),
       // ── Weight tools ──
       getWeightHistory: tool({
         description:
-          "查詢使用者的體重紀錄，包含最近的體重趨勢",
+          "Fetch the user's weight history, including recent trend data.",
         inputSchema: z.object({
           days: z
             .number()
             .optional()
-            .describe("查詢最近幾天的體重紀錄，預設 30 天"),
+            .describe("Number of recent days to query. Defaults to 30 days."),
         }),
         execute: async ({ days = 30 }) => {
           try {
@@ -334,7 +572,7 @@ export async function POST(req: Request) {
               .orderBy(desc(weightLogs.date));
 
             if (logs.length === 0) {
-              return { message: "使用者在此期間沒有體重紀錄" };
+              return { message: "The user has no weight logs in this period." };
             }
 
             const latest = Number(logs[0].weightKg);
@@ -355,20 +593,20 @@ export async function POST(req: Request) {
               },
             };
           } catch {
-            return { error: "查詢體重紀錄時發生錯誤" };
+            return { error: "Could not fetch weight history." };
           }
         },
       }),
       logWeight: tool({
         description:
-          "記錄使用者的體重。當使用者提到體重數字或要求記錄體重時使用。",
+          "Log the user's weight. Use when the user mentions a body weight value or asks to record weight.",
         inputSchema: z.object({
-          weightKg: z.number().min(20).max(300).describe("體重（公斤）"),
-          date: z.string().optional().describe("日期 YYYY-MM-DD，預設今天"),
-          note: z.string().optional().describe("備註"),
+          weightKg: z.number().min(20).max(300).describe("Weight in kilograms"),
+          date: z.string().optional().describe("Date in YYYY-MM-DD format. Defaults to today."),
+          note: z.string().optional().describe("Optional note"),
         }),
         execute: async ({ weightKg, date: dateInput, note }) => {
-          const date = dateInput ?? getTaiwanDate();
+          const date = dateInput ?? getNepalDate();
           try {
             await db
               .insert(weightLogs)
@@ -387,7 +625,7 @@ export async function POST(req: Request) {
               });
             return { success: true, weightKg, date, note };
           } catch {
-            return { error: "記錄體重時發生錯誤" };
+            return { error: "Could not log weight." };
           }
         },
       }),
@@ -395,15 +633,15 @@ export async function POST(req: Request) {
       // ── Water tools ──
       getWaterIntake: tool({
         description:
-          "查詢使用者指定日期的水分攝取量和目標",
+          "Fetch the user's water intake and target for a specific date.",
         inputSchema: z.object({
           date: z
             .string()
             .optional()
-            .describe("要查詢的日期，格式 YYYY-MM-DD，預設今天"),
+            .describe("Date to query in YYYY-MM-DD format. Defaults to today."),
         }),
         execute: async ({ date: dateInput } = {}) => {
-          const date = dateInput ?? getTaiwanDate();
+          const date = dateInput ?? getNepalDate();
           try {
             const logs = await db
               .select({
@@ -434,19 +672,19 @@ export async function POST(req: Request) {
               logCount: logs.length,
             };
           } catch {
-            return { error: "查詢水分攝取時發生錯誤" };
+            return { error: "Could not fetch water intake." };
           }
         },
       }),
       logWater: tool({
         description:
-          "記錄使用者的飲水量。當使用者提到喝水或要求記錄水分時使用。",
+          "Log the user's water intake. Use when the user mentions drinking water or asks to record hydration.",
         inputSchema: z.object({
-          amountMl: z.number().min(1).max(5000).describe("飲水量（毫升）"),
-          date: z.string().optional().describe("日期 YYYY-MM-DD，預設今天"),
+          amountMl: z.number().min(1).max(5000).describe("Water amount in milliliters"),
+          date: z.string().optional().describe("Date in YYYY-MM-DD format. Defaults to today."),
         }),
         execute: async ({ amountMl, date: dateInput }) => {
-          const date = dateInput ?? getTaiwanDate();
+          const date = dateInput ?? getNepalDate();
           try {
             await db.insert(waterLogs).values({
               userId,
@@ -480,7 +718,7 @@ export async function POST(req: Request) {
               targetMl,
             };
           } catch {
-            return { error: "記錄飲水時發生錯誤" };
+            return { error: "Could not log water intake." };
           }
         },
       }),
@@ -488,15 +726,15 @@ export async function POST(req: Request) {
       // ── Exercise tools ──
       getExerciseLogs: tool({
         description:
-          "查詢使用者指定日期的運動（有氧）紀錄",
+          "Fetch the user's cardio exercise logs for a specific date.",
         inputSchema: z.object({
           date: z
             .string()
             .optional()
-            .describe("要查詢的日期，格式 YYYY-MM-DD，預設今天"),
+            .describe("Date to query in YYYY-MM-DD format. Defaults to today."),
         }),
         execute: async ({ date: dateInput } = {}) => {
-          const date = dateInput ?? getTaiwanDate();
+          const date = dateInput ?? getNepalDate();
           try {
             const logs = await db
               .select({
@@ -534,7 +772,7 @@ export async function POST(req: Request) {
               summary: { totalCalories, totalMinutes, count: logs.length },
             };
           } catch {
-            return { error: "查詢運動紀錄時發生錯誤" };
+            return { error: "Could not fetch exercise logs." };
           }
         },
       }),
@@ -542,12 +780,12 @@ export async function POST(req: Request) {
       // ── Workout (strength training) tools ──
       getWorkoutHistory: tool({
         description:
-          "查詢使用者最近的重訓紀錄，包含每次訓練的動作、組數、重量和次數",
+          "Fetch the user's recent strength-training history, including exercises, sets, weight, and reps.",
         inputSchema: z.object({
           limit: z
             .number()
             .optional()
-            .describe("查詢最近幾次重訓，預設 5 次"),
+            .describe("Number of recent workouts to query. Defaults to 5."),
         }),
         execute: async ({ limit = 5 }) => {
           try {
@@ -571,7 +809,7 @@ export async function POST(req: Request) {
               .limit(limit);
 
             if (recentWorkouts.length === 0) {
-              return { message: "使用者沒有重訓紀錄" };
+              return { message: "The user has no strength-training history." };
             }
 
             const results = [];
@@ -625,7 +863,7 @@ export async function POST(req: Request) {
 
             return { workouts: results };
           } catch {
-            return { error: "查詢重訓紀錄時發生錯誤" };
+            return { error: "Could not fetch strength-training history." };
           }
         },
       }),

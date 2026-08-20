@@ -186,7 +186,7 @@ export default function CoachingSettingsPage() {
                       {msg.coachName}
                     </span>
                     <span className="text-[10px] text-neutral-300 dark:text-neutral-700">
-                      {new Date(msg.createdAt).toLocaleString("zh-TW", {
+                      {new Date(msg.createdAt).toLocaleString("en-US", {
                         month: "numeric",
                         day: "numeric",
                         hour: "2-digit",

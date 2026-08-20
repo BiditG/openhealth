@@ -69,6 +69,7 @@ export default function ActiveWorkoutPage() {
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
     string | undefined
   >();
@@ -111,14 +112,22 @@ export default function ActiveWorkoutPage() {
             | "other",
         }
       : {},
-    { enabled: showAddExercise }
+    { enabled: showAddExercise && searchQuery.trim().length < 1, staleTime: 60_000, retry: false }
   );
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
   const { data: searchResults } = trpc.exercise.searchExercises.useQuery(
-    { query: searchQuery },
-    { enabled: showAddExercise && searchQuery.length >= 1 }
+    { query: debouncedSearchQuery },
+    { enabled: showAddExercise && debouncedSearchQuery.length >= 2, staleTime: 60_000, retry: false }
   );
 
-  const exerciseList = searchQuery.length >= 1 ? searchResults : presets;
+  const exerciseList = searchQuery.trim().length >= 1 ? searchResults : presets;
 
   const handleAddExercise = async (exerciseId: string) => {
     if (!workout) return;

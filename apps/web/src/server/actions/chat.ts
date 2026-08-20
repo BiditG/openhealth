@@ -13,7 +13,7 @@ export async function createChatSession({ title }: { title: string }) {
     .insert(chatSessions)
     .values({
       userId: user.id,
-      title: title.slice(0, 50) || "新對話",
+      title: title.slice(0, 50) || "New conversation",
     })
     .returning({ id: chatSessions.id });
 

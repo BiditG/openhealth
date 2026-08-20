@@ -19,7 +19,7 @@ export const customReminders = pgTable(
     userId: text("user_id")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
-    title: text("title").notNull(), // e.g. "吃維他命 B"
+    title: text("title").notNull(), // e.g. "Take vitamin B"
     type: text("type").default("custom").notNull(), // preset: water, exercise, meditation, medication, sleep, custom
     note: text("note"), // free-form note shown in notification
     time: text("time").notNull(), // HH:mm format

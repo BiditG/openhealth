@@ -278,7 +278,7 @@ export default function ReferralPage() {
           )}
           {stats.trialExpiresAt && new Date(stats.trialExpiresAt) > new Date() && (
             <p className="text-xs text-green-600 dark:text-green-400">
-              {t("referralPage.trialExpires", { date: new Date(stats.trialExpiresAt).toLocaleDateString("zh-TW") })}
+              {t("referralPage.trialExpires", { date: new Date(stats.trialExpiresAt).toLocaleDateString("en-US") })}
             </p>
           )}
         </div>
@@ -330,7 +330,7 @@ export default function ReferralPage() {
                   </span>
                 </div>
                 <span className="text-xs text-neutral-400">
-                  {new Date(item.joinedAt).toLocaleDateString("zh-TW")}
+                  {new Date(item.joinedAt).toLocaleDateString("en-US")}
                 </span>
               </div>
             ))}

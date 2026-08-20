@@ -14,7 +14,7 @@ test.describe("Landing page", () => {
 
   test("has call-to-action button linking to diary", async ({ page }) => {
     await page.goto("/");
-    const ctaLink = page.getByRole("link", { name: /開始使用/ }).first();
+    const ctaLink = page.getByRole("link", { name: /Get Started/ }).first();
     await expect(ctaLink).toBeVisible();
     await expect(ctaLink).toHaveAttribute("href", "/hub");
   });

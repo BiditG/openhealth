@@ -24,11 +24,11 @@ export async function connectToCoach(
     .limit(1);
 
   if (coach.length === 0) {
-    return { success: false, error: "教練碼不存在" };
+    return { success: false, error: "Coach code does not exist" };
   }
 
   if (coach[0].id === userId) {
-    return { success: false, error: "不能加入自己為教練" };
+    return { success: false, error: "You cannot add yourself as your coach" };
   }
 
   try {
@@ -39,7 +39,7 @@ export async function connectToCoach(
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return { success: false, error: "你已經是此教練的學員了" };
+      return { success: false, error: "You are already connected to this coach" };
     }
     throw error;
   }

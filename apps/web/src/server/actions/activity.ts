@@ -91,7 +91,7 @@ export async function completeActivitySession(
     )
     .then((r) => r[0]);
 
-  if (!session) throw new Error("找不到此活動");
+  if (!session) throw new Error("Activity not found");
 
   const now = new Date();
   const durationSec = Math.floor(

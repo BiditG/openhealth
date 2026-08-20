@@ -9,14 +9,11 @@ interface Props {
 }
 
 const titles: Record<Locale, string> = {
-  "zh-TW": "定價方案 - Open Health",
-  en: "Pricing - Open Health",
+  en: "Pricing - Swastha",
 };
 
 const descriptions: Record<Locale, string> = {
-  "zh-TW":
-    "Open Health 定價方案：自部署永遠免費，或使用雲端託管版每月 $5 美元。",
-  en: "Open Health pricing: self-host for free forever, or use our cloud-hosted version for $5/month.",
+  en: "Swastha pricing and deployment options for a Nepal-focused personal health platform.",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -28,10 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: descriptions[lang],
     alternates: {
       canonical: `${BASE_URL}/pricing`,
-      languages: {
-        "zh-TW": `${BASE_URL}/pricing`,
-        en: `${BASE_URL}/en/pricing`,
-      },
+      languages: { en: `${BASE_URL}/pricing` },
     },
   };
 }
