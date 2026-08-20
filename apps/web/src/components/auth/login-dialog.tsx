@@ -84,7 +84,12 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
       if (mode === "login") {
         const result = await signIn.email({ email, password });
         if (result.error) {
-          setError(result.error.message || t("auth.loginFailed"));
+          setError(result.error.message || "Sign in failed. Check your email and password.");
+          setLoading(false);
+          return;
+        }
+        if (!result.data?.session) {
+          setError("Sign in could not create a session. Please confirm your email, then try again.");
           setLoading(false);
           return;
         }
@@ -98,6 +103,11 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
         const result = await signUp.email({ name, email, password });
         if (result.error) {
           setError(result.error.message || t("auth.registerFailed"));
+          setLoading(false);
+          return;
+        }
+        if (!result.data?.session) {
+          setError("Account created. Please confirm your email if Supabase sent a verification link, then sign in. After that, admin activation is required.");
           setLoading(false);
           return;
         }

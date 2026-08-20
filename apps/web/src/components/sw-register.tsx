@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 export function ServiceWorkerRegister() {
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_ENABLE_SERVICE_WORKER !== "true") return;
     if (!("serviceWorker" in navigator)) return;
 
     navigator.serviceWorker

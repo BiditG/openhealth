@@ -51,6 +51,21 @@ function toSessionData(session: Session | null) {
   };
 }
 
+function toAuthData(data: { session: Session | null; user: User | null }) {
+  return {
+    user: data.user ? toAppUser(data.user) : null,
+    session: data.session
+      ? {
+          id: data.session.access_token,
+          userId: data.session.user.id,
+          expiresAt: data.session.expires_at
+            ? new Date(data.session.expires_at * 1000)
+            : null,
+        }
+      : null,
+  };
+}
+
 export const authClient = {
   useSession,
 };
@@ -68,7 +83,7 @@ export const signIn = {
       email,
       password,
     });
-    return { data: toSessionData(data.session), error };
+    return { data: toAuthData(data), error };
   },
   social: async ({ provider }: { provider: "google" | "apple" }) => {
     const supabase = getSupabaseBrowserClient();
@@ -115,7 +130,7 @@ export const signUp = {
         data: { name, full_name: name },
       },
     });
-    return { data: toSessionData(data.session), error };
+    return { data: toAuthData(data), error };
   },
 };
 
