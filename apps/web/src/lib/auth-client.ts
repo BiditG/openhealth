@@ -36,14 +36,15 @@ function toAppUser(user: User) {
   };
 }
 
-function toSessionData(session: Session | null) {
+function toSessionData(session: Session | null, verifiedUser?: User | null) {
   if (!session?.user) return null;
+  const user = verifiedUser ?? session.user;
 
   return {
-    user: toAppUser(session.user),
+    user: toAppUser(user),
     session: {
       id: session.access_token,
-      userId: session.user.id,
+      userId: user.id,
       expiresAt: session.expires_at
         ? new Date(session.expires_at * 1000)
         : null,
@@ -179,10 +180,19 @@ export function useSession() {
 
     supabase.auth
       .getSession()
-      .then(({ data: sessionData, error: sessionError }) => {
+      .then(async ({ data: sessionData, error: sessionError }) => {
         if (!active) return;
         if (sessionError) setError(sessionError);
-        const nextData = toSessionData(sessionData.session);
+
+        let verifiedUser: User | null = null;
+        if (sessionData.session) {
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (!active) return;
+          if (userError) setError(userError);
+          verifiedUser = userData.user;
+        }
+
+        const nextData = verifiedUser ? toSessionData(sessionData.session, verifiedUser) : null;
         setData(nextData);
         setIsPending(false);
 
@@ -201,14 +211,25 @@ export function useSession() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      const nextData = toSessionData(session);
-      setData(nextData);
-      setIsPending(false);
-      if (nextData) {
-        localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(nextData));
-      } else {
+      if (!session) {
+        setData(null);
+        setIsPending(false);
         localStorage.removeItem(SESSION_CACHE_KEY);
+        return;
       }
+
+      supabase.auth.getUser().then(({ data: userData, error: userError }) => {
+        if (!active) return;
+        if (userError) setError(userError);
+        const nextData = userData.user ? toSessionData(session, userData.user) : null;
+        setData(nextData);
+        setIsPending(false);
+        if (nextData) {
+          localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(nextData));
+        } else {
+          localStorage.removeItem(SESSION_CACHE_KEY);
+        }
+      });
     });
 
     return () => {

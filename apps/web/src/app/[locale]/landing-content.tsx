@@ -30,8 +30,8 @@ interface BlogPost {
 
 const tools = [
   {
-    href: "/hub/food/scan",
-    title: "Scan Food",
+    href: "/hub/food/scan-label",
+    title: "Snap Food",
     body: "Understand calories and nutrition.",
     icon: Camera,
   },
@@ -122,11 +122,11 @@ function Hero() {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/hub/food/scan"
+              href="/hub/food/scan-label"
               className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#125745]"
             >
               <Camera className="h-4 w-4" strokeWidth={1.8} />
-              Scan My Food
+              Snap My Food
             </Link>
             <Link
               href="/hub"
@@ -311,10 +311,10 @@ function FinalCta() {
           A small, clear health habit is easier to keep than a complicated dashboard.
         </p>
         <Link
-          href="/hub/food/scan"
+          href="/hub/food/scan-label"
           className="mt-6 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#125745]"
         >
-          Scan My Food
+          Snap My Food
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -336,7 +336,7 @@ function Footer() {
           </div>
         </div>
         <div className="flex flex-wrap gap-4 text-sm font-medium text-muted-foreground">
-          <Link href="/hub/food/scan">Food</Link>
+          <Link href="/hub/food/scan-label">Food</Link>
           <Link href="/hub/chat">AI Assistant</Link>
           <Link href="/hub/documents">Reports</Link>
           <Link href="/privacy">Privacy</Link>

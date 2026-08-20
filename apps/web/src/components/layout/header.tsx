@@ -46,11 +46,11 @@ export function Header() {
           {session?.user ? (
             <div className="flex items-center gap-2">
               <Link
-                href="/hub/food/scan"
+                href="/hub/food/scan-label"
                 className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#0D8064] md:inline-flex"
               >
                 <Camera className="h-4 w-4" strokeWidth={2} />
-                Scan meal
+                Snap meal
               </Link>
               <Link
                 href="/hub/food/search"

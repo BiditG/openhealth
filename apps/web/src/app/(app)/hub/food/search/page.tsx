@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState, useTransition, type ComponentType } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Barcode, Camera, Loader2, MessageSquare, Plus, Search } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, MessageSquare, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoginDialog } from "@/components/auth/login-dialog";
@@ -178,9 +178,9 @@ function FoodSearchContent() {
             className="pl-12 pr-14"
             autoFocus
           />
-          <Link href={`/hub/food/scan?date=${date}&meal=${meal}`} className="absolute right-1 top-1/2 -translate-y-1/2">
-            <Button variant="ghost" size="icon" aria-label="Scan barcode">
-              <Barcode className="h-5 w-5" />
+          <Link href={`/hub/food/scan-label?date=${date}&meal=${meal}`} className="absolute right-1 top-1/2 -translate-y-1/2">
+            <Button variant="ghost" size="icon" aria-label="Snap food">
+              <Camera className="h-5 w-5" />
             </Button>
           </Link>
         </div>

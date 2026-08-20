@@ -785,9 +785,9 @@ export default function HubPage() {
                   <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{burnPreview.calories} kcal</p>
                   <p className="mt-1 text-xs text-muted-foreground">{burnPreview.durationMin} min • {weightForBurn} kg basis</p>
                 </div>
-                <Link href="/hub/food/scan" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                <Link href="/hub/food/scan-label" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary">
                   <Camera className="h-4 w-4" />
-                  Scan meal
+                  Snap meal
                 </Link>
               </div>
             </div>
