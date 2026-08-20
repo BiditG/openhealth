@@ -4,18 +4,10 @@ import { format, subDays } from "date-fns";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
-  ArrowRight,
-  ArrowDownRight,
-  ArrowUpRight,
   Bike,
-  Bot,
-  Camera,
   Check,
-  Droplets,
   Flame,
   Footprints,
-  HeartPulse,
-  Plus,
   Search,
   Scale,
   Utensils,
@@ -28,39 +20,8 @@ import { Dialog, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   DEFAULT_CALORIE_TARGET,
-  DEFAULT_CARBS_G,
-  DEFAULT_FAT_G,
-  DEFAULT_FIBER_G,
-  DEFAULT_PROTEIN_G,
   NUTRIENT_IDS,
 } from "@open-health/shared/constants";
-
-const quickActions = [
-  {
-    href: "/hub/chat",
-    title: "Ask AI",
-    body: "Health answers",
-    icon: Bot,
-  },
-  {
-    href: "/hub/food/search",
-    title: "Add meal",
-    body: "Search food",
-    icon: Plus,
-  },
-  {
-    href: "/hub/water",
-    title: "Log water",
-    body: "250 ml",
-    icon: Droplets,
-  },
-  {
-    href: "/hub/progress",
-    title: "Progress",
-    body: "View trends",
-    icon: Scale,
-  },
-];
 
 function getFirstName(name?: string | null) {
   if (!name) return "Naresh";
@@ -170,6 +131,8 @@ export default function HubPage() {
   const [localLoggedFoods, setLocalLoggedFoods] = useState<LocalLoggedFood[]>([]);
   const [foodConfirmation, setFoodConfirmation] = useState<FoodConfirmation | null>(null);
   const [weightInput, setWeightInput] = useState("");
+  const [activeQuickLog, setActiveQuickLog] = useState<"food" | "burn" | null>(null);
+  const [isWeightEditing, setIsWeightEditing] = useState(false);
   const [isPendingWeight, startWeightTransition] = useTransition();
 
   useEffect(() => {
@@ -202,11 +165,8 @@ export default function HubPage() {
   }, [hasHydrated]);
 
   const { data: diaryData } = trpc.diary.getDay.useQuery({ date: today }, { enabled: isAuthed });
-  const { data: weekSummary } = trpc.diary.getWeekSummary.useQuery({ startDate: weekStart, endDate: today }, { enabled: isAuthed });
   const { data: goals } = trpc.user.getGoals.useQuery(undefined, { enabled: isAuthed });
-  const { data: waterData } = trpc.water.getToday.useQuery({ date: today }, { enabled: isAuthed });
   const { data: dateWeight } = trpc.progress.getDateWeight.useQuery({ date: today }, { enabled: isAuthed });
-  const { data: dateSteps } = trpc.progress.getDateSteps.useQuery({ date: today }, { enabled: isAuthed });
   const { data: exerciseData } = trpc.exercise.getDay.useQuery({ date: today }, { enabled: isAuthed });
   const { data: micronutrients } = trpc.diary.getDayNutrients.useQuery(
     { date: today, nutrientIds: micronutrientIds },
@@ -273,33 +233,17 @@ export default function HubPage() {
     fiber: Number(savedTotals.fiber ?? 0) + localTotals.fiber,
   };
   const calorieTarget = goals?.calorieTarget ? Number(goals.calorieTarget) : DEFAULT_CALORIE_TARGET;
-  const proteinTarget = goals?.proteinG ? Number(goals.proteinG) : DEFAULT_PROTEIN_G;
-  const carbsTarget = goals?.carbsG ? Number(goals.carbsG) : DEFAULT_CARBS_G;
-  const fatTarget = goals?.fatG ? Number(goals.fatG) : DEFAULT_FAT_G;
-  const waterTotal = waterData?.totalMl ?? 0;
-  const waterGoal = waterData?.goalMl ?? 2000;
   const currentWeight = dateWeight ? Number(dateWeight.weightKg) : null;
   const weightForBurn = currentWeight ?? 70;
-  const currentSteps = dateSteps ? Number(dateSteps.steps) : 0;
   const exerciseCalories = exerciseData?.totalCalories ?? 0;
   const netCalories = Math.max(0, Math.round(totals.calories - exerciseCalories));
   const calorieBalance = Math.round(netCalories - calorieTarget);
-  const balanceLabel = calorieBalance > 0 ? "surplus" : "deficit";
   const balanceAbs = Math.abs(calorieBalance);
-  const isWeightGainSignal = calorieBalance > 0;
-  const WeightSignalIcon = isWeightGainSignal ? ArrowUpRight : ArrowDownRight;
-  const weightSignalLabel = isWeightGainSignal ? "Likely gain" : "Likely decrease";
-  const weightSignalTone = isWeightGainSignal ? "text-[#B76A16]" : "text-primary";
-  const weekMeals = weekSummary?.reduce((sum, day) => sum + Number(day.entryCount ?? 0), 0) ?? 0;
+  const remainingCalories = Math.max(0, calorieTarget - netCalories);
   const burnPreview = useMemo(
     () => estimateBurn(activity, Number(activityMinutes), weightForBurn),
     [activity, activityMinutes, weightForBurn]
   );
-  const progressItems = [
-    { label: "Meal logging", value: `${Math.min(weekMeals, 21)} / 21`, width: `${pct(weekMeals, 21)}%` },
-    { label: "Protein goal", value: `${Math.round(totals.protein)}g`, width: `${pct(totals.protein, proteinTarget)}%` },
-    { label: "Water", value: `${(waterTotal / 1000).toFixed(1)}L`, width: `${pct(waterTotal, waterGoal)}%` },
-  ];
   const localMicronutrients = localLoggedFoods.reduce<Record<number, number>>((sum, food) => {
     sum[NUTRIENT_IDS.vitaminA] = (sum[NUTRIENT_IDS.vitaminA] ?? 0) + food.vitaminA * food.servingQty;
     sum[NUTRIENT_IDS.vitaminC] = (sum[NUTRIENT_IDS.vitaminC] ?? 0) + food.vitaminC * food.servingQty;
@@ -330,10 +274,10 @@ export default function HubPage() {
   );
   const nutritionStatus =
     totals.calories === 0
-      ? "Start with your first meal."
+      ? "Start with your first meal today"
       : totals.calories <= calorieTarget
-        ? "You're on track."
-        : "A little over today.";
+        ? "You're on track today"
+        : "A little over today";
 
   useEffect(() => {
     setWeightInput(currentWeight ? String(currentWeight) : "");
@@ -517,11 +461,12 @@ export default function HubPage() {
         note: `Net ${calorieBalance >= 0 ? "+" : ""}${calorieBalance} kcal`,
       });
       setStatusMessage("Weight saved.");
+      setIsWeightEditing(false);
     });
   };
 
   return (
-    <div className="bg-[#F6F8F7] px-4 py-6 sm:px-6 lg:py-10">
+    <div className="min-h-screen bg-[#F7FAF9]">
       <Dialog open={Boolean(foodConfirmation)} onOpenChange={(open) => !open && setFoodConfirmation(null)}>
         {foodConfirmation && (
           <div className="text-center">
@@ -569,187 +514,219 @@ export default function HubPage() {
           </div>
         )}
       </Dialog>
-      <div className="mx-auto max-w-[1080px] space-y-7 sm:space-y-8">
-        <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Good morning, {firstName}</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Calories, macros, burn.</p>
-          </div>
-          <Link href="/today" className="inline-flex items-center gap-2 text-sm font-medium text-primary">
-            Details
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+      <div className="mx-auto max-w-[480px] px-[18px] pb-[110px] pt-6">
+        <section className="mb-5 mt-6">
+          <h1 className="text-[24px] font-bold leading-[1.2] text-[#17201E]">
+            Good morning, {firstName} 👋
+          </h1>
+          <p className="mt-1.5 text-sm font-normal text-[#6B7773]">
+            Here&apos;s your health summary today.
+          </p>
         </section>
 
-        <section className="overflow-hidden rounded-3xl border border-[#DCE8E3] bg-[#133A31] p-5 text-white shadow-[0_16px_42px_rgba(19,58,49,0.16)] sm:p-6">
-          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="space-y-5">
-              <div>
-                <p className="text-xs font-semibold uppercase text-white/60">Net calories</p>
-                <div className="mt-3 flex items-end gap-2">
-                  <span className="text-5xl font-semibold leading-none tracking-tight sm:text-6xl">{netCalories.toLocaleString()}</span>
-                  <span className="pb-2 text-sm font-medium text-white/60">/ {calorieTarget.toLocaleString()}</span>
+        <section className="rounded-[24px] bg-[#123F37] p-[22px] text-white">
+          <p className="text-xs font-semibold uppercase tracking-[0.04em] text-white/65">Today</p>
+          <div className="mt-6">
+            <p className="text-[52px] font-bold leading-none tracking-[-1.5px]">
+              {netCalories.toLocaleString()}
+            </p>
+            <p className="mt-1 text-[13px] text-white/65">net calories</p>
+          </div>
+          <p className="mt-6 text-sm font-medium text-white/80">
+            {netCalories.toLocaleString()} of {calorieTarget.toLocaleString()} kcal
+          </p>
+          <div className="mt-3 h-[7px] overflow-hidden rounded-full bg-white/15">
+            <div className="h-full rounded-full bg-[#70DFC3]" style={{ width: `${pct(netCalories, calorieTarget)}%` }} />
+          </div>
+          <p className="mt-3 text-sm font-semibold text-[#72E4C4]">
+            {calorieBalance > 0
+              ? `${balanceAbs.toLocaleString()} kcal over target`
+              : `${remainingCalories.toLocaleString()} kcal remaining`}
+          </p>
+          <div className="mt-4 grid grid-cols-2 border-t border-white/12 pt-4">
+            <div>
+              <p className="text-xs font-medium text-white/60">Food</p>
+              <p className="mt-1 text-lg font-bold tabular-nums">{Math.round(totals.calories).toLocaleString()} kcal</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-medium text-white/60">Burned</p>
+              <p className="mt-1 text-lg font-bold tabular-nums">{Math.round(exerciseCalories).toLocaleString()} kcal</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-4">
+          <h2 className="text-[17px] font-semibold text-[#17201E]">Nutrition</h2>
+          <div className="mt-3 rounded-[20px] border border-[#E5ECE9] bg-white p-[18px]">
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                ["Protein", `${Math.round(totals.protein)} g`],
+                ["Carbs", `${Math.round(totals.carbs)} g`],
+                ["Fat", `${Math.round(totals.fat)} g`],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-xs font-medium text-[#74807C]">{label}</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-[#17201E]">{value}</p>
                 </div>
-                <p className={`mt-3 text-sm font-semibold ${calorieBalance > 0 ? "text-[#F5C76B]" : "text-[#8CE5C9]"}`}>
-                  {balanceAbs.toLocaleString()} kcal {balanceLabel}
-                </p>
-                <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-white/12">
-                  <WeightSignalIcon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{weightSignalLabel}</span>
-                </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-              <div className="h-2 overflow-hidden rounded-full bg-white/14">
-                <div className="h-full rounded-full bg-[#7EE0C1]" style={{ width: `${pct(netCalories, calorieTarget)}%` }} />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  ["Food", `${Math.round(totals.calories)}`],
-                  ["Burn", `-${Math.round(exerciseCalories)}`],
-                  ["Steps", currentSteps.toLocaleString()],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
-                    <p className="text-xs font-medium text-white/58">{label}</p>
-                    <p className="mt-1 text-lg font-semibold tabular-nums text-white">{value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 border-t border-white/12 pt-5">
-                {[
-                  ["Protein", `${Math.round(totals.protein)}g`, proteinTarget],
-                  ["Carbs", `${Math.round(totals.carbs)}g`, carbsTarget],
-                  ["Fat", `${Math.round(totals.fat)}g`, fatTarget],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <p className="text-xs font-medium text-white/58">{label}</p>
-                    <p className="mt-1 text-xl font-bold tabular-nums text-white">{value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/12">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase text-white/58">Weight check-in</p>
-                    <p className="mt-1 truncate text-lg font-semibold text-white">
-                      {currentWeight ? `${currentWeight} kg today` : "Add today's weight"}
+        <section className="mt-4">
+          <div className="flex items-end justify-between gap-3">
+            <h2 className="text-[17px] font-semibold text-[#17201E]">Micronutrient coverage</h2>
+            <p className="text-xl font-bold tabular-nums text-[#0FA88B]">{micronutrientCoverage}%</p>
+          </div>
+          <div className="mt-3 rounded-[20px] border border-[#E5ECE9] bg-white p-[18px]">
+            <div className="space-y-3">
+              {micronutrientRows.slice(0, 5).map((item) => (
+                <div key={item.nutrientId}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate text-xs font-semibold text-[#4D5B57]">{item.name}</p>
+                    <p className="shrink-0 text-xs font-medium tabular-nums text-[#74807C]">
+                      {Math.round(item.total)}
+                      {item.unit}
                     </p>
                   </div>
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 ${calorieBalance > 0 ? "text-[#F5C76B]" : "text-[#8CE5C9]"}`}>
-                    <WeightSignalIcon className="h-5 w-5" strokeWidth={2} />
+                  <div className="mt-2 h-[7px] overflow-hidden rounded-full bg-[#E9F1EE]">
+                    <div className="h-full rounded-full bg-[#70DFC3]" style={{ width: item.width }} />
                   </div>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
-                  <div className="relative min-w-0">
-                    <Input
-                      type="number"
-                      min="1"
-                      step="0.1"
-                      value={weightInput}
-                      onChange={(event) => setWeightInput(event.target.value)}
-                      placeholder="Weight"
-                      className="border-white/15 bg-white/12 pr-12 text-sm text-white placeholder:text-white/45"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-white/55">kg</span>
-                  </div>
-                  <Button
-                    onClick={handleLogWeight}
-                    disabled={!weightInput || isPendingWeight || logWeight.isPending}
-                    className="rounded-full bg-white text-[#133A31] hover:bg-white/90"
-                  >
-                    {isPendingWeight || logWeight.isPending ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-                <Link href="/hub/progress" className="mt-3 inline-flex text-sm font-semibold text-[#8CE5C9]">
-                  View weight graph
-                </Link>
-              </div>
+              ))}
             </div>
+            <p className="mt-4 text-xs leading-5 text-[#74807C]">
+              Based on foods logged today. More detailed vitamins and minerals are available in your diary.
+            </p>
+          </div>
+        </section>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-[#BFE3D6] bg-[#F0FBF7] p-4 text-foreground shadow-[0_10px_28px_rgba(0,0,0,0.08)]">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-primary shadow-[0_6px_14px_rgba(22,160,133,0.12)]">
-                    <Utensils className="h-4 w-4" />
-                  </span>
-                  <h2 className="text-sm font-semibold text-foreground">Add food</h2>
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      className="pl-9 text-sm"
-                      value={foodQuery}
-                      onChange={(e) => setFoodQuery(e.target.value)}
-                      placeholder="Dal, bhat, chiya..."
-                    />
-                  </div>
-                  <Input
-                    className="w-20 text-sm"
-                    type="number"
-                    min="0.25"
-                    step="0.25"
-                    value={servingQty}
-                    onChange={(e) => setServingQty(e.target.value)}
-                    aria-label="Servings"
-                  />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+        <section className="mt-6">
+          <h2 className="text-[17px] font-semibold text-[#17201E]">Quick log</h2>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setActiveQuickLog(activeQuickLog === "food" ? null : "food")}
+              className="min-h-[88px] rounded-[18px] border border-[#E5ECE9] bg-white p-4 text-left transition-colors hover:border-[#0FA88B]/40"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#E8F7F3] text-[#0FA88B]">
+                <Utensils className="h-5 w-5" />
+              </span>
+              <span className="mt-3 block text-[15px] font-semibold leading-5 text-[#17201E]">Add food</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveQuickLog(activeQuickLog === "burn" ? null : "burn")}
+              className="min-h-[88px] rounded-[18px] border border-[#E5ECE9] bg-white p-4 text-left transition-colors hover:border-[#F1B65F]"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#FFF3DF] text-[#C96B08]">
+                <Flame className="h-5 w-5" />
+              </span>
+              <span className="mt-3 block text-[15px] font-semibold leading-5 text-[#17201E]">Burn calories</span>
+            </button>
+          </div>
+
+          {activeQuickLog === "food" && (
+            <div className="mt-3 rounded-[20px] border border-[#E5ECE9] bg-white p-[18px]">
+              <h3 className="text-[15px] font-semibold text-[#17201E]">Add food</h3>
+              <div className="relative mt-4">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#74807C]" />
+                <Input
+                  className="h-[52px] rounded-[14px] border-[#DCE5E1] bg-white pl-11 text-sm"
+                  value={foodQuery}
+                  onChange={(e) => setFoodQuery(e.target.value)}
+                  placeholder="Search dal, bhat, chiya..."
+                />
+              </div>
+              <div className="mt-4">
+                <p className="text-xs font-medium text-[#74807C]">Meal</p>
+                <div className="mt-2 grid grid-cols-4 gap-2">
                   {(["breakfast", "lunch", "dinner", "snack"] as const).map((type) => (
                     <button
                       key={type}
                       type="button"
                       onClick={() => setMealType(type)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${mealType === type ? "bg-primary text-primary-foreground" : "bg-white text-muted-foreground ring-1 ring-[#D7EAE3]"}`}
+                      className={`min-h-11 rounded-[12px] px-2 text-xs font-semibold transition-colors ${
+                        mealType === type
+                          ? "bg-[#0FA88B] text-white"
+                          : "border border-[#DCE5E1] bg-white text-[#4D5B57]"
+                      }`}
                     >
                       {mealLabel(type)}
                     </button>
                   ))}
                 </div>
-                <div className="mt-4 space-y-2">
-                  {hasHydrated && foodSearching && <p className="text-sm text-muted-foreground">Searching...</p>}
-                  {localFoodResults.map((food) => (
-                    <button
-                      key={food.id}
-                      type="button"
-                      onClick={() => openLocalFoodConfirmation(food)}
-                      className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border border-[#CFE5DC] bg-white px-3 py-2 text-left transition-colors hover:border-primary/50 hover:bg-[#FAFFFD]"
-                    >
-                      <span className="min-w-0 overflow-hidden">
-                        <span className="block truncate text-sm font-semibold text-foreground">{food.name}</span>
-                        <span className="block truncate text-xs text-muted-foreground">Food data • {Math.round(food.protein)}g protein</span>
-                      </span>
-                      <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-foreground">{Math.round(food.calories)} kcal</span>
-                    </button>
-                  ))}
-                  {(foodResults ?? []).map((food) => (
-                    <button
-                      key={food.id}
-                      type="button"
-                      onClick={() => openDatabaseFoodConfirmation(food.id, food.name, Number(food.calories || 0))}
-                      disabled={logFood.isPending}
-                      className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border border-[#CFE5DC] bg-white px-3 py-2 text-left transition-colors hover:border-primary/50 hover:bg-[#FAFFFD] disabled:opacity-60"
-                    >
-                      <span className="min-w-0 overflow-hidden">
-                        <span className="block truncate text-sm font-semibold text-foreground">{food.name}</span>
-                        <span className="block truncate text-xs text-muted-foreground">{food.householdServing ?? `${food.servingSize}${food.servingUnit}`}</span>
-                      </span>
-                      <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-foreground">{Math.round(Number(food.calories || 0))} kcal</span>
-                    </button>
-                  ))}
+              </div>
+              <div className="mt-4">
+                <p className="text-xs font-medium text-[#74807C]">Quantity</p>
+                <div className="mt-2 grid grid-cols-[52px_1fr_52px] items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setServingQty(String(Math.max(0.25, getSafeServingQty() - 0.25)))}
+                    className="min-h-11 rounded-[14px] border border-[#DCE5E1] bg-white text-lg font-semibold text-[#4D5B57]"
+                  >
+                    -
+                  </button>
+                  <div className="flex min-h-11 items-center justify-center rounded-[14px] border border-[#DCE5E1] bg-[#F7FAF9] text-sm font-semibold text-[#17201E]">
+                    {getSafeServingQty()} serving{getSafeServingQty() === 1 ? "" : "s"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setServingQty(String(getSafeServingQty() + 0.25))}
+                    className="min-h-11 rounded-[14px] border border-[#DCE5E1] bg-white text-lg font-semibold text-[#4D5B57]"
+                  >
+                    +
+                  </button>
                 </div>
               </div>
+              <div className="mt-4 space-y-2">
+                {hasHydrated && foodSearching && <p className="text-sm text-[#74807C]">Searching...</p>}
+                {localFoodResults.map((food) => (
+                  <button
+                    key={food.id}
+                    type="button"
+                    onClick={() => openLocalFoodConfirmation(food)}
+                    className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-[14px] border border-[#E5ECE9] bg-[#FDFEFE] px-3 py-3 text-left"
+                  >
+                    <span className="min-w-0 overflow-hidden">
+                      <span className="block truncate text-sm font-semibold text-[#17201E]">{food.name}</span>
+                      <span className="block truncate text-xs text-[#74807C]">Food data • {Math.round(food.protein)}g protein</span>
+                    </span>
+                    <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-[#17201E]">{Math.round(food.calories)} kcal</span>
+                  </button>
+                ))}
+                {(foodResults ?? []).map((food) => (
+                  <button
+                    key={food.id}
+                    type="button"
+                    onClick={() => openDatabaseFoodConfirmation(food.id, food.name, Number(food.calories || 0))}
+                    disabled={logFood.isPending}
+                    className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-[14px] border border-[#E5ECE9] bg-[#FDFEFE] px-3 py-3 text-left disabled:opacity-60"
+                  >
+                    <span className="min-w-0 overflow-hidden">
+                      <span className="block truncate text-sm font-semibold text-[#17201E]">{food.name}</span>
+                      <span className="block truncate text-xs text-[#74807C]">{food.householdServing ?? `${food.servingSize}${food.servingUnit}`}</span>
+                    </span>
+                    <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-[#17201E]">{Math.round(Number(food.calories || 0))} kcal</span>
+                  </button>
+                ))}
+              </div>
+              <Button
+                type="button"
+                onClick={() => setStatusMessage("Search and choose a food to add.")}
+                className="mt-4 h-[50px] w-full rounded-[14px] bg-[#0FA88B] font-semibold text-white hover:bg-[#0D967C]"
+              >
+                Add food
+              </Button>
+            </div>
+          )}
 
-              <div className="rounded-2xl border border-[#F0D9B4] bg-[#FFF5E4] p-4 text-foreground shadow-[0_10px_28px_rgba(0,0,0,0.08)]">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-[#B76A16] shadow-[0_6px_14px_rgba(183,106,22,0.12)]">
-                    <Flame className="h-4 w-4" />
-                  </span>
-                  <h2 className="text-sm font-semibold text-foreground">Burn calories</h2>
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-2">
+          {activeQuickLog === "burn" && (
+            <div className="mt-3 rounded-[20px] border border-[#E5ECE9] bg-white p-[18px]">
+              <h3 className="text-[15px] font-semibold text-[#17201E]">Burn calories</h3>
+              <div className="mt-4">
+                <p className="text-xs font-medium text-[#74807C]">Activity</p>
+                <div className="mt-2 grid grid-cols-3 gap-2">
                   {(Object.keys(activityOptions) as Array<keyof typeof activityOptions>).map((key) => {
                     const option = activityOptions[key];
                     const Icon = option.icon;
@@ -758,7 +735,11 @@ export default function HubPage() {
                         key={key}
                         type="button"
                         onClick={() => setActivity(key)}
-                        className={`flex min-h-12 items-center justify-center gap-2 rounded-xl text-xs font-semibold transition-colors ${activity === key ? "bg-[#B76A16] text-white" : "bg-white text-muted-foreground ring-1 ring-[#F0D9B4]"}`}
+                        className={`flex min-h-11 items-center justify-center gap-1.5 rounded-[12px] text-xs font-semibold transition-colors ${
+                          activity === key
+                            ? "border border-[#F1B65F] bg-[#FFF1D8] text-[#B35D00]"
+                            : "border border-[#E4E8E6] bg-white text-[#4D5B57]"
+                        }`}
                       >
                         <Icon className="h-4 w-4" />
                         {option.label}
@@ -766,134 +747,91 @@ export default function HubPage() {
                     );
                   })}
                 </div>
-                <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+              </div>
+              <div className="mt-4">
+                <p className="text-xs font-medium text-[#74807C]">Duration</p>
+                <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-3">
                   <Input
                     type="number"
                     min="1"
                     step="1"
                     value={activityMinutes}
                     onChange={(e) => setActivityMinutes(e.target.value)}
-                    placeholder="Minutes"
-                    className="text-sm"
+                    className="h-[50px] rounded-[14px] border-[#DCE5E1] text-sm"
                   />
-                  <Button onClick={handleLogActivity} disabled={logExercise.isPending || createExercise.isPending}>
-                    Log
-                  </Button>
+                  <span className="text-sm font-medium text-[#6B7773]">minutes</span>
                 </div>
-                <div className="mt-4 rounded-2xl bg-white px-4 py-3 ring-1 ring-[#F1DFBF]">
-                  <p className="text-xs font-medium text-[#B76A16]">Estimated burn</p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{burnPreview.calories} kcal</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{burnPreview.durationMin} min • {weightForBurn} kg basis</p>
-                </div>
-                <Link href="/hub/food/scan-label" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary">
-                  <Camera className="h-4 w-4" />
-                  Snap meal
-                </Link>
               </div>
-            </div>
-
-            {(statusMessage || nutritionStatus) && (
-              <p className="rounded-2xl bg-white/10 px-4 py-3 text-sm font-medium text-white">{statusMessage || nutritionStatus}</p>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-[#DCE4F2] bg-[#F4F7FF] p-5 shadow-[0_4px_24px_rgba(44,68,112,0.045)] sm:p-6 dark:bg-card">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase text-muted-foreground">Vitamins & minerals</p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight text-foreground">Micronutrient coverage</h2>
-            </div>
-            <p className="text-2xl font-semibold tabular-nums text-primary">{micronutrientCoverage}%</p>
-          </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {micronutrientRows.map((item) => (
-              <div key={item.nutrientId} className="rounded-2xl border border-[#DDE6F5] bg-white p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-foreground">{item.name}</p>
-                  <p className="text-xs font-medium tabular-nums text-muted-foreground">
-                    {Math.round(item.total)}
-                    {item.unit}
-                  </p>
-                </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E6ECF7]">
-                  <div className="h-full rounded-full bg-[#4568A8]" style={{ width: item.width }} />
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {item.target ? `${pct(item.total, item.target)}% of target` : "Logged from foods"}
-                </p>
+              <div className="mt-4 rounded-[14px] bg-[#FFF8EB] p-[14px]">
+                <p className="text-xs font-medium text-[#B35D00]">Estimated burn</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-[#17201E]">{burnPreview.calories} kcal</p>
+                <p className="mt-1 text-xs text-[#6B7773]">{burnPreview.durationMin} min • based on {weightForBurn} kg</p>
               </div>
-            ))}
-          </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Updates from foods you log today. Values depend on available food nutrient data.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">Quick actions</h2>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {quickActions.map(({ href, title, body, icon: Icon }, index) => (
-              <Link
-                key={title}
-                href={href}
-                className={`group rounded-2xl border p-5 transition-all duration-200 hover:-translate-y-0.5 ${
-                  index === 0
-                    ? "border-[#D9E7E2] bg-[#EEF8F4]"
-                    : index === 1
-                      ? "border-[#E7E1D5] bg-[#FBF7EF]"
-                      : index === 2
-                        ? "border-[#D8E5EF] bg-[#F0F7FB]"
-                        : "border-[#E2E1ED] bg-[#F6F4FB]"
-                }`}
+              <Button
+                onClick={handleLogActivity}
+                disabled={logExercise.isPending || createExercise.isPending}
+                className="mt-4 h-[50px] w-full rounded-[14px] bg-[#0FA88B] font-semibold text-white hover:bg-[#0D967C]"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-primary shadow-[0_6px_16px_rgba(20,50,40,0.06)]">
-                    <Icon className="h-5 w-5" strokeWidth={1.8} />
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                {logExercise.isPending || createExercise.isPending ? "Logging..." : "Log activity"}
+              </Button>
+            </div>
+          )}
+        </section>
+
+        <section className="mt-6">
+          <h2 className="text-[17px] font-semibold text-[#17201E]">Weight</h2>
+          <div className="mt-3 rounded-[20px] border border-[#E5ECE9] bg-white p-[18px]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[30px] font-bold leading-none tabular-nums text-[#17201E]">
+                  {currentWeight ? `${currentWeight.toFixed(1)} kg` : "No weight"}
+                </p>
+                <p className="mt-2 text-sm text-[#6B7773]">Today</p>
+              </div>
+              <Scale className="h-5 w-5 text-[#0FA88B]" />
+            </div>
+            {isWeightEditing && (
+              <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="1"
+                    step="0.1"
+                    value={weightInput}
+                    onChange={(event) => setWeightInput(event.target.value)}
+                    placeholder="63.0"
+                    className="h-[50px] rounded-[14px] border-[#DCE5E1] pr-10 text-sm"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#6B7773]">kg</span>
                 </div>
-                <h3 className="mt-5 text-lg font-bold text-foreground">{title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{body}</p>
-              </Link>
-            ))}
+                <Button
+                  onClick={handleLogWeight}
+                  disabled={!weightInput || isPendingWeight || logWeight.isPending}
+                  className="h-[50px] rounded-[14px] bg-[#0FA88B] px-5 font-semibold text-white hover:bg-[#0D967C]"
+                >
+                  {isPendingWeight || logWeight.isPending ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsWeightEditing((value) => !value)}
+              className="mt-5 block min-h-11 text-sm font-semibold text-[#17201E]"
+            >
+              Update weight
+            </button>
+            <Link href="/hub/progress" className="inline-flex min-h-11 items-center text-sm font-semibold text-[#0FA88B]">
+              View progress →
+            </Link>
           </div>
         </section>
 
-        <section className="grid gap-5 lg:grid-cols-[1fr_0.8fr]">
-          <div className="rounded-3xl border border-[#DCE8E3] bg-white p-5 shadow-[0_4px_24px_rgba(20,50,40,0.035)] sm:p-7 dark:bg-card">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">This week</h2>
-              <Link href="/hub/progress" className="text-sm font-medium text-primary">Progress</Link>
-            </div>
-            <div className="mt-6 space-y-5">
-              {progressItems.map((item) => (
-                <div key={item.label}>
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="font-medium text-muted-foreground">{item.label}</span>
-                    <span className="font-semibold tabular-nums text-foreground">{item.value}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-[#E9F0ED]">
-                    <div className="h-full rounded-full bg-primary" style={{ width: item.width }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+        {(statusMessage || nutritionStatus) && (
+          <div className="mt-6 flex items-center gap-2 rounded-[14px] bg-[#EAF8F3] px-[15px] py-[13px] text-sm font-semibold text-[#176B5A]">
+            <Check className="h-4 w-4" />
+            <span>{statusMessage || nutritionStatus}</span>
           </div>
-
-          <div className="rounded-3xl border border-[#CFE7DE] bg-[#EAF8F3] p-5 sm:p-7">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-primary shadow-[0_6px_16px_rgba(20,50,40,0.06)]">
-              <HeartPulse className="h-5 w-5" strokeWidth={2} />
-            </div>
-            <p className="mt-6 text-sm font-semibold uppercase text-primary">One thing to try</p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-foreground">
-              {totals.fiber < DEFAULT_FIBER_G ? "Add fiber today." : "Nice balance today."}
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              {totals.fiber < DEFAULT_FIBER_G ? "Vegetables or dal help." : "Keep portions steady."}
-            </p>
-          </div>
-        </section>
+        )}
       </div>
     </div>
   );
