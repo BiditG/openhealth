@@ -111,8 +111,6 @@ export const exerciseRouter = router({
   logExercise: protectedProcedure
     .input(logExerciseSchema)
     .mutation(async ({ ctx, input }) => {
-      requireFeature(ctx.userPlan, "exercise");
-
       let caloriesBurned = input.caloriesBurned;
 
       if (caloriesBurned === undefined) {

@@ -10,6 +10,7 @@ import {
   Footprints,
   Search,
   Scale,
+  Sparkles,
   Utensils,
 } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
@@ -20,6 +21,10 @@ import { Dialog, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   DEFAULT_CALORIE_TARGET,
+  DEFAULT_CARBS_G,
+  DEFAULT_FAT_G,
+  DEFAULT_FIBER_G,
+  DEFAULT_PROTEIN_G,
   NUTRIENT_IDS,
 } from "@open-health/shared/constants";
 
@@ -72,6 +77,19 @@ type FoodConfirmation = {
   protein?: number;
   carbs?: number;
   fat?: number;
+};
+
+type CoachGoalSuggestion = {
+  source: "ollama" | "formula";
+  suggestion: {
+    calorieTarget: number;
+    proteinG: number;
+    carbsG: number;
+    fatG: number;
+    fiberG: number;
+    reason: string;
+    cautions: string[];
+  };
 };
 
 const micronutrientFallbackTargets: Record<number, number> = {
@@ -133,6 +151,7 @@ export default function HubPage() {
   const [weightInput, setWeightInput] = useState("");
   const [activeQuickLog, setActiveQuickLog] = useState<"food" | "burn" | null>(null);
   const [isWeightEditing, setIsWeightEditing] = useState(false);
+  const [coachGoals, setCoachGoals] = useState<CoachGoalSuggestion | null>(null);
   const [isPendingWeight, startWeightTransition] = useTransition();
 
   useEffect(() => {
@@ -208,12 +227,28 @@ export default function HubPage() {
       ]);
     },
   });
-  const createExercise = trpc.exercise.createCustomExercise.useMutation({
-    onSuccess: async () => {
-      await utils.exercise.getPresets.invalidate({ category: "cardio" });
+  const getCoachGoalSuggestion = trpc.user.getCoachGoalSuggestion.useMutation({
+    onSuccess: (data) => {
+      setCoachGoals({
+        source: data.source,
+        suggestion: data.suggestion,
+      });
+      setStatusMessage("Coach suggestion ready. Review it before applying.");
+    },
+    onError: (error) => {
+      setStatusMessage(error.message || "Coach suggestion could not be generated.");
     },
   });
-
+  const updateGoals = trpc.user.updateGoals.useMutation({
+    onSuccess: async () => {
+      await utils.user.getGoals.invalidate();
+      setCoachGoals(null);
+      setStatusMessage("Coach goals saved. Hub targets updated.");
+    },
+    onError: (error) => {
+      setStatusMessage(error.message || "Could not save coach goals.");
+    },
+  });
   const savedTotals = diaryData?.totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
   const localTotals = localLoggedFoods.reduce(
     (sum, food) => ({
@@ -233,6 +268,10 @@ export default function HubPage() {
     fiber: Number(savedTotals.fiber ?? 0) + localTotals.fiber,
   };
   const calorieTarget = goals?.calorieTarget ? Number(goals.calorieTarget) : DEFAULT_CALORIE_TARGET;
+  const proteinTarget = goals?.proteinG ? Number(goals.proteinG) : DEFAULT_PROTEIN_G;
+  const carbsTarget = goals?.carbsG ? Number(goals.carbsG) : DEFAULT_CARBS_G;
+  const fatTarget = goals?.fatG ? Number(goals.fatG) : DEFAULT_FAT_G;
+  const fiberTarget = goals?.fiberG ? Number(goals.fiberG) : DEFAULT_FIBER_G;
   const currentWeight = dateWeight ? Number(dateWeight.weightKg) : null;
   const weightForBurn = currentWeight ?? 70;
   const exerciseCalories = exerciseData?.totalCalories ?? 0;
@@ -423,23 +462,24 @@ export default function HubPage() {
     const existing = cardioPresets?.find((preset) =>
       preset.name.toLowerCase().includes(option.query)
     );
-    const exerciseId =
-      existing?.id ??
-      (await createExercise.mutateAsync({
-        name: option.label,
-        category: "cardio",
-        metValue: option.met,
-      })).id;
+    if (!existing?.id) {
+      setStatusMessage(`${option.label} preset is not available yet.`);
+      return;
+    }
 
-    await logExercise.mutateAsync({
-      date: today,
-      exerciseId,
-      durationMin: burnPreview.durationMin,
-      caloriesBurned: burnPreview.calories,
-      intensity: option.intensity,
-      note: `${Math.round(minutes)} min ${option.label.toLowerCase()}`,
-    });
-    setStatusMessage(`${option.label} logged. ${burnPreview.calories} kcal burned.`);
+    try {
+      await logExercise.mutateAsync({
+        date: today,
+        exerciseId: existing.id,
+        durationMin: burnPreview.durationMin,
+        caloriesBurned: burnPreview.calories,
+        intensity: option.intensity,
+        note: `${Math.round(minutes)} min ${option.label.toLowerCase()}`,
+      });
+      setStatusMessage(`${option.label} logged. ${burnPreview.calories} kcal burned.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Could not log activity.");
+    }
   };
 
   const handleLogWeight = () => {
@@ -462,6 +502,18 @@ export default function HubPage() {
       });
       setStatusMessage("Weight saved.");
       setIsWeightEditing(false);
+    });
+  };
+
+  const handleApplyCoachGoals = async () => {
+    if (!coachGoals) return;
+    const suggestion = coachGoals.suggestion;
+    await updateGoals.mutateAsync({
+      calorieTarget: Math.round(suggestion.calorieTarget),
+      proteinG: Math.round(suggestion.proteinG),
+      carbsG: Math.round(suggestion.carbsG),
+      fatG: Math.round(suggestion.fatG),
+      fiberG: Math.round(suggestion.fiberG),
     });
   };
 
@@ -556,22 +608,103 @@ export default function HubPage() {
         </section>
 
         <section className="mt-4">
-          <h2 className="text-[17px] font-semibold text-[#17201E]">Nutrition</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-[17px] font-semibold text-[#17201E]">Nutrition</h2>
+            <button
+              type="button"
+              onClick={() => getCoachGoalSuggestion.mutate()}
+              disabled={!isAuthed || getCoachGoalSuggestion.isPending || updateGoals.isPending}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[#E8F7F3] px-3 text-xs font-bold text-[#0A806C] transition-colors hover:bg-[#DDF2EC] disabled:opacity-55"
+            >
+              <Sparkles className="h-4 w-4" />
+              {getCoachGoalSuggestion.isPending ? "Thinking..." : "Coach Suggestion"}
+            </button>
+          </div>
           <div className="mt-3 rounded-[20px] border border-[#E5ECE9] bg-white p-[18px]">
             <div className="grid grid-cols-3 gap-3">
               {[
-                ["Protein", `${Math.round(totals.protein)} g`],
-                ["Carbs", `${Math.round(totals.carbs)} g`],
-                ["Fat", `${Math.round(totals.fat)} g`],
-              ].map(([label, value]) => (
+                ["Protein", totals.protein, proteinTarget],
+                ["Carbs", totals.carbs, carbsTarget],
+                ["Fat", totals.fat, fatTarget],
+              ].map(([label, value, target]) => (
                 <div key={label}>
                   <p className="text-xs font-medium text-[#74807C]">{label}</p>
-                  <p className="mt-1 text-xl font-bold tabular-nums text-[#17201E]">{value}</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-[#17201E]">{Math.round(Number(value))} g</p>
+                  <p className="mt-0.5 text-[11px] font-medium tabular-nums text-[#74807C]">
+                    of {Math.round(Number(target))} g
+                  </p>
+                  <div className="mt-2 h-[6px] overflow-hidden rounded-full bg-[#E9F1EE]">
+                    <div
+                      className="h-full rounded-full bg-[#0FA88B]"
+                      style={{ width: `${pct(Number(value), Number(target))}%` }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
+            <div className="mt-4 flex items-center justify-between border-t border-[#EDF2F0] pt-4">
+              <p className="text-xs font-medium text-[#74807C]">Fiber target</p>
+              <p className="text-sm font-bold tabular-nums text-[#17201E]">
+                {Math.round(totals.fiber)} g / {Math.round(fiberTarget)} g
+              </p>
+            </div>
           </div>
         </section>
+
+        {coachGoals && (
+          <section className="mt-4 rounded-[20px] border border-[#CFECE4] bg-white p-[18px]">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[#E8F7F3] text-[#0A806C]">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-[16px] font-semibold text-[#17201E]">Coach goals</h2>
+                <p className="mt-1 text-xs leading-5 text-[#6B7773]">
+                  {coachGoals.suggestion.reason}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {[
+                ["Calories", calorieTarget, coachGoals.suggestion.calorieTarget, "kcal"],
+                ["Protein", proteinTarget, coachGoals.suggestion.proteinG, "g"],
+                ["Carbs", carbsTarget, coachGoals.suggestion.carbsG, "g"],
+                ["Fat", fatTarget, coachGoals.suggestion.fatG, "g"],
+                ["Fiber", fiberTarget, coachGoals.suggestion.fiberG, "g"],
+              ].map(([label, current, suggested, unit]) => (
+                <div key={label} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-[12px] bg-[#F7FAF9] px-3 py-2">
+                  <p className="text-xs font-semibold text-[#4D5B57]">{label}</p>
+                  <p className="text-xs font-bold tabular-nums text-[#17201E]">
+                    {Math.round(Number(current))} {"->"} {Math.round(Number(suggested))} {unit}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {coachGoals.suggestion.cautions.length > 0 && (
+              <p className="mt-3 text-xs leading-5 text-[#74807C]">
+                {coachGoals.suggestion.cautions[0]}
+              </p>
+            )}
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCoachGoals(null)}
+                className="h-[48px] rounded-[14px] border-[#DCE5E1] font-semibold"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleApplyCoachGoals}
+                disabled={updateGoals.isPending}
+                className="h-[48px] rounded-[14px] bg-[#0FA88B] font-semibold text-white hover:bg-[#0D967C]"
+              >
+                {updateGoals.isPending ? "Saving..." : "Apply goals"}
+              </Button>
+            </div>
+          </section>
+        )}
 
         <section className="mt-4">
           <div className="flex items-end justify-between gap-3">
@@ -769,10 +902,10 @@ export default function HubPage() {
               </div>
               <Button
                 onClick={handleLogActivity}
-                disabled={logExercise.isPending || createExercise.isPending}
+                disabled={logExercise.isPending}
                 className="mt-4 h-[50px] w-full rounded-[14px] bg-[#0FA88B] font-semibold text-white hover:bg-[#0D967C]"
               >
-                {logExercise.isPending || createExercise.isPending ? "Logging..." : "Log activity"}
+                {logExercise.isPending ? "Logging..." : "Log activity"}
               </Button>
             </div>
           )}
