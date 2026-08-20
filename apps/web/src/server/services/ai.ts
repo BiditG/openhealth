@@ -93,7 +93,14 @@ Return JSON only.`;
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "gpt-oss:20b";
-const GEMINI_VISION_MODEL = process.env.GEMINI_VISION_MODEL ?? "gemini-2.5-flash";
+const DEFAULT_GEMINI_VISION_MODEL = "gemini-3.6-flash";
+const GEMINI_VISION_MODELS = [
+  process.env.GEMINI_VISION_MODEL,
+  DEFAULT_GEMINI_VISION_MODEL,
+  "gemini-2.0-flash",
+].filter((model, index, models): model is string => {
+  return Boolean(model) && models.indexOf(model) === index;
+});
 
 function getOllamaApiBaseUrl() {
   const baseUrl = OLLAMA_BASE_URL.replace(/\/$/, "");
@@ -177,34 +184,47 @@ async function callGeminiNutritionLabel(base64Image: string) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_VISION_MODEL,
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: nutritionLabelSchema,
-    },
-  });
+  let lastError: unknown = null;
 
-  const result = await model.generateContent([
-    {
-      text: `${LABEL_SYSTEM_PROMPT}
+  for (const modelName of GEMINI_VISION_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: nutritionLabelSchema,
+        },
+      });
+
+      const result = await model.generateContent([
+        {
+          text: `${LABEL_SYSTEM_PROMPT}
 
 Return strict JSON only. Do not include markdown, prose, or extra keys.`,
-    },
-    {
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: base64Image,
-      },
-    },
-  ]);
+        },
+        {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: base64Image,
+          },
+        },
+      ]);
 
-  const normalized = normalizeNutritionData(extractJsonObject(result.response.text()));
-  if (!normalized) {
-    throw new Error("Gemini returned an incomplete nutrition format");
+      const normalized = normalizeNutritionData(extractJsonObject(result.response.text()));
+      if (!normalized) {
+        throw new Error(`${modelName} returned an incomplete nutrition format`);
+      }
+
+      return normalized;
+    } catch (error) {
+      lastError = error;
+      console.warn(`Gemini nutrition recognition failed with ${modelName}:`, error);
+    }
   }
 
-  return normalized;
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Gemini nutrition recognition failed");
 }
 
 function normalizeNutritionData(data: unknown): NutritionRecognitionResult | null {
