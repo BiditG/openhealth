@@ -76,10 +76,10 @@ export default function FoodBrowsePage() {
           <h1 className="mt-1 text-3xl font-semibold text-foreground">{t("title")}</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">Search foods, compare calories, or scan your next meal.</p>
         </div>
-        <Link href="/hub/food/scan">
+        <Link href="/hub/food/scan-label">
           <Button>
             <Camera className="h-4 w-4" />
-            Scan Food
+            Snap Food
           </Button>
         </Link>
       </section>

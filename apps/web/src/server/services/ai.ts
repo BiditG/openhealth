@@ -24,29 +24,32 @@ const nutritionLabelSchema: Schema = {
     vitaminAMcg: { type: SchemaType.NUMBER, description: "Vitamin A in mcg RAE", nullable: true },
     vitaminCMg: { type: SchemaType.NUMBER, description: "Vitamin C in mg", nullable: true },
     vitaminDMcg: { type: SchemaType.NUMBER, description: "Vitamin D in mcg", nullable: true },
-    notes: { type: SchemaType.STRING, description: "Extra label details such as allergens, vegetarian marks, origin, or storage instructions", nullable: true },
+    notes: { type: SchemaType.STRING, description: "Food recognition notes, visible portion assumptions, label details, allergens, vegetarian marks, origin, or storage instructions", nullable: true },
     inferredFields: {
       type: SchemaType.ARRAY,
       items: { type: SchemaType.STRING },
-      description: "Fields inferred by AI from food knowledge instead of read directly from the label. Use camelCase field names.",
+      description: "Fields inferred by AI from visible food portions or food knowledge instead of read directly from a label. Use camelCase field names.",
     },
   },
   required: ["foodName", "servingSize", "servingUnit", "calories", "proteinG", "fatG", "carbsG", "inferredFields"],
 };
 
-const LABEL_SYSTEM_PROMPT = `You are a nutrition label extraction assistant for consumer health tracking.
+const LABEL_SYSTEM_PROMPT = `You are a food photo and nutrition label analysis assistant for consumer calorie tracking.
 
 Rules:
-1. Prefer per-serving nutrition values. If only per-100g/ml values are available, use 100 as servingSize.
-2. Read the food name from the package. If it is not visible, use "Unknown food".
-3. Read the brand from the package when visible; otherwise use null.
-4. servingUnit is usually "g", "ml", "piece", "cup", or "plate".
-5. Convert values to the correct units: kcal for calories, g for protein/fat/carbs/fiber/sugar, mg for sodium/calcium/iron/potassium/cholesterol, mcg for vitamins A/D, and mg for vitamin C.
-6. If energy is shown as kJ, convert to kcal by dividing by 4.184.
-7. Optional fields that cannot be read should be null.
-8. For labels from Nepal, India, or other South Asian markets, carefully handle per-serving, per-100g, and daily value formats.
-9. notes should briefly capture allergens, vegetarian/vegan marks, origin, storage instructions, or preparation notes. Use null if none are present.
-10. If some nutrients are missing or clearly impossible, infer reasonable values from food knowledge and list inferred field names in inferredFields. If all values are directly read from the label, inferredFields must be [].`;
+1. If the image shows a nutrition label or packaged food facts panel, extract the label values and prefer per-serving nutrition values. If only per-100g/ml values are available, use 100 as servingSize.
+2. If the image shows prepared food, identify the visible dish or combined meal and estimate nutrition for the visible edible portion.
+3. For mixed meals, return one concise foodName such as "Dal bhat with chicken curry" and combine total calories/macros for the whole visible portion.
+4. Read the brand from the package when visible; otherwise use null.
+5. servingUnit is usually "g", "ml", "piece", "cup", "bowl", "plate", or "serving". For food photos, use a natural servingUnit and set servingSize to the estimated portion quantity or weight.
+6. Convert values to the correct units: kcal for calories, g for protein/fat/carbs/fiber/sugar, mg for sodium/calcium/iron/potassium/cholesterol, mcg for vitamins A/D, and mg for vitamin C.
+7. If energy is shown as kJ, convert to kcal by dividing by 4.184.
+8. Optional fields that cannot be read or reasonably estimated should be null.
+9. For labels or foods from Nepal, India, or other South Asian markets, carefully handle familiar foods, portion sizes, per-serving, per-100g, and daily value formats.
+10. notes should briefly explain the visible portion, key assumptions, allergens, vegetarian/vegan marks, origin, storage instructions, or preparation notes. Use null if none are present.
+11. If the photo is a prepared food photo, most nutrition values are estimates. List estimated field names in inferredFields, especially calories, proteinG, fatG, carbsG, servingSize, and optional nutrients.
+12. If a label value is directly read, do not list that field in inferredFields. If a value is inferred from food knowledge or visible portion size, list its camelCase field name.
+13. If the image is too unclear to identify food, return foodName "Unknown food", calories 0, proteinG 0, fatG 0, carbsG 0, servingSize 1, servingUnit "serving", notes explaining that the image was unclear, and inferredFields ["foodName"].`;
 
 const ESTIMATION_SYSTEM_PROMPT = `You are a nutrition estimation assistant for Nepal and South Asian meals. Users may describe food in English, Nepali Unicode, or Romanized Nepali such as "dal bhat tarkari", "2 plate momo", "dherai bhat khaye", or "chiura ra masu".
 
@@ -90,6 +93,7 @@ Return JSON only.`;
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "gpt-oss:20b";
+const GEMINI_VISION_MODEL = process.env.GEMINI_VISION_MODEL ?? "gemini-2.5-flash";
 
 function getOllamaApiBaseUrl() {
   const baseUrl = OLLAMA_BASE_URL.replace(/\/$/, "");
@@ -164,6 +168,43 @@ async function callOllamaJson(
     throw new Error("Ollama did not return a response");
   }
   return extractJsonObject(content);
+}
+
+async function callGeminiNutritionLabel(base64Image: string) {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GOOGLE_AI_API_KEY is not configured");
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: GEMINI_VISION_MODEL,
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: nutritionLabelSchema,
+    },
+  });
+
+  const result = await model.generateContent([
+    {
+      text: `${LABEL_SYSTEM_PROMPT}
+
+Return strict JSON only. Do not include markdown, prose, or extra keys.`,
+    },
+    {
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: base64Image,
+      },
+    },
+  ]);
+
+  const normalized = normalizeNutritionData(extractJsonObject(result.response.text()));
+  if (!normalized) {
+    throw new Error("Gemini returned an incomplete nutrition format");
+  }
+
+  return normalized;
 }
 
 function normalizeNutritionData(data: unknown): NutritionRecognitionResult | null {
@@ -250,6 +291,15 @@ export type NutritionEstimationResult =
 export async function recognizeNutritionLabel(
   base64Image: string
 ): Promise<NutritionLabelResult> {
+  if (process.env.GOOGLE_AI_API_KEY) {
+    try {
+      const data = await callGeminiNutritionLabel(base64Image);
+      return { success: true, data };
+    } catch (error) {
+      console.warn("Gemini nutrition label recognition failed, checking Ollama fallback:", error);
+    }
+  }
+
   try {
     const data = await callOllamaJson(
       LABEL_SYSTEM_PROMPT,
@@ -264,42 +314,17 @@ export async function recognizeNutritionLabel(
     console.warn("Ollama nutrition label recognition failed, checking fallback:", error);
   }
 
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey) {
-    return { success: false, error: "Ollama is unavailable and no fallback vision API key is configured" };
-  }
-
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: nutritionLabelSchema,
-      },
-    });
-
-    const result = await model.generateContent([
-      { text: LABEL_SYSTEM_PROMPT },
-      {
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: base64Image,
-        },
-      },
-    ]);
-
-    const text = result.response.text();
-    const data = JSON.parse(text);
-
-    return { success: true, data };
-  } catch (error) {
-    console.error("Nutrition label recognition error:", error);
+  if (!process.env.GOOGLE_AI_API_KEY) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Recognition failed. Please try again.",
+      error: "Gemini vision is not configured. Add GOOGLE_AI_API_KEY to enable Snap recognition.",
     };
   }
+
+  return {
+    success: false,
+    error: "Vision recognition failed. Please retake the photo in good light and try again.",
+  };
 }
 
 export async function estimateNutritionFromText(

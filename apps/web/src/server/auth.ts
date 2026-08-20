@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr/dist/main/createServerClient";
-import type { Session, User } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { generateReferralCode, isUniqueViolation, REFERRAL_CODE_MAX_RETRIES } from "@/lib/referral-code";
@@ -243,18 +243,18 @@ async function ensureApplicationUser(user: User) {
   }
 }
 
-function toAppSession(session: Session): AppSession {
+function toAppSession(user: User): AppSession {
   return {
     user: {
-      id: session.user.id,
-      email: session.user.email ?? "",
-      name: getUserName(session.user),
-      image: getAvatarUrl(session.user),
+      id: user.id,
+      email: user.email ?? "",
+      name: getUserName(user),
+      image: getAvatarUrl(user),
     },
     session: {
-      id: session.access_token,
-      userId: session.user.id,
-      expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : null,
+      id: user.id,
+      userId: user.id,
+      expiresAt: null,
     },
   };
 }
@@ -264,14 +264,14 @@ export async function getSupabaseSession() {
   if (!supabase) return null;
 
   const {
-    data: { session },
+    data: { user },
     error,
-  } = await supabase.auth.getSession();
+  } = await supabase.auth.getUser();
 
-  if (error || !session?.user) return null;
+  if (error || !user) return null;
 
-  await ensureApplicationUser(session.user);
-  return toAppSession(session);
+  await ensureApplicationUser(user);
+  return toAppSession(user);
 }
 
 export const auth = {

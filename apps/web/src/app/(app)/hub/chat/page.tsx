@@ -5,16 +5,19 @@ import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc-client";
 import { createChatSession, deleteChatSession } from "@/server/actions/chat";
-import { ArrowRight, Crown, HeartPulse, Loader2, Lock, Plus, Send, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowRight, Crown, HeartPulse, Loader2, Lock, Send, ShieldCheck, Trash2 } from "lucide-react";
 import { UpgradeDialog } from "@/components/upgrade-dialog";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
+import { VoiceInputButton } from "./voice-input-button";
 
 const suggestedPrompts = [
-  "Is dal a good protein source?",
-  "What does HbA1c mean?",
-  "How much water should I drink?",
-  "How can I increase protein?",
+  "Analyze my health status",
+  "Ask me about my food details",
+  "Build a simple plan for today",
+  "How can I reduce weight safely?",
+  "How do I gain muscle with Nepali food?",
+  "Motivate me to stay consistent",
 ];
 
 export default function ChatPage() {
@@ -98,16 +101,16 @@ export default function ChatPage() {
             </div>
             <div>
               <p className="text-sm font-semibold text-muted-foreground">Wellness coach</p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Ask anything about food or health.</h1>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Your practical health coach.</h1>
               <p className="mt-3 max-w-xl text-base leading-7 text-muted-foreground">
-                Simple answers. Calm guidance.
+                Ask for meal ideas, progress analysis, simple habits, motivation, or quick explanations in everyday language.
               </p>
             </div>
           </div>
         </section>
 
         <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_24px_rgba(20,50,40,0.045)] sm:p-6 dark:bg-card">
-          <h2 className="text-xl font-bold tracking-tight text-foreground">Try asking</h2>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Quick questions</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {suggestedPrompts.map((prompt) => (
               <button
@@ -167,7 +170,7 @@ export default function ChatPage() {
               </span>
             )}
           </div>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">Short questions work best.</p>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">Short questions work best. You can also tap the mic and speak naturally.</p>
         </section>
 
         {sessionsData && sessionsData.length > 0 && (
@@ -221,16 +224,19 @@ function ChatComposer({
   placeholder,
 }: {
   input: string;
-  setInput: (value: string) => void;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
   isSending: boolean;
   onSubmit: (e: React.FormEvent) => void;
   placeholder: string;
 }) {
   return (
     <form onSubmit={onSubmit} className="mt-5 flex items-center gap-3 rounded-[22px] border border-input bg-background p-2">
-      <button type="button" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white hover:text-primary" aria-label="Add context">
-        <Plus className="h-5 w-5" strokeWidth={1.8} />
-      </button>
+      <VoiceInputButton
+        disabled={isSending}
+        onTranscript={(text) => {
+          setInput((current) => [current.trim(), text].filter(Boolean).join(" "));
+        }}
+      />
       <input
         value={input}
         onChange={(e) => setInput(e.target.value)}

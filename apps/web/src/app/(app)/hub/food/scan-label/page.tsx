@@ -165,16 +165,16 @@ function ScanLabelContent() {
           setInferredFields(new Set(
             (data.inferredFields ?? []).map((f: string) => fieldMap[f] ?? f)
           ));
-          posthog.capture("ai_label_scanned", { success: true });
+          posthog.capture("ai_food_photo_scanned", { success: true });
           setStage("edit");
         } else {
-          posthog.capture("ai_label_scanned", { success: false });
+          posthog.capture("ai_food_photo_scanned", { success: false });
           setError(result.error || t("food:recognitionFailed"));
           setStage("capture");
         }
       } catch (err) {
         if (err instanceof Error && err.message === "AI_LIMIT_REACHED") {
-          posthog.capture("ai_limit_reached", { feature: "label_scan" });
+          posthog.capture("ai_limit_reached", { feature: "food_photo_scan" });
           setShowUpgrade(true);
           setStage("capture");
         } else {
@@ -257,7 +257,7 @@ function ScanLabelContent() {
             servingQty: 1,
           });
           await utils.diary.getDay.invalidate();
-          posthog.capture("food_logged", { source: "label_scan", meal_type: meal, calories: parseFloat(calories) });
+          posthog.capture("food_logged", { source: "food_photo_scan", meal_type: meal, calories: parseFloat(calories) });
           toast.success(t("common:toast.addedToDiary"));
           router.push(`/hub/diary?date=${date}`);
           router.refresh();
@@ -417,6 +417,9 @@ function ScanLabelContent() {
                       <option value="ml">ml</option>
                       <option value="oz">oz</option>
                       <option value="cup">cup</option>
+                      <option value="bowl">bowl</option>
+                      <option value="plate">plate</option>
+                      <option value="serving">serving</option>
                       <option value="piece">{t("common:units.pieces")}</option>
                     </select>
                   </div>

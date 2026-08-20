@@ -8,6 +8,7 @@ import { useSession } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc-client";
 import { deleteChatSession } from "@/server/actions/chat";
 import { ChatMessage } from "../chat-message";
+import { VoiceInputButton } from "../voice-input-button";
 import {
   Send,
   RotateCcw,
@@ -24,6 +25,12 @@ import { UpgradeDialog } from "@/components/upgrade-dialog";
 import posthog from "posthog-js";
 
 const MAX_USER_MESSAGES_PER_CONVERSATION = 5;
+const quickPrompts = [
+  "Analyze my health status",
+  "Ask me what I ate today",
+  "Give me one healthy habit for today",
+  "Motivate me to stay on track",
+];
 
 function ChatDetail() {
   const { t } = useTranslation("ai");
@@ -191,6 +198,24 @@ function ChatDetail() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="mx-auto max-w-lg lg:max-w-3xl space-y-4">
+          {messages.length === 0 && (
+            <div className="rounded-2xl border border-black/[0.06] px-4 py-4 dark:border-white/[0.06]">
+              <p className="text-sm font-medium text-foreground">Start with a coaching question</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {quickPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => handleSend(prompt)}
+                    className="rounded-xl border border-black/[0.06] px-3 py-2 text-left text-sm font-light text-muted-foreground transition-colors hover:border-primary/30 hover:bg-secondary hover:text-foreground dark:border-white/[0.06]"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
@@ -252,6 +277,12 @@ function ChatDetail() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex items-center gap-2">
+              <VoiceInputButton
+                disabled={isLoading}
+                onTranscript={(text) => {
+                  setInput((current) => [current.trim(), text].filter(Boolean).join(" "));
+                }}
+              />
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
