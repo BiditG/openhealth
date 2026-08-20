@@ -71,12 +71,26 @@ function getAvatarUrl(user: User) {
     : null;
 }
 
+function getAdminEmails() {
+  return (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 async function ensureApplicationUser(user: User) {
   const email = user.email;
   if (!email) return;
 
   const name = getUserName(user);
   const image = getAvatarUrl(user);
+  const isAdminEmail = getAdminEmails().includes(email.toLowerCase());
+  const adminActivation = isAdminEmail
+    ? {
+        isActive: true,
+        isAdmin: true,
+      }
+    : {};
 
   await db
     .insert(users)
@@ -85,6 +99,8 @@ async function ensureApplicationUser(user: User) {
       email,
       name,
       emailVerified: Boolean(user.email_confirmed_at),
+      isActive: isAdminEmail,
+      isAdmin: isAdminEmail,
       image,
       updatedAt: new Date(),
     })
@@ -94,6 +110,7 @@ async function ensureApplicationUser(user: User) {
         email,
         name,
         emailVerified: Boolean(user.email_confirmed_at),
+        ...adminActivation,
         image,
         updatedAt: new Date(),
       },

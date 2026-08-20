@@ -43,6 +43,8 @@ create table if not exists users (
   email varchar(255) unique not null,
   name varchar(100) not null,
   email_verified boolean not null default false,
+  is_active boolean not null default false,
+  is_admin boolean not null default false,
   image text,
   timezone varchar(50) default 'UTC',
   unit_system unit_system default 'metric',

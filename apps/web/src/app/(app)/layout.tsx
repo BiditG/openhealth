@@ -2,8 +2,11 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
 import { PullToRefresh } from "@/components/layout/pull-to-refresh";
 import { DeferredProviders } from "@/components/layout/deferred-providers";
+import { requireActiveUser } from "@/server/authz";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  await requireActiveUser();
+
   return (
     <div className="min-h-screen bg-background">
       <Header />

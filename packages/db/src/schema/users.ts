@@ -29,6 +29,8 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).unique().notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   emailVerified: boolean("email_verified").default(false).notNull(),
+  isActive: boolean("is_active").default(false).notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
   image: text("image"),
   timezone: varchar("timezone", { length: 50 }).default("UTC"),
   unitSystem: unitSystemEnum("unit_system").default("metric"),

@@ -234,6 +234,7 @@ export default function HubPage() {
       ]);
     },
   });
+  const createFood = trpc.food.createCustomFood.useMutation();
   const logExercise = trpc.exercise.logExercise.useMutation({
     onSuccess: async () => {
       await utils.exercise.getDay.invalidate({ date: today });
@@ -393,16 +394,73 @@ export default function HubPage() {
     const localFood = foodConfirmation.localFood;
     if (!localFood) return;
 
-    setLocalLoggedFoods((current) => [
-      {
-        ...localFood,
-        loggedId: `${localFood.id}-${Date.now()}`,
-        mealType: foodConfirmation.mealType,
-        servingQty: foodConfirmation.quantity,
-      },
-      ...current,
-    ]);
-    setStatusMessage(`${foodConfirmation.name} added from food data.`);
+    if (!isAuthed) {
+      setLocalLoggedFoods((current) => [
+        {
+          ...localFood,
+          loggedId: `${localFood.id}-${Date.now()}`,
+          mealType: foodConfirmation.mealType,
+          servingQty: foodConfirmation.quantity,
+        },
+        ...current,
+      ]);
+      setStatusMessage(`${foodConfirmation.name} added locally. Log in to save it.`);
+      setFoodConfirmation(null);
+      return;
+    }
+
+    const nutrients = [
+      [NUTRIENT_IDS.protein, localFood.protein],
+      [NUTRIENT_IDS.totalFat, localFood.fat],
+      [NUTRIENT_IDS.totalCarbs, localFood.carbs],
+      [NUTRIENT_IDS.fiber, localFood.fiber],
+      [NUTRIENT_IDS.sugar, localFood.sugar],
+      [NUTRIENT_IDS.saturatedFat, localFood.saturatedFat],
+      [NUTRIENT_IDS.sodium, localFood.sodium],
+      [NUTRIENT_IDS.vitaminA, localFood.vitaminA],
+      [NUTRIENT_IDS.vitaminB1, localFood.vitaminB1],
+      [NUTRIENT_IDS.folate, localFood.vitaminB11],
+      [NUTRIENT_IDS.vitaminB12, localFood.vitaminB12],
+      [NUTRIENT_IDS.vitaminB2, localFood.vitaminB2],
+      [NUTRIENT_IDS.vitaminB3, localFood.vitaminB3],
+      [NUTRIENT_IDS.vitaminB5, localFood.vitaminB5],
+      [NUTRIENT_IDS.vitaminB6, localFood.vitaminB6],
+      [NUTRIENT_IDS.vitaminC, localFood.vitaminC],
+      [NUTRIENT_IDS.vitaminD, localFood.vitaminD],
+      [NUTRIENT_IDS.vitaminE, localFood.vitaminE],
+      [NUTRIENT_IDS.vitaminK, localFood.vitaminK],
+      [NUTRIENT_IDS.calcium, localFood.calcium],
+      [NUTRIENT_IDS.copper, localFood.copper],
+      [NUTRIENT_IDS.iron, localFood.iron],
+      [NUTRIENT_IDS.magnesium, localFood.magnesium],
+      [NUTRIENT_IDS.manganese, localFood.manganese],
+      [NUTRIENT_IDS.phosphorus, localFood.phosphorus],
+      [NUTRIENT_IDS.potassium, localFood.potassium],
+      [NUTRIENT_IDS.selenium, localFood.selenium],
+      [NUTRIENT_IDS.zinc, localFood.zinc],
+    ]
+      .filter(([, amount]) => Number(amount) > 0)
+      .map(([nutrientId, amount]) => ({ nutrientId: Number(nutrientId), amount: Number(amount) }));
+
+    const created = await createFood.mutateAsync({
+      name: localFood.name,
+      brand: localFood.category || undefined,
+      description: `Imported from food data${localFood.basis ? ` (${localFood.basis})` : ""}`,
+      servingSize: 1,
+      servingUnit: "serving",
+      householdServing: localFood.basis || "1 serving",
+      calories: localFood.calories,
+      nutrients,
+    });
+
+    await logFood.mutateAsync({
+      date: today,
+      mealType: foodConfirmation.mealType,
+      foodId: created.foodId,
+      servingQty: foodConfirmation.quantity,
+    });
+
+    setStatusMessage(`${foodConfirmation.name} saved to diary.`);
     setFoodConfirmation(null);
   };
 
@@ -504,8 +562,8 @@ export default function HubPage() {
               <Button variant="outline" className="rounded-full" onClick={() => setFoodConfirmation(null)}>
                 Cancel
               </Button>
-              <Button className="rounded-full" onClick={confirmSelectedFood} disabled={logFood.isPending}>
-                {logFood.isPending ? "Adding..." : "Confirm"}
+              <Button className="rounded-full" onClick={confirmSelectedFood} disabled={logFood.isPending || createFood.isPending}>
+                {logFood.isPending || createFood.isPending ? "Adding..." : "Confirm"}
               </Button>
             </div>
           </div>

@@ -7,6 +7,13 @@ const PRECACHE_URLS = [
   "/offline.html",
 ];
 
+function safeCachePut(cache, request, response) {
+  return cache.put(request, response).catch(() => {
+    // Cache writes can fail for interrupted/dev-server responses. The network
+    // response is still returned to the page, so this should stay non-fatal.
+  });
+}
+
 // Install: pre-cache essential static assets (don't skipWaiting — let client decide)
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -92,7 +99,7 @@ function networkFirstWithCache(request) {
     .then((response) => {
       if (!response.ok) return response;
       const clone = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+      caches.open(CACHE_NAME).then((cache) => safeCachePut(cache, request, clone));
       return response;
     })
     .catch(() => caches.match(request).then((cached) => cached || Response.error()));
@@ -110,7 +117,7 @@ function staleWhileRevalidate(request) {
       const fetchPromise = fetch(request)
         .then((response) => {
           if (response.ok) {
-            cache.put(request, response.clone());
+            safeCachePut(cache, request, response.clone());
           }
           return response;
         })
@@ -142,7 +149,7 @@ self.addEventListener("fetch", (event) => {
           const fetchPromise = fetch(request)
             .then((response) => {
               if (response.ok) {
-                cache.put(request, response.clone());
+                safeCachePut(cache, request, response.clone());
               }
               return response;
             })
@@ -172,7 +179,7 @@ self.addEventListener("fetch", (event) => {
           fetch(request).then((response) => {
             if (!response.ok) return response;
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            caches.open(CACHE_NAME).then((cache) => safeCachePut(cache, request, clone));
             return response;
           })
       )

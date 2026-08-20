@@ -2,15 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Camera, HeartPulse, Search, User } from "lucide-react";
+import { HeartPulse, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
-  { path: "/hub/food", label: "Food" },
   { path: "/today", label: "Health" },
   { path: "/learn", label: "Learn" },
-  { path: "/hub", label: "Tools" },
-  { path: "/hub/chat", label: "AI Assistant" },
 ];
 
 export function SiteNav() {
@@ -51,25 +48,11 @@ export function SiteNav() {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/hub/food/search"
-            className="hidden h-10 w-10 items-center justify-center rounded-lg border border-border bg-white text-muted-foreground transition-colors hover:bg-muted hover:text-primary sm:flex dark:bg-card"
-            aria-label="Search"
-          >
-            <Search className="h-4.5 w-4.5" strokeWidth={1.8} />
-          </Link>
-          <Link
-            href="/settings/profile"
-            className="hidden h-10 w-10 items-center justify-center rounded-lg border border-border bg-white text-muted-foreground transition-colors hover:bg-muted hover:text-primary sm:flex dark:bg-card"
-            aria-label="Profile"
-          >
-            <User className="h-4.5 w-4.5" strokeWidth={1.8} />
-          </Link>
-          <Link
-            href="/hub/food/scan"
+            href="/hub"
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#125745]"
           >
-            <Camera className="h-4 w-4" strokeWidth={1.8} />
-            Scan My Food
+            <LogIn className="h-4 w-4" strokeWidth={1.8} />
+            Open App
           </Link>
         </div>
       </div>

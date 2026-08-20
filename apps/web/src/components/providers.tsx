@@ -58,7 +58,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <MiniKitProvider>
       <PostHogProvider>
         <PostHogPageView />
-        <Theme attribute="class" defaultTheme="system" enableSystem={true}>
+        <Theme attribute="class" defaultTheme="light" enableSystem={false}>
           <trpc.Provider client={trpcClient} queryClient={queryClient}>
             {children}
           </trpc.Provider>
