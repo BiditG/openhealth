@@ -33,9 +33,17 @@ import { estimateNutritionFromText } from "@/server/services/ai";
 import { calculateNutrition } from "@/server/services/nutrition";
 import { NUTRIENT_IDS } from "@open-health/shared/constants";
 
+function getOllamaOpenAIBaseUrl() {
+  const rawBaseUrl = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
+  const baseUrl = rawBaseUrl.replace(/\/$/, "");
+  if (baseUrl.endsWith("/v1")) return baseUrl;
+  if (baseUrl.endsWith("/api")) return `${baseUrl.slice(0, -4)}/v1`;
+  return `${baseUrl}/v1`;
+}
+
 const ollama = createOpenAICompatible({
   name: "ollama",
-  baseURL: `${(process.env.OLLAMA_BASE_URL ?? "http://localhost:11434").replace(/\/$/, "")}/v1`,
+  baseURL: getOllamaOpenAIBaseUrl(),
   apiKey: process.env.OLLAMA_API_KEY ?? "ollama",
 });
 
@@ -43,7 +51,7 @@ function getCoachModel() {
   if (process.env.AI_PROVIDER === "minimax") {
     return minimax("MiniMax-M2.7");
   }
-  return ollama.chatModel(process.env.OLLAMA_MODEL ?? "llama3.1");
+  return ollama.chatModel(process.env.OLLAMA_MODEL ?? "gpt-oss:20b");
 }
 
 function getAge(dateOfBirth: string | Date | null | undefined) {

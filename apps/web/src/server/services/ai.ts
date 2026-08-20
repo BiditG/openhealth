@@ -89,7 +89,14 @@ Return strict JSON only, with no extra text:
 Return JSON only.`;
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.1";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "gpt-oss:20b";
+
+function getOllamaApiBaseUrl() {
+  const baseUrl = OLLAMA_BASE_URL.replace(/\/$/, "");
+  if (baseUrl.endsWith("/api")) return baseUrl;
+  if (baseUrl.endsWith("/v1")) return `${baseUrl.slice(0, -3)}/api`;
+  return `${baseUrl}/api`;
+}
 
 function getOllamaHeaders() {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -127,7 +134,7 @@ async function callOllamaJson(
   user: string,
   images?: string[]
 ) {
-  const response = await fetch(`${OLLAMA_BASE_URL.replace(/\/$/, "")}/api/chat`, {
+  const response = await fetch(`${getOllamaApiBaseUrl()}/chat`, {
     method: "POST",
     headers: getOllamaHeaders(),
     body: JSON.stringify({
