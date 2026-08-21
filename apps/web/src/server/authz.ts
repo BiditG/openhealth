@@ -29,6 +29,25 @@ export async function requireActiveUser() {
       throw error;
     }
 
+    if (process.env.NODE_ENV !== "production") {
+      const session = await auth.api.getSession().catch(() => null);
+
+      if (session?.user) {
+        console.warn(
+          "Protected route DB check failed; allowing authenticated user in local development.",
+          error
+        );
+
+        return {
+          session,
+          user: {
+            isActive: true,
+            isAdmin: false,
+          },
+        };
+      }
+    }
+
     console.error("Protected route setup error:", error);
     redirect("/setup-error");
   }

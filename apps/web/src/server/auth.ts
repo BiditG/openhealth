@@ -268,10 +268,25 @@ export async function getSupabaseSession() {
     error,
   } = await supabase.auth.getUser();
 
-  if (error || !user) return null;
+  let authUser = user;
 
-  await ensureApplicationUser(user);
-  return toAppSession(user);
+  if (error || !authUser) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    authUser = session?.user ?? null;
+  }
+
+  if (!authUser) return null;
+
+  try {
+    await ensureApplicationUser(authUser);
+  } catch (syncError) {
+    console.warn("Supabase user sync failed; continuing with auth session.", syncError);
+  }
+
+  return toAppSession(authUser);
 }
 
 export const auth = {

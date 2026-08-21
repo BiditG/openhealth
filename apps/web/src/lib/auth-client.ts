@@ -1,12 +1,15 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr/dist/main/createBrowserClient";
-import type { Session, User } from "@supabase/supabase-js";
+import type { SupabaseClient, Session, User } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
 
 const SESSION_CACHE_KEY = "oh-session-cache";
+let supabaseBrowserClient: SupabaseClient | null = null;
 
 function getSupabaseBrowserClient() {
+  if (supabaseBrowserClient) return supabaseBrowserClient;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -14,7 +17,8 @@ function getSupabaseBrowserClient() {
     return null;
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  supabaseBrowserClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
+  return supabaseBrowserClient;
 }
 
 function toAppUser(user: User) {
@@ -67,6 +71,33 @@ function toAuthData(data: { session: Session | null; user: User | null }) {
   };
 }
 
+function cacheSessionData(session: Session | null, user?: User | null) {
+  const nextData = toSessionData(session, user);
+  if (nextData) {
+    localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(nextData));
+  } else {
+    localStorage.removeItem(SESSION_CACHE_KEY);
+  }
+  return nextData;
+}
+
+async function syncServerSession(session: Session | null) {
+  if (!session?.access_token || !session.refresh_token) return;
+
+  const response = await fetch("/api/supabase/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Could not sync Supabase session cookies.");
+  }
+}
+
 export const authClient = {
   useSession,
 };
@@ -84,6 +115,10 @@ export const signIn = {
       email,
       password,
     });
+    if (data.session) {
+      cacheSessionData(data.session, data.user);
+      await syncServerSession(data.session);
+    }
     return { data: toAuthData(data), error };
   },
   social: async ({ provider }: { provider: "google" | "apple" }) => {
@@ -133,6 +168,10 @@ export const signUp = {
         data: { name, full_name: name, ...metadata },
       },
     });
+    if (data.session) {
+      cacheSessionData(data.session, data.user);
+      await syncServerSession(data.session);
+    }
     return { data: toAuthData(data), error };
   },
 };

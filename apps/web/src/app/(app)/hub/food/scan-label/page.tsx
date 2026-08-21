@@ -1,9 +1,8 @@
 "use client";
 
-import { Suspense, useState, useTransition, useRef, useEffect } from "react";
+import { Suspense, useState, useTransition, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, Camera, RotateCcw, Loader2, ImageIcon } from "lucide-react";
-import Link from "next/link";
+import { Activity, Camera, Leaf, RotateCcw, Loader2, ImageIcon, PersonStanding, Target } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +16,10 @@ import { NUTRIENT_IDS, DEFAULT_SERVING_SIZE } from "@open-health/shared/constant
 import { UpgradeDialog } from "@/components/upgrade-dialog";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
+import { WorkoutAnalyzerMode } from "./workout-analyzer-mode";
+import { MeditationMode } from "./meditation-mode";
+import { StretchingMode } from "./stretching-mode";
+import { VirtualGamesMode } from "./virtual-games-mode";
 
 function compressImage(dataUrl: string, maxWidth = 1600, quality = 0.8): Promise<string> {
   return new Promise((resolve) => {
@@ -61,10 +64,46 @@ function ScanLabelContent() {
     | "lunch"
     | "dinner"
     | "snack";
+  const requestedMode = searchParams.get("mode");
+  const initialGame =
+    requestedMode === "boxing" || requestedMode === "shadow-boxing"
+      ? "boxing"
+      : requestedMode === "football"
+        ? "football"
+        : requestedMode === "running" || requestedMode === "escape"
+          ? "running"
+          : requestedMode === "hero"
+            ? "hero"
+            : "cricket";
+  const initialCricketMode =
+    requestedMode === "fielding"
+      ? "fielding"
+      : requestedMode === "bowling"
+        ? "bowling"
+        : "batting";
+  const initialMode =
+    requestedMode === "workout"
+      ? "workout"
+      : requestedMode === "meditation"
+        ? "meditation"
+        : requestedMode === "stretching"
+          ? "stretching"
+          : requestedMode === "games" ||
+              requestedMode === "batting" ||
+              requestedMode === "fielding" ||
+              requestedMode === "bowling" ||
+              requestedMode === "football" ||
+              requestedMode === "running" ||
+              requestedMode === "escape" ||
+              requestedMode === "hero" ||
+              requestedMode === "boxing" ||
+              requestedMode === "shadow-boxing"
+            ? "games"
+            : "food";
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
-  const hasTriggered = useRef(false);
+  const [mode, setMode] = useState<"food" | "workout" | "meditation" | "stretching" | "games">(initialMode);
   const [stage, setStage] = useState<"capture" | "recognizing" | "edit">("capture");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,17 +134,6 @@ function ScanLabelContent() {
   const [vitaminD, setVitaminD] = useState("");
   const [notes, setNotes] = useState("");
   const [inferredFields, setInferredFields] = useState<Set<string>>(new Set());
-
-  // Auto-trigger camera on mount
-  useEffect(() => {
-    if (!hasTriggered.current && fileInputRef.current) {
-      hasTriggered.current = true;
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        fileInputRef.current?.click();
-      }, 100);
-    }
-  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -273,15 +301,76 @@ function ScanLabelContent() {
 
   return (
     <div className="px-4 py-4">
-      <div className="flex items-center gap-3 mb-4">
-        <Link href={`/hub/food/search?date=${date}&meal=${meal}`}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="font-semibold">{t("food:scanLabelTitle")}</h1>
+      <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1 sm:grid-cols-5">
+        <button
+          type="button"
+          onClick={() => setMode("food")}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
+            mode === "food"
+              ? "bg-white text-foreground shadow-sm dark:bg-card"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Camera className="h-4 w-4" />
+          Food label
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("workout")}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
+            mode === "workout"
+              ? "bg-white text-foreground shadow-sm dark:bg-card"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Activity className="h-4 w-4" />
+          Workout analyzer
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("meditation")}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
+            mode === "meditation"
+              ? "bg-white text-foreground shadow-sm dark:bg-card"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Leaf className="h-4 w-4" />
+          Meditation
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("stretching")}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
+            mode === "stretching"
+              ? "bg-white text-foreground shadow-sm dark:bg-card"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <PersonStanding className="h-4 w-4" />
+          Stretching
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("games")}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
+            mode === "games"
+              ? "bg-white text-foreground shadow-sm dark:bg-card"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Target className="h-4 w-4" />
+          Virtual games
+        </button>
       </div>
 
+      {mode === "workout" && <WorkoutAnalyzerMode />}
+      {mode === "meditation" && <MeditationMode />}
+      {mode === "stretching" && <StretchingMode />}
+      {mode === "games" && <VirtualGamesMode initialGame={initialGame} initialCricketMode={initialCricketMode} />}
+
+      {mode === "food" && (
+        <>
       {error && (
         <div className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
@@ -291,7 +380,7 @@ function ScanLabelContent() {
       {/* Stage 1: Capture */}
       {stage === "capture" && (
         <div className="space-y-4">
-          {/* Hidden camera input (auto-triggered on mount) */}
+          {/* Hidden camera input */}
           <input
             ref={fileInputRef}
             type="file"
@@ -651,6 +740,8 @@ function ScanLabelContent() {
       )}
 
       <UpgradeDialog open={showUpgrade} onOpenChange={setShowUpgrade} />
+        </>
+      )}
     </div>
   );
 }

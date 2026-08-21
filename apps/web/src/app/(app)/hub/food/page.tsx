@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Camera, Loader2, Search } from "lucide-react";
+import { Activity, Camera, Leaf, Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc-client";
@@ -76,12 +76,26 @@ export default function FoodBrowsePage() {
           <h1 className="mt-1 text-3xl font-semibold text-foreground">{t("title")}</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">Search foods, compare calories, or scan your next meal.</p>
         </div>
-        <Link href="/hub/food/scan-label">
-          <Button>
-            <Camera className="h-4 w-4" />
-            Snap Food
-          </Button>
-        </Link>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Link href="/hub/food/scan-label">
+            <Button>
+              <Camera className="h-4 w-4" />
+              Snap Food
+            </Button>
+          </Link>
+          <Link href="/hub/food/scan-label?mode=workout">
+            <Button variant="outline">
+              <Activity className="h-4 w-4" />
+              Workout Analyzer
+            </Button>
+          </Link>
+          <Link href="/hub/food/scan-label?mode=meditation">
+            <Button variant="outline">
+              <Leaf className="h-4 w-4" />
+              Meditation
+            </Button>
+          </Link>
+        </div>
       </section>
 
       <div className="relative">

@@ -566,17 +566,19 @@ export default function HubPage() {
           </div>
         )}
       </Dialog>
-      <div className="mx-auto max-w-[480px] px-[18px] pb-[110px] pt-6">
-        <section className="mb-5 mt-6">
-          <h1 className="text-[24px] font-bold leading-[1.2] text-[#17201E]">
+      <div className="mx-auto max-w-[1180px] px-[18px] pb-[110px] pt-6 sm:px-6 lg:px-8 lg:pb-12">
+        <section className="mb-5 mt-6 lg:mb-7 lg:flex lg:items-end lg:justify-between lg:gap-6">
+          <h1 className="text-[24px] font-bold leading-[1.2] text-[#17201E] sm:text-[30px] lg:text-[34px]">
             Good morning, {firstName} 👋
           </h1>
-          <p className="mt-1.5 text-sm font-normal text-[#6B7773]">
+          <p className="mt-1.5 text-sm font-normal text-[#6B7773] lg:max-w-[360px] lg:text-right">
             Here&apos;s your health summary today.
           </p>
         </section>
 
-        <section className="rounded-[24px] bg-[#123F37] p-[22px] text-white">
+        <div className="lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:items-start lg:gap-5 xl:gap-6">
+          <div className="min-w-0">
+        <section className="rounded-[24px] bg-[#123F37] p-[22px] text-white lg:min-h-[286px] lg:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.04em] text-white/65">Today</p>
           <div className="mt-6">
             <p className="text-[52px] font-bold leading-none tracking-[-1.5px]">
@@ -734,7 +736,10 @@ export default function HubPage() {
           </div>
         </section>
 
-        <section className="mt-6">
+          </div>
+
+          <div className="min-w-0 lg:sticky lg:top-6">
+        <section className="mt-6 lg:mt-0">
           <h2 className="text-[17px] font-semibold text-[#17201E]">Quick log</h2>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <button
@@ -958,6 +963,9 @@ export default function HubPage() {
             </Link>
           </div>
         </section>
+
+          </div>
+        </div>
 
         {(statusMessage || nutritionStatus) && (
           <div className="mt-6 flex items-center gap-2 rounded-[14px] bg-[#EAF8F3] px-[15px] py-[13px] text-sm font-semibold text-[#176B5A]">
