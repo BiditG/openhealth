@@ -37,17 +37,28 @@ export function DailySummary({
   const { t } = useTranslation("common");
   const remaining = calorieTarget - calories + exerciseCalories;
   const caloriePercent = calorieTarget > 0 ? Math.min((calories / calorieTarget) * 100, 100) : 0;
+  const todayStatus =
+    calories === 0
+      ? "You have room for your first meal."
+      : remaining < 0
+        ? "Eat a little lighter today."
+        : remaining <= 650
+          ? "You have room for one more meal."
+          : "On track today";
 
   return (
     <div className="space-y-6">
       <div>
+        <p className="mb-4 rounded-xl bg-[#EAF8F4] px-4 py-3 text-sm font-semibold text-[#15483F]">
+          {todayStatus}
+        </p>
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">{t("labels.consumed")}</p>
+            <p className="text-sm font-medium text-muted-foreground">Food eaten</p>
             <p className="mt-1 text-5xl font-bold tracking-tight text-foreground tabular-nums">{Math.round(calories)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-medium text-muted-foreground">{t("labels.remaining")}</p>
+            <p className="text-sm font-medium text-muted-foreground">You can still eat</p>
             <p className={`mt-1 text-3xl font-bold tabular-nums ${remaining >= 0 ? "text-primary" : "text-destructive"}`}>
               {Math.round(remaining)}
             </p>
@@ -64,7 +75,7 @@ export function DailySummary({
 
       {exerciseCalories > 0 && (
         <div className="rounded-xl bg-[#f8ead7] px-4 py-2 text-sm font-medium text-[#9a6625]">
-          +{Math.round(exerciseCalories)} {t("labels.exerciseBurned")}
+          Activity burn: {Math.round(exerciseCalories)} kcal
         </div>
       )}
 
@@ -81,10 +92,14 @@ export function DailySummary({
 }
 
 function MacroItem({ label, current, target }: { label: string; current: number; target: number }) {
+  const percent = target > 0 ? current / target : 0;
+  const status = percent < 0.55 ? "Low" : percent <= 1.1 ? "Good" : "High";
+
   return (
     <div className="text-center">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 text-lg font-bold text-foreground tabular-nums">
+      <p className="mt-1 text-base font-bold text-foreground">{status}</p>
+      <p className="mt-0.5 text-sm font-semibold text-muted-foreground tabular-nums">
         {current.toFixed(0)}
         <span className="text-sm font-medium text-muted-foreground">/{target}g</span>
       </p>

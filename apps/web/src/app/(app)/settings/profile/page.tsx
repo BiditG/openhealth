@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, LogOut, User } from "lucide-react";
+import { ArrowLeft, Dumbbell, Footprints, Loader2, LogOut, Medal, Trophy, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,7 @@ export default function ProfilePage() {
   const { t } = useTranslation(["settings", "common"]);
   const { data: session, isPending: sessionPending } = useSession();
   const { data: profile, isLoading: profileLoading } = trpc.user.getProfile.useQuery();
+  const { data: achievementStats } = trpc.tasks.getMyStats.useQuery();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
@@ -35,6 +36,17 @@ export default function ProfilePage() {
   const [medications, setMedications] = useState("");
   const [allergies, setAllergies] = useState("");
   const [initialized, setInitialized] = useState(false);
+  const [localDistanceKm, setLocalDistanceKm] = useState(0);
+
+  useEffect(() => {
+    try {
+      const activities = JSON.parse(window.localStorage.getItem("swastha.offline.activities") ?? "[]") as Array<{ distanceMeters?: number }>;
+      const totalMeters = activities.reduce((sum, activity) => sum + (activity.distanceMeters ?? 0), 0);
+      setLocalDistanceKm(totalMeters / 1000);
+    } catch {
+      setLocalDistanceKm(0);
+    }
+  }, []);
 
   useEffect(() => {
     if (!initialized && session?.user && profile !== undefined) {
@@ -111,6 +123,59 @@ export default function ProfilePage() {
           <h1 className="text-3xl font-semibold text-foreground">{t("profile")}</h1>
         </div>
       </div>
+
+      <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
+        <div className="mb-5 flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-primary">
+            <Trophy className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Activity achievements</h2>
+            <p className="text-sm text-muted-foreground">Completed through Swastha tasks, missions, tracker, and analyzer.</p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-4">
+          {[
+            ["Points", achievementStats?.points ?? 0, Trophy],
+            ["Medals", achievementStats?.medals ?? 0, Medal],
+            ["Tasks", achievementStats?.tasks ?? 0, Dumbbell],
+            ["Missions", achievementStats?.missions ?? 0, Footprints],
+          ].map(([label, value, Icon]) => (
+            <div key={String(label)} className="rounded-2xl bg-secondary/70 p-4">
+              <Icon className="h-5 w-5 text-primary" />
+              <p className="mt-3 text-2xl font-black tabular-nums text-foreground">{Number(value)}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{String(label)}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-5">
+          {[
+            ["Push-ups", achievementStats?.pushups ?? 0],
+            ["Bicep curls", achievementStats?.bicepCurls ?? 0],
+            ["Pull-ups", achievementStats?.pullups ?? 0],
+            ["Squats", achievementStats?.squats ?? 0],
+            ["Distance", `${localDistanceKm.toFixed(2)} km`],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-2xl border border-border bg-white p-3 dark:bg-card">
+              <p className="text-lg font-black tabular-nums text-foreground">{value}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{String(label)}</p>
+            </div>
+          ))}
+        </div>
+        {achievementStats?.recentMedals?.length ? (
+          <div className="mt-5">
+            <h3 className="text-sm font-semibold text-foreground">Recent medals</h3>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {achievementStats.recentMedals.map((medal) => (
+                <div key={medal.id} className="rounded-2xl border border-border bg-secondary/40 p-3">
+                  <p className="text-sm font-bold text-foreground">{medal.medalName}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{medal.title} • {medal.medalPoints} pts</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </section>
 
       <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
         <div className="mb-5 flex items-center gap-3">

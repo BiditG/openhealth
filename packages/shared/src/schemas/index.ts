@@ -89,6 +89,9 @@ export const updateProfileSchema = z.object({
 });
 
 export const updateGoalsSchema = z.object({
+  goalType: z.enum(["lose", "maintain", "gain"]).nullable().optional(),
+  targetWeightKg: z.number().positive().max(500).nullable().optional(),
+  weeklyRateKg: z.number().positive().max(5).nullable().optional(),
   calorieTarget: z.number().int().positive().max(20000).nullable(),
   proteinG: z.number().nonnegative().max(2000).nullable(),
   carbsG: z.number().nonnegative().max(2000).nullable(),

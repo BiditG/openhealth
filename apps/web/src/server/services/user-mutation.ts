@@ -58,10 +58,21 @@ export async function updateGoals(
   userId: string,
   input: z.infer<typeof updateGoalsSchema>
 ) {
+  const optionalGoalValues = {
+    ...(input.goalType !== undefined ? { goalType: input.goalType } : {}),
+    ...(input.targetWeightKg !== undefined
+      ? { targetWeightKg: input.targetWeightKg != null ? String(input.targetWeightKg) : null }
+      : {}),
+    ...(input.weeklyRateKg !== undefined
+      ? { weeklyRateKg: input.weeklyRateKg != null ? String(input.weeklyRateKg) : null }
+      : {}),
+  };
+
   await db
     .insert(userGoals)
     .values({
       userId,
+      ...optionalGoalValues,
       calorieTarget: input.calorieTarget,
       proteinG: input.proteinG != null ? String(input.proteinG) : null,
       carbsG: input.carbsG != null ? String(input.carbsG) : null,
@@ -71,6 +82,7 @@ export async function updateGoals(
     .onConflictDoUpdate({
       target: userGoals.userId,
       set: {
+        ...optionalGoalValues,
         calorieTarget: input.calorieTarget,
         proteinG: input.proteinG != null ? String(input.proteinG) : null,
         carbsG: input.carbsG != null ? String(input.carbsG) : null,

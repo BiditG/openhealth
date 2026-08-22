@@ -2,6 +2,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
 import { PullToRefresh } from "@/components/layout/pull-to-refresh";
 import { DeferredProviders } from "@/components/layout/deferred-providers";
+import { FloatingCoachButton } from "@/components/layout/floating-coach-button";
 import { requireActiveUser } from "@/server/authz";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </PullToRefresh>
+      <FloatingCoachButton />
       <BottomNav />
     </div>
   );

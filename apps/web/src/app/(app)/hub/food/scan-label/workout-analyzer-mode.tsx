@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Activity,
   Bookmark,
@@ -13,8 +14,11 @@ import {
   Heart,
   ListChecks,
   Loader2,
+  Maximize2,
+  Medal,
   Mic,
   MicOff,
+  Minimize2,
   Pause,
   Play,
   RotateCcw,
@@ -27,6 +31,8 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc-client";
+import { toast } from "sonner";
 
 type Landmark = {
   x: number;
@@ -897,6 +903,8 @@ async function loadPoseLandmarker(): Promise<PoseLandmarkerLike> {
 }
 
 export function WorkoutAnalyzerMode() {
+  const searchParams = useSearchParams();
+  const analyzerShellRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -951,16 +959,55 @@ export function WorkoutAnalyzerMode() {
   const [showSettings, setShowSettings] = useState(false);
   const [showExerciseMenu, setShowExerciseMenu] = useState(false);
   const [showPoseOverlay, setShowPoseOverlay] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [recentSets, setRecentSets] = useState<SetSummary[]>([]);
   const [lastSetSummary, setLastSetSummary] = useState<SetSummary | null>(null);
   const [timedRemaining, setTimedRemaining] = useState<number | null>(null);
   const [cameraFacingMode, setCameraFacingMode] = useState<"user" | "environment">("user");
   const [favoritePresetIds, setFavoritePresetIds] = useState<Set<string>>(new Set(["web-hero"]));
   const [savedPresetIds, setSavedPresetIds] = useState<Set<string>>(new Set(["beginner-strength"]));
+  const [taskCompleted, setTaskCompleted] = useState(false);
+
+  const taskId = searchParams.get("taskId");
+  const requestedExercise = searchParams.get("exercise");
+  const taskExercise = EXERCISES.some((item) => item.key === requestedExercise)
+    ? (requestedExercise as ExerciseKey)
+    : null;
+  const requestedTarget = Number(searchParams.get("target"));
+  const taskTarget = Number.isFinite(requestedTarget) && requestedTarget > 0 ? Math.round(requestedTarget) : null;
+  const isTaskMode = Boolean(taskId && taskExercise && taskTarget);
+  const completeTask = trpc.tasks.completeTask.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+    },
+    onError: (error) => {
+      setTaskCompleted(false);
+      toast.error(error.message);
+    },
+  });
 
   useEffect(() => {
     exerciseRef.current = exercise;
   }, [exercise]);
+
+  useEffect(() => {
+    if (!isTaskMode || !taskExercise || !taskTarget) return;
+    setActiveTab("quick");
+    setActivePreset(null);
+    setProgram("free");
+    programRef.current = "free";
+    setExercise(taskExercise);
+    exerciseRef.current = taskExercise;
+    setCustomReps(taskTarget);
+    setCustomSets(1);
+    setCustomRestSeconds(0);
+    metricsRef.current = {
+      ...metricsRef.current,
+      feedback: `Task started: complete ${taskTarget} ${getExerciseLabel(taskExercise)} reps.`,
+      quality: streamRef.current ? "tracking" : "idle",
+    };
+    setMetrics(metricsRef.current);
+  }, [isTaskMode, taskExercise, taskTarget]);
 
   useEffect(() => {
     programRef.current = program;
@@ -981,6 +1028,14 @@ export function WorkoutAnalyzerMode() {
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === analyzerShellRef.current);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   const selectedExercise = useMemo(
     () => EXERCISES.find((item) => item.key === exercise) ?? EXERCISES[0],
@@ -1638,19 +1693,20 @@ export function WorkoutAnalyzerMode() {
   const activeRoutineStep = program === "custom" ? currentCustomStep : currentRoutineStep;
   const activeStep = program === "custom" ? activeRoutineSteps[routineStepIndex] : null;
   const targetReps = activeRoutineStep?.type === "work" ? activeRoutineStep.reps : null;
+  const displayTargetReps = isTaskMode ? taskTarget : targetReps;
   const currentSetReps = program === "free" ? metrics.repCount : Math.max(0, metrics.repCount - setStartRep);
-  const routineProgress = targetReps
-    ? Math.min(100, (currentSetReps / targetReps) * 100)
+  const routineProgress = displayTargetReps
+    ? Math.min(100, (currentSetReps / displayTargetReps) * 100)
     : repProgress;
-  const modeLocked = program !== "free" && routinePhase !== "idle" && routinePhase !== "complete";
+  const modeLocked = isTaskMode || (program !== "free" && routinePhase !== "idle" && routinePhase !== "complete");
   const customDescription = `${customSets} set${customSets === 1 ? "" : "s"} x ${customReps} ${getExerciseLabel(exercise)} reps, ${customRestSeconds}s rest.`;
   const stageLabel =
     status === "rest"
       ? `${routineRemaining ?? 0}s rest`
       : routinePhase === "timed" && timedRemaining != null
         ? `${timedRemaining}s`
-      : targetReps
-        ? `${currentSetReps}/${targetReps} reps`
+      : displayTargetReps
+        ? `${currentSetReps}/${displayTargetReps} reps`
         : status === "running"
           ? "Live set"
           : status === "paused"
@@ -1680,6 +1736,35 @@ export function WorkoutAnalyzerMode() {
     ) : (
       <Play className="h-4 w-4" />
     );
+
+  const toggleFullscreen = async () => {
+    const shell = analyzerShellRef.current;
+    if (!shell) return;
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    await shell.requestFullscreen();
+  };
+
+  useEffect(() => {
+    if (!isTaskMode || !taskId || !taskTarget || taskCompleted) return;
+    if (metrics.repCount < taskTarget) return;
+    setTaskCompleted(true);
+    metricsRef.current = {
+      ...metricsRef.current,
+      feedback: "Task completed. Medal unlocked.",
+      quality: "good",
+    };
+    setMetrics(metricsRef.current);
+    playSound("finish");
+    speak("Task completed. Medal unlocked.");
+    completeTask.mutate({
+      taskKey: taskId,
+      countedReps: metrics.repCount,
+      source: "analyzer",
+    });
+  }, [completeTask, isTaskMode, metrics.repCount, playSound, speak, taskCompleted, taskId, taskTarget]);
 
   const endCurrentSet = () => {
     const label =
@@ -1841,6 +1926,29 @@ export function WorkoutAnalyzerMode() {
 
   return (
     <div className="space-y-5 bg-background pb-8">
+      {isTaskMode && taskExercise && taskTarget && (
+        <div className="overflow-hidden rounded-[22px] border border-[#20C7A4]/30 bg-[#EAF8F4] p-4 text-[#123F37] shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#20C7A4]">
+                {taskCompleted ? "Task completed" : "Task started"}
+              </p>
+              <p className="mt-2 text-lg font-black">
+                {currentSetReps}/{taskTarget} {getExerciseLabel(taskExercise)} reps
+              </p>
+              <p className="mt-1 text-sm text-[#6B7773]">
+                Keep the camera on you. This medal unlocks only after Swastha verifies the reps.
+              </p>
+            </div>
+            <div className={cn("flex h-12 w-12 items-center justify-center rounded-full", taskCompleted ? "bg-[#123F37] text-white animate-medal-pop" : "bg-white text-[#123F37]")}>
+              {taskCompleted ? <Medal className="h-6 w-6" /> : <Dumbbell className="h-6 w-6" />}
+            </div>
+          </div>
+          <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
+            <div className="h-full rounded-full bg-[#20C7A4] transition-all duration-500" style={{ width: `${routineProgress}%` }} />
+          </div>
+        </div>
+      )}
       {error && (
         <div className="rounded-[20px] border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
@@ -1952,7 +2060,7 @@ export function WorkoutAnalyzerMode() {
         </section>
       ) : (
         <>
-          <section className="overflow-hidden rounded-[24px] border border-border bg-black shadow-sm">
+          <section ref={analyzerShellRef} className="overflow-hidden rounded-[24px] border border-border bg-black shadow-sm">
             <div className="relative h-[72vh] min-h-[560px] w-full sm:h-[76vh] sm:min-h-[640px]">
               <video
                 ref={videoRef}
@@ -2006,6 +2114,14 @@ export function WorkoutAnalyzerMode() {
                   title="Workout settings"
                 >
                   <Settings className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/92 text-foreground shadow-sm backdrop-blur"
+                  title={isFullscreen ? "Exit fullscreen" : "Fullscreen workout"}
+                >
+                  {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
                 </button>
               </div>
 

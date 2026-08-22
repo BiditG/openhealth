@@ -1,18 +1,19 @@
 "use client";
 
 import { useSession } from "@/lib/auth-client";
-import { Camera, HeartPulse, Search, User } from "lucide-react";
+import { Bell, Camera, HeartPulse, LineChart, ListChecks, Route, Search, Trophy, User, Utensils } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { LoginDialog } from "@/components/auth/login-dialog";
 import { useTranslation } from "react-i18next";
 
 const navItems = [
-  { href: "/today", label: "Today" },
-  { href: "/hub/food", label: "Food" },
-  { href: "/hub/progress", label: "Progress" },
-  { href: "/hub/chat", label: "AI Coach" },
-  { href: "/learn", label: "Learn" },
+  { href: "/hub/notifications", label: "Notifications", icon: Bell },
+  { href: "/hub/daily-tasks", label: "Tasks", icon: ListChecks },
+  { href: "/hub/tasks", label: "Leaderboard", icon: Trophy },
+  { href: "/hub/track", label: "Track", icon: Route },
+  { href: "/hub/food", label: "Food", icon: Utensils },
+  { href: "/hub/progress", label: "Progress", icon: LineChart },
 ];
 
 export function Header() {
@@ -36,8 +37,9 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-xl px-3.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
               >
+                <item.icon className="h-4 w-4" strokeWidth={1.8} />
                 {item.label}
               </Link>
             ))}
