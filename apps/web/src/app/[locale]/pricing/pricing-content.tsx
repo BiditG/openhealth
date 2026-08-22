@@ -4,6 +4,7 @@ import { Check, X, Cloud, Server, HeartPulse } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SiteNav } from "@/components/layout/site-nav";
 import Link from "next/link";
+import { ProPlans } from "@/components/pro/pro-plans";
 
 type FeatureValue = boolean | string;
 
@@ -63,8 +64,10 @@ export function PricingContent() {
           </p>
         </div>
 
+        <ProPlans showDemoLink />
+
         {/* 3-Column Plans */}
-        <div className="mx-auto mb-20 grid max-w-5xl gap-5 md:grid-cols-3">
+        <div className="mx-auto my-20 grid max-w-5xl gap-5 md:grid-cols-3">
           {/* Free */}
           <div className="space-y-6 rounded-2xl border border-border bg-white p-8 dark:bg-card">
             <div className="space-y-2">
@@ -106,9 +109,9 @@ export function PricingContent() {
                 </span>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-semibold">{t("pro.price")}</span>
+                <span className="text-3xl font-semibold">Rs. 199</span>
                 <span className="text-sm text-muted-foreground">
-                  / {t("pro.month")}
+                  / month
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">

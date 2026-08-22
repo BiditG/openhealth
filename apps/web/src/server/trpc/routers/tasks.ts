@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
-import { protectedProcedure, router } from "../trpc";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { didRankUp, getRankForPoints } from "@/lib/rank-system";
+import { protectedProcedure, publicProcedure, router } from "../trpc";
 import {
   dailyGuidanceNotifications,
   healthTaskCompletions,
+  userProfiles,
   users,
 } from "@/server/db/schema";
 
@@ -186,6 +188,61 @@ function analyzerHref(task: DailyTask) {
 }
 
 export const tasksRouter = router({
+  getTeamScores: publicProcedure.query(async ({ ctx }) => {
+    const [memberRows, pointRows] = await Promise.all([
+      ctx.db
+        .select({
+          teamColor: userProfiles.teamColor,
+          members: sql<number>`count(distinct ${userProfiles.userId})`,
+        })
+        .from(userProfiles)
+        .where(inArray(userProfiles.teamColor, ["red", "blue"]))
+        .groupBy(userProfiles.teamColor),
+      ctx.db
+        .select({
+          teamColor: userProfiles.teamColor,
+          points: sql<number>`coalesce(sum(${healthTaskCompletions.medalPoints}), 0)`,
+          completions: sql<number>`count(${healthTaskCompletions.id})`,
+        })
+        .from(healthTaskCompletions)
+        .innerJoin(userProfiles, eq(healthTaskCompletions.userId, userProfiles.userId))
+        .where(and(isNotNull(healthTaskCompletions.completedAt), inArray(userProfiles.teamColor, ["red", "blue"])))
+        .groupBy(userProfiles.teamColor),
+    ]);
+
+    const teams = (["red", "blue"] as const).map((teamColor) => {
+      const memberRow = memberRows.find((row) => row.teamColor === teamColor);
+      const pointRow = pointRows.find((row) => row.teamColor === teamColor);
+      return {
+        teamColor,
+        label: teamColor === "red" ? "Team RED" : "Team Blue",
+        points: Number(pointRow?.points ?? 0),
+        members: Number(memberRow?.members ?? 0),
+        completions: Number(pointRow?.completions ?? 0),
+      };
+    });
+
+    const [red, blue] = teams;
+    const leader =
+      red.points === blue.points
+        ? red.members <= blue.members
+          ? red
+          : blue
+        : red.points > blue.points
+          ? red
+          : blue;
+    const needsYou =
+      red.points === blue.points
+        ? red.members <= blue.members
+          ? red
+          : blue
+        : red.points < blue.points
+          ? red
+          : blue;
+
+    return { teams, leaderTeam: leader.teamColor, needsYouTeam: needsYou.teamColor };
+  }),
+
   getDaily: protectedProcedure.query(async ({ ctx }) => {
     const taskDate = todayIsoDate();
 
@@ -305,6 +362,14 @@ export const tasksRouter = router({
         throw new Error(`Cover ${(task.targetDistanceMeters ?? 0) / 1000} km before claiming this medal.`);
       }
 
+      const previousPoints = await ctx.db
+        .select({
+          points: sql<number>`coalesce(sum(${healthTaskCompletions.medalPoints}), 0)`,
+        })
+        .from(healthTaskCompletions)
+        .where(and(eq(healthTaskCompletions.userId, ctx.user.id), isNotNull(healthTaskCompletions.completedAt)))
+        .then((rows) => Number(rows[0]?.points ?? 0));
+
       await ctx.db
         .insert(healthTaskCompletions)
         .values({
@@ -342,9 +407,23 @@ export const tasksRouter = router({
           },
         });
 
+      const nextPoints = await ctx.db
+        .select({
+          points: sql<number>`coalesce(sum(${healthTaskCompletions.medalPoints}), 0)`,
+        })
+        .from(healthTaskCompletions)
+        .where(and(eq(healthTaskCompletions.userId, ctx.user.id), isNotNull(healthTaskCompletions.completedAt)))
+        .then((rows) => Number(rows[0]?.points ?? 0));
+      const rankBefore = getRankForPoints(previousPoints);
+      const rankAfter = getRankForPoints(nextPoints);
+
       return {
         success: true,
         medal: task.medal,
+        points: nextPoints,
+        rankBefore,
+        rankAfter,
+        levelUp: didRankUp(previousPoints, nextPoints),
         message: `${task.medal.name} unlocked.`,
       };
     }),
@@ -371,6 +450,7 @@ export const tasksRouter = router({
       .select({
         userId: healthTaskCompletions.userId,
         name: users.name,
+        teamColor: userProfiles.teamColor,
         medalCount: sql<number>`count(${healthTaskCompletions.id})`,
         points: sql<number>`coalesce(sum(${healthTaskCompletions.medalPoints}), 0)`,
         score: scoreSql,
@@ -384,10 +464,12 @@ export const tasksRouter = router({
       })
       .from(healthTaskCompletions)
       .innerJoin(users, eq(healthTaskCompletions.userId, users.id))
+      .leftJoin(userProfiles, eq(healthTaskCompletions.userId, userProfiles.userId))
       .where(where)
-      .groupBy(healthTaskCompletions.userId, users.name)
+      .groupBy(healthTaskCompletions.userId, users.name, userProfiles.teamColor)
       .orderBy(
         desc(scoreSql),
+        desc(sql<number>`sum(case when ${healthTaskCompletions.category} = 'Mission' then 1 else 0 end)`),
         desc(sql<number>`count(${healthTaskCompletions.id})`)
       )
       .limit(20);
@@ -396,14 +478,8 @@ export const tasksRouter = router({
       ...row,
       rank: index + 1,
       isCurrentUser: row.userId === ctx.user.id,
-      rankTitle:
-        Number(row.points) >= 1000
-          ? "Legend"
-          : Number(row.points) >= 500
-            ? "Champion"
-            : Number(row.points) >= 200
-              ? "Contender"
-              : "Rising",
+      rankTitle: getRankForPoints(Number(row.points)).title,
+      rankTier: getRankForPoints(Number(row.points)).tier,
     }));
   }),
 

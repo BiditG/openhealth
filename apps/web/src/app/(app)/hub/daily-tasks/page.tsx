@@ -15,6 +15,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { toast } from "sonner";
+import { RankBadge } from "@/components/ranks/rank-badge";
 import { trpc } from "@/lib/trpc-client";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,39 @@ type TaskView = {
     points: number;
   };
 };
+
+type LevelUpState = {
+  title: string;
+  tier: number;
+  points: number;
+} | null;
+
+function playMetalClick() {
+  try {
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return;
+    const ctx = new AudioContextCtor();
+    const now = ctx.currentTime;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+    gain.connect(ctx.destination);
+
+    [220, 820].forEach((frequency, index) => {
+      const osc = ctx.createOscillator();
+      osc.type = index === 0 ? "square" : "triangle";
+      osc.frequency.setValueAtTime(frequency, now);
+      osc.frequency.exponentialRampToValueAtTime(frequency * 0.55, now + 0.12);
+      osc.connect(gain);
+      osc.start(now + index * 0.025);
+      osc.stop(now + 0.16);
+    });
+    window.setTimeout(() => void ctx.close(), 260);
+  } catch {
+    // Non-critical: browsers may block audio in some contexts.
+  }
+}
 
 function taskIcon(category: string) {
   if (category === "Task") return Utensils;
@@ -140,6 +174,7 @@ export default function DailyTasksPage() {
   const router = useRouter();
   const utils = trpc.useUtils();
   const [celebration, setCelebration] = useState<string | null>(null);
+  const [levelUp, setLevelUp] = useState<LevelUpState>(null);
   const { data: daily, isLoading } = trpc.tasks.getDaily.useQuery();
   const startTask = trpc.tasks.startTask.useMutation({
     onSuccess: async (data) => {
@@ -152,6 +187,11 @@ export default function DailyTasksPage() {
     onSuccess: async (data) => {
       await utils.tasks.getDaily.invalidate();
       setCelebration(data.medal.name);
+      if (data.levelUp) {
+        playMetalClick();
+        setLevelUp({ title: data.rankAfter.title, tier: data.rankAfter.tier, points: data.points });
+        window.setTimeout(() => setLevelUp(null), 3600);
+      }
       toast.success(data.message);
       window.setTimeout(() => setCelebration(null), 2400);
     },
@@ -181,6 +221,23 @@ export default function DailyTasksPage() {
           </div>
           <p className="mt-3 text-sm font-semibold text-[#17201E]">Medal unlocked</p>
           <p className="mt-1 text-lg font-black text-[#123F37]">{celebration}</p>
+        </div>
+      )}
+
+      {levelUp && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#07110F]/86 px-4 animate-in fade-in">
+          <div className="relative w-full max-w-md overflow-hidden rounded-[26px] border border-amber-300/60 bg-[#101614] p-7 text-center text-white shadow-[0_0_60px_rgba(251,191,36,0.24)]">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-red-500 via-amber-300 to-[#20C7A4]" />
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-amber-200">Promotion unlocked</p>
+            <div className="mx-auto mt-6 flex h-24 w-24 items-center justify-center rounded-full border border-amber-300/70 bg-white/10 shadow-[0_0_35px_rgba(251,191,36,0.35)] animate-medal-pop">
+              <RankBadge points={levelUp.points} showTitle={false} className="scale-150" />
+            </div>
+            <h2 className="mt-6 text-4xl font-black uppercase tracking-[0.18em] text-white">{levelUp.title}</h2>
+            <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-amber-200">Tier {levelUp.tier}</p>
+            <p className="mt-4 text-sm leading-6 text-white/70">
+              Your total score is now {levelUp.points.toLocaleString()} points. Rank icon upgraded across your profile and leaderboard.
+            </p>
+          </div>
         </div>
       )}
 

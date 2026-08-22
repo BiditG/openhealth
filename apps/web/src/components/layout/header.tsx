@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "@/lib/auth-client";
-import { Bell, Camera, HeartPulse, LineChart, ListChecks, Route, Search, Trophy, User, Utensils } from "lucide-react";
+import { Bell, Camera, Crown, HeartPulse, LineChart, ListChecks, Route, Search, Trophy, User, Utensils } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { LoginDialog } from "@/components/auth/login-dialog";
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/hub/track", label: "Track", icon: Route },
   { href: "/hub/food", label: "Food", icon: Utensils },
   { href: "/hub/progress", label: "Progress", icon: LineChart },
+  { href: "/settings/subscription", label: "Pro", icon: Crown },
 ];
 
 export function Header() {
@@ -31,6 +32,19 @@ export function Header() {
             </span>
             <span className="text-lg font-bold leading-none tracking-tight">Swastha</span>
           </Link>
+
+          <nav className="flex items-center gap-1 lg:hidden">
+            {navItems.slice(0, 2).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF8F4] text-[#123F37]"
+                aria-label={item.label}
+              >
+                <item.icon className="h-5 w-5" strokeWidth={1.8} />
+              </Link>
+            ))}
+          </nav>
 
           <nav className="hidden items-center gap-1 lg:flex">
             {navItems.map((item) => (

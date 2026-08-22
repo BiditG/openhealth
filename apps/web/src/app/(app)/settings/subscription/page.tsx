@@ -1,28 +1,18 @@
 "use client";
 
-import { ArrowLeft, Crown, Check, Loader2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Crown, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useSession } from "@/lib/auth-client";
-
-const PRO_FEATURES_KEYS = [
-  "unlimitedAI",
-  "micronutrients",
-  "exercise",
-  "fasting",
-  "progressPhotos",
-  "exportData",
-  "savedMeals",
-] as const;
+import { ProPlans } from "@/components/pro/pro-plans";
 
 function SubscriptionContent() {
   const { t } = useTranslation("settings");
   const { data: session } = useSession();
   const searchParams = useSearchParams();
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const success = searchParams.get("success") === "true";
   const canceled = searchParams.get("canceled") === "true";
 
@@ -30,37 +20,6 @@ function SubscriptionContent() {
     undefined,
     { enabled: !!session?.user }
   );
-
-  const [error, setError] = useState<string | null>(null);
-
-  const checkoutMutation = trpc.subscription.createCheckout.useMutation({
-    onSuccess: (data) => {
-      window.location.href = data.url;
-    },
-    onError: (err) => {
-      setIsCheckingOut(false);
-      setError(err.message);
-    },
-  });
-
-  const portalMutation = trpc.subscription.createPortalSession.useMutation({
-    onSuccess: (data) => {
-      window.location.href = data.url;
-    },
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
-  const handleUpgrade = () => {
-    setIsCheckingOut(true);
-    checkoutMutation.mutate({ interval: "monthly" });
-  };
-
-  const handleManage = () => {
-    portalMutation.mutate();
-  };
-
   const isActive = subscription?.status === "active" || subscription?.status === "trialing";
 
   return (
@@ -89,11 +48,6 @@ function SubscriptionContent() {
           <p className="text-sm font-light text-neutral-500">
             {t("subscriptionPage.canceledMessage")}
           </p>
-        </div>
-      )}
-      {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
-          <p className="text-sm font-light text-red-700 dark:text-red-400">{error}</p>
         </div>
       )}
 
@@ -137,19 +91,7 @@ function SubscriptionContent() {
               </p>
             )}
           </div>
-
-          <button
-            onClick={handleManage}
-            disabled={portalMutation.isPending}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-black/[0.06] dark:border-white/[0.06] py-3 text-sm font-light transition-all duration-300 hover:border-foreground/20 disabled:opacity-50"
-          >
-            {portalMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ExternalLink className="h-4 w-4" strokeWidth={1.5} />
-            )}
-            {t("subscriptionPage.manageSubscription")}
-          </button>
+          <ProPlans compact />
         </div>
       ) : (
         /* --- Free plan / upgrade --- */
@@ -162,46 +104,7 @@ function SubscriptionContent() {
             <p className="text-lg font-light">Free</p>
           </div>
 
-          {/* Pro card */}
-          <div className="rounded-xl border border-amber-500/20 bg-gradient-to-b from-amber-500/5 to-transparent p-6 space-y-5">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Crown className="h-5 w-5 text-amber-500" />
-                <span className="text-lg font-light">Pro</span>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-light">$5</span>
-                <span className="text-sm text-neutral-400 font-light">
-                  / {t("subscriptionPage.month")}
-                </span>
-              </div>
-            </div>
-
-            {/* Feature list */}
-            <ul className="space-y-2.5">
-              {PRO_FEATURES_KEYS.map((key) => (
-                <li key={key} className="flex items-start gap-2.5">
-                  <Check className="h-4 w-4 mt-0.5 text-green-500 shrink-0" strokeWidth={2} />
-                  <span className="text-sm font-light">
-                    {t(`subscriptionPage.features.${key}`)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <button
-              onClick={handleUpgrade}
-              disabled={isCheckingOut}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 py-3 text-sm font-medium text-white transition-all duration-300 hover:bg-amber-600 disabled:opacity-50"
-            >
-              {isCheckingOut ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : null}
-              {isCheckingOut
-                ? t("subscriptionPage.redirecting")
-                : t("subscriptionPage.upgrade")}
-            </button>
-          </div>
+          <ProPlans compact />
         </div>
       )}
     </div>

@@ -85,6 +85,7 @@ export const updateProfileSchema = z.object({
   allergies: z.string().max(1000).nullable().optional(),
   dietaryPreference: z.string().max(80).nullable().optional(),
   primaryGoal: z.string().max(80).nullable().optional(),
+  teamColor: z.enum(["red", "blue"]).nullable().optional(),
   onboardingCompleted: z.boolean().optional(),
 });
 

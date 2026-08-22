@@ -120,6 +120,14 @@ function getOnboardingProfile(user: User) {
         .filter(Boolean)
         .slice(0, 20)
     : [];
+  const profileTeam = profile.teamColor;
+  const metadataTeam = user.user_metadata?.team_color;
+  const teamColor =
+    profileTeam === "red" || profileTeam === "blue"
+      ? profileTeam
+      : metadataTeam === "red" || metadataTeam === "blue"
+        ? metadataTeam
+        : null;
 
   return {
     sex: safeSex,
@@ -134,6 +142,7 @@ function getOnboardingProfile(user: User) {
     allergies: getString(profile.allergies, 1000),
     dietaryPreference: getString(profile.dietaryPreference, 80),
     primaryGoal: getString(profile.primaryGoal, 80),
+    teamColor,
     onboardingCompleted: profile.onboardingCompleted === true,
   };
 }
@@ -198,6 +207,7 @@ async function ensureApplicationUser(user: User) {
         allergies: onboardingProfile.allergies,
         dietaryPreference: onboardingProfile.dietaryPreference,
         primaryGoal: onboardingProfile.primaryGoal,
+        teamColor: onboardingProfile.teamColor,
         onboardingCompleted: onboardingProfile.onboardingCompleted,
       })
       .onConflictDoUpdate({
@@ -213,6 +223,7 @@ async function ensureApplicationUser(user: User) {
           allergies: onboardingProfile.allergies,
           dietaryPreference: onboardingProfile.dietaryPreference,
           primaryGoal: onboardingProfile.primaryGoal,
+          teamColor: onboardingProfile.teamColor,
           onboardingCompleted: onboardingProfile.onboardingCompleted,
           updatedAt: new Date(),
         },

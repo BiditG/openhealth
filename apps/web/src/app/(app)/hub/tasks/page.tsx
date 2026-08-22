@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Crown, Loader2, Medal, Star, Trophy } from "lucide-react";
+import { Crown, Loader2, Medal, Shield, Star, Trophy } from "lucide-react";
+import { RankBadge } from "@/components/ranks/rank-badge";
 import { trpc } from "@/lib/trpc-client";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,7 @@ function rankTone(rank: number) {
 export default function LeaderboardPage() {
   const [metric, setMetric] = useState<"overall" | "pushup" | "bicepCurl" | "pullup" | "squat">("overall");
   const { data: leaderboard, isLoading } = trpc.tasks.getLeaderboard.useQuery({ metric });
+  const { data: teamScores } = trpc.tasks.getTeamScores.useQuery();
   const topThree = leaderboard?.slice(0, 3) ?? [];
   const rest = leaderboard?.slice(3) ?? [];
   const scoreLabel = metric === "overall" ? "points" : "verified reps";
@@ -42,6 +44,55 @@ export default function LeaderboardPage() {
             <Trophy className="h-8 w-8 text-[#20C7A4]" />
           </div>
         </div>
+      </section>
+
+      <section className="mt-5 grid gap-3 md:grid-cols-2">
+        {teamScores?.teams.map((team) => {
+          const isLeader = teamScores.leaderTeam === team.teamColor;
+          const total = Math.max(...teamScores.teams.map((item) => item.points), 1);
+          const pct = Math.max(4, Math.round((team.points / total) * 100));
+          return (
+            <article
+              key={team.teamColor}
+              className={cn(
+                "relative overflow-hidden rounded-[22px] border bg-white p-5 shadow-sm",
+                team.teamColor === "red" ? "border-red-200" : "border-blue-200"
+              )}
+            >
+              {isLeader && (
+                <div className="absolute right-5 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700 shadow-sm">
+                  <Crown className="h-5 w-5 fill-amber-400" />
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <span
+                  className={cn(
+                    "flex h-12 w-12 items-center justify-center rounded-[15px] text-white",
+                    team.teamColor === "red" ? "bg-red-600" : "bg-blue-600"
+                  )}
+                >
+                  <Shield className="h-6 w-6" />
+                </span>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#6B7773]">
+                    {isLeader ? "Leading team" : "Chasing team"}
+                  </p>
+                  <h2 className="text-xl font-black text-[#17201E]">{team.label}</h2>
+                </div>
+              </div>
+              <div className="mt-5 flex items-end justify-between gap-3">
+                <p className="text-3xl font-black tabular-nums text-[#17201E]">{team.points.toLocaleString()}</p>
+                <p className="text-sm font-semibold text-[#6B7773]">{team.members} members • {team.completions} completions</p>
+              </div>
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#F7FAF9]">
+                <div
+                  className={cn("h-full rounded-full transition-all duration-700", team.teamColor === "red" ? "bg-red-500" : "bg-blue-500")}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </article>
+          );
+        })}
       </section>
 
       <section className="mt-5 flex gap-2 overflow-x-auto rounded-[18px] border border-[#E3EAE7] bg-white p-2 shadow-sm">
@@ -83,9 +134,12 @@ export default function LeaderboardPage() {
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#123F37] text-xl font-black text-white">
                 {entry.rank}
               </div>
-              <h2 className="mt-4 truncate text-xl font-black text-[#17201E]">{entry.name}</h2>
+              <div className="mt-4 flex min-w-0 flex-wrap items-center gap-2">
+                <h2 className="truncate text-xl font-black text-[#17201E]">{entry.name}</h2>
+                <RankBadge points={Number(entry.points)} compact />
+              </div>
               <p className="mt-1 text-sm text-[#6B7773]">
-                {entry.rankTitle} • {Number(entry.taskCount)} tasks • {Number(entry.missionCount)} missions
+                {entry.teamColor === "red" ? "Team RED" : entry.teamColor === "blue" ? "Team Blue" : "No team"} • {Number(entry.taskCount)} tasks • {Number(entry.missionCount)} missions
               </p>
               <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-[#123F37] shadow-sm">
                 <Star className="h-4 w-4 fill-[#20C7A4] text-[#20C7A4]" />
@@ -113,13 +167,25 @@ export default function LeaderboardPage() {
                 entry.isCurrentUser ? "border-[#20C7A4]/40 bg-[#EAF8F4]" : "border-[#E3EAE7] bg-[#F7FAF9]"
               )}
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#123F37] text-sm font-black text-white">
+              <div
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-full border-2 bg-[#123F37] text-sm font-black text-white",
+                  Number(entry.rankTier) >= 6
+                    ? "border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.45)]"
+                    : Number(entry.rankTier) >= 5
+                      ? "border-slate-300 shadow-[0_0_18px_rgba(148,163,184,0.5)]"
+                      : "border-transparent"
+                )}
+              >
                 {entry.rank}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-[#17201E]">{entry.name}</p>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <p className="truncate text-sm font-bold text-[#17201E]">{entry.name}</p>
+                  <RankBadge points={Number(entry.points)} compact />
+                </div>
                 <p className="text-xs text-[#6B7773]">
-                  {entry.rankTitle} • {Number(entry.taskCount)} tasks • {Number(entry.missionCount)} missions
+                  {entry.teamColor === "red" ? "Team RED" : entry.teamColor === "blue" ? "Team Blue" : "No team"} • {Number(entry.taskCount)} tasks • {Number(entry.missionCount)} missions
                 </p>
               </div>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#123F37]">

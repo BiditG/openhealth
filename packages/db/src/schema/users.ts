@@ -97,6 +97,7 @@ export const userProfiles = pgTable("user_profiles", {
   allergies: text("allergies"),
   dietaryPreference: varchar("dietary_preference", { length: 80 }),
   primaryGoal: varchar("primary_goal", { length: 80 }),
+  teamColor: varchar("team_color", { length: 12 }),
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   activityLevel: activityLevelEnum("activity_level").default("moderately_active"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

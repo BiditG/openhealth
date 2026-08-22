@@ -32,6 +32,7 @@ export async function updateProfile(
       allergies: input.allergies ?? null,
       dietaryPreference: input.dietaryPreference ?? null,
       primaryGoal: input.primaryGoal ?? null,
+      teamColor: input.teamColor ?? null,
       onboardingCompleted: input.onboardingCompleted ?? false,
     })
     .onConflictDoUpdate({
@@ -47,6 +48,7 @@ export async function updateProfile(
         allergies: input.allergies ?? null,
         dietaryPreference: input.dietaryPreference ?? null,
         primaryGoal: input.primaryGoal ?? null,
+        teamColor: input.teamColor ?? null,
         onboardingCompleted: input.onboardingCompleted ?? false,
         updatedAt: new Date(),
       },

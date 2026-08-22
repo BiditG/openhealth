@@ -15,7 +15,7 @@ import {
   YAxis,
   ResponsiveContainer,
 } from "recharts";
-import { BarChart3, ChevronDown, Droplets, Footprints, Scale, Utensils } from "lucide-react";
+import { BarChart3, ChevronDown, Droplets, Dumbbell, Footprints, Medal, Scale, Trophy, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateNavigator } from "@/components/diary/date-navigator";
@@ -102,6 +102,7 @@ function ProgressContent() {
   const { data: dateWeight } = trpc.progress.getDateWeight.useQuery({ date: dateStr }, queryOptions);
   const { data: weightHistory } = trpc.progress.getWeightHistory.useQuery({ limit: 30 }, queryOptions);
   const { data: analytics } = trpc.progress.getAnalytics.useQuery({ days: 30 }, queryOptions);
+  const { data: achievementStats } = trpc.tasks.getMyStats.useQuery(undefined, queryOptions);
   const { data: nutritionSummary } = trpc.diary.getWeekSummary.useQuery({ startDate, endDate: dateStr }, queryOptions);
   const { data: nutrientSummary } = trpc.diary.getNutrientSummary.useQuery(
     {
@@ -115,6 +116,16 @@ function ProgressContent() {
   const currentWeight = dateWeight ? toNumber(dateWeight.weightKg) : null;
   const targetWeight = goals?.targetWeightKg ? toNumber(goals.targetWeightKg) : null;
   const recordedAt = dateWeight?.createdAt ? format(new Date(dateWeight.createdAt), "MMM d, h:mm a") : null;
+  const [localDistanceKm, setLocalDistanceKm] = useState(0);
+
+  useEffect(() => {
+    try {
+      const activities = JSON.parse(window.localStorage.getItem("swastha.offline.activities") ?? "[]") as Array<{ distanceMeters?: number }>;
+      setLocalDistanceKm(activities.reduce((sum, activity) => sum + (activity.distanceMeters ?? 0), 0) / 1000);
+    } catch {
+      setLocalDistanceKm(0);
+    }
+  }, []);
 
   useEffect(() => {
     setWeight(currentWeight !== null ? String(currentWeight) : "");
@@ -223,6 +234,25 @@ function ProgressContent() {
               Analysis
             </Button>
           </Link>
+        </section>
+
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Distance", `${localDistanceKm.toFixed(2)} km`, Footprints],
+            ["Push-ups", achievementStats?.pushups ?? 0, Dumbbell],
+            ["Bicep curls", achievementStats?.bicepCurls ?? 0, Dumbbell],
+            ["Squats", achievementStats?.squats ?? 0, Dumbbell],
+            ["Pull-ups", achievementStats?.pullups ?? 0, Dumbbell],
+            ["Tasks", achievementStats?.tasks ?? 0, Trophy],
+            ["Missions", achievementStats?.missions ?? 0, Medal],
+            ["Points", achievementStats?.points ?? 0, BarChart3],
+          ].map(([label, value, Icon]) => (
+            <div key={String(label)} className="rounded-2xl border border-[#DCE8E3] bg-white p-4 shadow-[0_4px_18px_rgba(20,50,40,0.04)]">
+              <Icon className="h-5 w-5 text-primary" />
+              <p className="mt-3 text-2xl font-black tabular-nums text-foreground">{value}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{String(label)}</p>
+            </div>
+          ))}
         </section>
 
         <section className="rounded-3xl border border-[#DCE8E3] bg-white p-4 shadow-[0_4px_24px_rgba(20,50,40,0.04)] sm:p-5">

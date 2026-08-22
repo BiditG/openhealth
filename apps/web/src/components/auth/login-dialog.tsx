@@ -6,10 +6,12 @@ import {
   Activity,
   CalendarDays,
   CheckCircle2,
+  Crown,
   HeartPulse,
   Mail,
   MapPin,
   Scale,
+  Shield,
   Sparkles,
   Target,
   User,
@@ -23,10 +25,11 @@ import { trpc } from "@/lib/trpc-client";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 
-const registrationSteps = ["name", "goals", "followups", "activity", "basics", "body", "account"] as const;
+const registrationSteps = ["name", "team", "goals", "followups", "activity", "basics", "body", "account"] as const;
 
 type GoalFocus = "body_building" | "weight_reduction" | "general_health";
 type ActivityLevel = "sedentary" | "lightly_active" | "moderately_active" | "very_active" | "extremely_active";
+type TeamColor = "red" | "blue";
 type GoalId =
   | "weight_loss"
   | "maintain_weight"
@@ -138,6 +141,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
   const [appleLoading, setAppleLoading] = useState(false);
   const [registerStep, setRegisterStep] = useState(0);
   const [fullName, setFullName] = useState("");
+  const [teamColor, setTeamColor] = useState<TeamColor>("blue");
   const [selectedGoals, setSelectedGoals] = useState<GoalId[]>(["weight_loss"]);
   const [goalNotes, setGoalNotes] = useState<Record<string, string>>({});
   const [birthDate, setBirthDate] = useState("");
@@ -151,6 +155,10 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
   const [dietaryPreference, setDietaryPreference] = useState("");
   const [medicalConditions, setMedicalConditions] = useState("");
   const completeOnboarding = trpc.user.completeOnboarding.useMutation();
+  const { data: teamScores } = trpc.tasks.getTeamScores.useQuery(undefined, {
+    enabled: mode === "register" && open,
+    staleTime: 30_000,
+  });
 
   const primaryGoal = useMemo(() => getPrimaryGoal(selectedGoals), [selectedGoals]);
   const weightGoal = selectedGoals.find((goal) => goalOptions.find((option) => option.id === goal)?.category === "weight");
@@ -161,6 +169,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
     setReferralCode("");
     setRegisterStep(0);
     setFullName("");
+    setTeamColor("blue");
     setSelectedGoals(["weight_loss"]);
     setGoalNotes({});
     setBirthDate("");
@@ -293,6 +302,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
           allergies: null,
           dietaryPreference: dietaryPreference || null,
           primaryGoal,
+          teamColor,
           onboardingCompleted: true,
         };
         const result = await signUp.email({
@@ -304,6 +314,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
             selected_goals: selectedGoals,
             goal_notes: goalNotes,
             country: country.trim(),
+            team_color: teamColor,
             target_weight_kg: targetWeight,
           },
         });
@@ -397,6 +408,64 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
           <div className="space-y-4">
             <StepIntro icon={User} title="What should we call you?" description="We are happy you are here. Let us make Swastha feel personal from the first screen." />
             <Input id="register-name" placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" required />
+          </div>
+        )}
+
+        {step === "team" && (
+          <div className="space-y-4">
+            <StepIntro icon={Shield} title="Choose your team" description="Every point you earn joins your team score. Pick the side you want to carry." />
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(["red", "blue"] as const).map((team) => {
+                const score = teamScores?.teams.find((item) => item.teamColor === team);
+                const selected = teamColor === team;
+                const isLeader = teamScores?.leaderTeam === team;
+                const needsYou = teamScores?.needsYouTeam === team;
+                return (
+                  <button
+                    key={team}
+                    type="button"
+                    onClick={() => setTeamColor(team)}
+                    className={`relative overflow-hidden rounded-[18px] border p-4 text-left transition-all ${
+                      selected
+                        ? team === "red"
+                          ? "border-red-400 bg-red-50 shadow-[0_12px_28px_rgba(248,113,113,0.18)]"
+                          : "border-blue-400 bg-blue-50 shadow-[0_12px_28px_rgba(96,165,250,0.18)]"
+                        : "border-[#E3EAE7] bg-white hover:border-[#20C7A4]"
+                    }`}
+                  >
+                    {isLeader && (
+                      <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                        <Crown className="h-4 w-4 fill-amber-400" />
+                      </span>
+                    )}
+                    <span
+                      className={`flex h-12 w-12 items-center justify-center rounded-[14px] ${
+                        team === "red" ? "bg-red-600 text-white" : "bg-blue-600 text-white"
+                      }`}
+                    >
+                      <Shield className="h-6 w-6" />
+                    </span>
+                    <span className="mt-4 block text-lg font-black text-[#17201E]">
+                      {team === "red" ? "Team RED" : "Team Blue"}
+                    </span>
+                    <span className="mt-1 block text-sm font-semibold text-[#6B7773]">
+                      {Number(score?.points ?? 0).toLocaleString()} pts • {Number(score?.members ?? 0)} members
+                    </span>
+                    <span
+                      className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-black ${
+                        needsYou
+                          ? team === "red"
+                            ? "bg-red-600 text-white"
+                            : "bg-blue-600 text-white"
+                          : "bg-white text-[#6B7773]"
+                      }`}
+                    >
+                      {needsYou ? "Needs you more" : isLeader ? "In the lead" : "Ready for points"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 

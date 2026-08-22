@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { path: "/today", label: "Health" },
   { path: "/learn", label: "Learn" },
+  { path: "/pro", label: "Pro" },
 ];
 
 export function SiteNav() {

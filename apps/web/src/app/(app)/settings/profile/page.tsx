@@ -3,7 +3,10 @@
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Dumbbell, Footprints, Loader2, LogOut, Medal, Trophy, User } from "lucide-react";
+import { ArrowLeft, Dumbbell, Footprints, Loader2, LogOut, Medal, Shield, Trophy, User } from "lucide-react";
+import { RankBadge } from "@/components/ranks/rank-badge";
+import { getRankProgress } from "@/lib/rank-system";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +34,7 @@ export default function ProfilePage() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [activityLevel, setActivityLevel] = useState("moderately_active");
   const [primaryGoal, setPrimaryGoal] = useState("");
+  const [teamColor, setTeamColor] = useState<"red" | "blue" | "">("");
   const [dietaryPreference, setDietaryPreference] = useState("");
   const [medicalConditions, setMedicalConditions] = useState("");
   const [medications, setMedications] = useState("");
@@ -57,6 +61,7 @@ export default function ProfilePage() {
       setDateOfBirth(profile?.dateOfBirth || "");
       setActivityLevel(profile?.activityLevel || "moderately_active");
       setPrimaryGoal(profile?.primaryGoal || "");
+      setTeamColor((profile?.teamColor as "red" | "blue" | null) || "");
       setDietaryPreference(profile?.dietaryPreference || "");
       setMedicalConditions(profile?.medicalConditions?.join(", ") || "");
       setMedications(profile?.medications || "");
@@ -85,6 +90,7 @@ export default function ProfilePage() {
           ? (activityLevel as "sedentary" | "lightly_active" | "moderately_active" | "very_active" | "extremely_active")
           : null,
         primaryGoal: primaryGoal || null,
+        teamColor: teamColor || null,
         dietaryPreference: dietaryPreference || null,
         medicalConditions: parseList(medicalConditions),
         medications: medications || null,
@@ -110,6 +116,8 @@ export default function ProfilePage() {
 
   if (sessionPending || profileLoading) return <LoadingSpinner />;
 
+  const rankProgress = getRankProgress(achievementStats?.points ?? 0);
+
   return (
     <div className="mx-auto max-w-[640px] space-y-6 px-4 py-6">
       <div className="flex items-center gap-3">
@@ -126,13 +134,26 @@ export default function ProfilePage() {
 
       <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
         <div className="mb-5 flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-primary">
+          <span
+            className={cn(
+              "flex h-14 w-14 items-center justify-center rounded-2xl border-2 bg-secondary text-primary",
+              rankProgress.current.profileFrameClass
+            )}
+          >
             <Trophy className="h-5 w-5" />
           </span>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Activity achievements</h2>
-            <p className="text-sm text-muted-foreground">Completed through Swastha tasks, missions, tracker, and analyzer.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold text-foreground">Activity achievements</h2>
+              <RankBadge points={achievementStats?.points ?? 0} compact />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {teamColor === "red" ? "Team RED" : teamColor === "blue" ? "Team Blue" : "Choose a team"} • {rankProgress.pointsToNext ? `${rankProgress.pointsToNext.toLocaleString()} pts to ${rankProgress.next?.title}` : "Max rank reached"}
+            </p>
           </div>
+        </div>
+        <div className="mb-4 h-2 overflow-hidden rounded-full bg-secondary">
+          <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${rankProgress.progressPct}%` }} />
         </div>
         <div className="grid gap-3 sm:grid-cols-4">
           {[
@@ -247,6 +268,28 @@ export default function ProfilePage() {
               <option value="gain">Gain muscle</option>
               <option value="manage_health">Manage health</option>
             </select>
+          </Field>
+          <Field label="Team">
+            <div className="grid grid-cols-2 gap-2">
+              {(["red", "blue"] as const).map((team) => (
+                <button
+                  key={team}
+                  type="button"
+                  onClick={() => setTeamColor(team)}
+                  className={cn(
+                    "flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold transition-colors",
+                    teamColor === team
+                      ? team === "red"
+                        ? "border-red-500 bg-red-50 text-red-700"
+                        : "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-input bg-white text-foreground dark:bg-card"
+                  )}
+                >
+                  <Shield className="h-4 w-4" />
+                  {team === "red" ? "RED" : "Blue"}
+                </button>
+              ))}
+            </div>
           </Field>
           <Field label="Diet preference">
             <Input placeholder="Vegetarian, high protein, etc." value={dietaryPreference} onChange={(e) => setDietaryPreference(e.target.value)} />
