@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import {
   Camera,
   Download,
-  Loader2,
-  MapPin,
+  Maximize2,
+  Minimize2,
   Pause,
   Play,
   RotateCcw,
@@ -41,6 +41,12 @@ type SavedActivity = {
 };
 
 const STORAGE_KEY = "swastha.offline.activities";
+const DEFAULT_TRACK_WEIGHT_KG = 70;
+const CELEBRATION_LINES = [
+  "Congratulations. Activity saved.",
+  "Keep pushing. That effort counts.",
+  "Nice finish. Your food guide has been updated.",
+];
 
 function toRad(value: number) {
   return (value * Math.PI) / 180;
@@ -80,6 +86,23 @@ function pace(distanceMeters: number, elapsedSeconds: number) {
 function avgSpeed(distanceMeters: number, elapsedSeconds: number) {
   if (elapsedSeconds <= 0) return "0.0";
   return ((distanceMeters / 1000) / (elapsedSeconds / 3600)).toFixed(1);
+}
+
+function localDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function estimateCalories(mode: "walk" | "run", elapsedSeconds: number, weightKg: number) {
+  const minutes = Math.max(1, Math.round(elapsedSeconds / 60));
+  const met = mode === "run" ? 9.8 : 3.5;
+  return {
+    minutes,
+    calories: Math.round(met * weightKg * (minutes / 60)),
+    intensity: mode === "run" ? ("high" as const) : ("low" as const),
+  };
 }
 
 function routePath(points: TrackPoint[], width = 640, height = 360) {
@@ -165,15 +188,18 @@ function loadActivities() {
   }
 }
 
-export default function TrackPage() {
+export function TrackExperience() {
   const searchParams = useSearchParams();
+  const utils = trpc.useUtils();
   const taskId = searchParams.get("taskId");
   const targetDistance = Number(searchParams.get("targetDistance"));
   const missionTargetMeters = Number.isFinite(targetDistance) && targetDistance > 0 ? targetDistance : null;
   const watchRef = useRef<number | null>(null);
+  const trackStageRef = useRef<HTMLElement>(null);
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const savedOnFinishRef = useRef(false);
   const [mode, setMode] = useState<"walk" | "run">("run");
   const [status, setStatus] = useState<"idle" | "tracking" | "paused" | "complete">("idle");
   const [points, setPoints] = useState<TrackPoint[]>([]);
@@ -183,6 +209,15 @@ export default function TrackPage() {
   const [photoDataUrl, setPhotoDataUrl] = useState<string | undefined>();
   const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([]);
   const [missionCompleted, setMissionCompleted] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { data: cardioPresets } = trpc.exercise.getPresets.useQuery({ category: "cardio" });
+  const { data: profile } = trpc.user.getProfile.useQuery();
+  const logExercise = trpc.exercise.logExercise.useMutation({
+    onSuccess: async () => {
+      await utils.exercise.getDay.invalidate({ date: localDateString() });
+    },
+  });
   const completeTask = trpc.tasks.completeTask.useMutation({
     onSuccess: (data) => {
       setMissionCompleted(true);
@@ -199,6 +234,24 @@ export default function TrackPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === trackStageRef.current);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    const stage = trackStageRef.current;
+    if (!stage) return;
+    if (document.fullscreenElement === stage) {
+      await document.exitFullscreen();
+      return;
+    }
+    await stage.requestFullscreen();
+  };
+
   const path = useMemo(() => routePath(points), [points]);
   const mapCenter = points.at(-1) ?? points[0] ?? null;
   const mapZoom = points.length > 1 && distanceMeters > 5000 ? 13 : points.length > 1 && distanceMeters > 1500 ? 14 : 15;
@@ -206,6 +259,7 @@ export default function TrackPage() {
   const liveRoutePath = useMemo(() => mapRoutePath(points, mapCenter, mapZoom), [points, mapCenter, mapZoom]);
   const liveSpeed = points.at(-1)?.speed;
   const missionProgress = missionTargetMeters ? Math.min(100, Math.round((distanceMeters / missionTargetMeters) * 100)) : 0;
+  const activityBurn = estimateCalories(mode, elapsedSeconds, Number(profile?.currentWeightKg ?? DEFAULT_TRACK_WEIGHT_KG));
 
   const stopWatch = () => {
     if (watchRef.current != null) {
@@ -266,6 +320,25 @@ export default function TrackPage() {
   const finishTracking = () => {
     stopWatch();
     setStatus("complete");
+    if (!savedOnFinishRef.current) {
+      savedOnFinishRef.current = true;
+      const activity = saveActivity();
+      const optionQuery = mode === "run" ? "running" : "walking";
+      const existing = cardioPresets?.find((preset) => preset.name.toLowerCase().includes(optionQuery));
+      if (existing?.id) {
+        logExercise.mutate({
+          date: localDateString(),
+          exerciseId: existing.id,
+          durationMin: activityBurn.minutes,
+          caloriesBurned: activityBurn.calories,
+          intensity: activityBurn.intensity,
+          note: `${km(activity.distanceMeters)} km ${mode} from GPS tracker`,
+        });
+      }
+      const message = CELEBRATION_LINES[Math.floor(Math.random() * CELEBRATION_LINES.length)];
+      setCompletionMessage(message);
+      toast.success(`${message} ${activityBurn.calories} kcal deducted from today's guide.`);
+    }
     if (taskId && missionTargetMeters && distanceMeters >= missionTargetMeters && !missionCompleted) {
       completeTask.mutate({
         taskKey: taskId,
@@ -284,6 +357,8 @@ export default function TrackPage() {
     setDistanceMeters(0);
     setPhotoDataUrl(undefined);
     setError(null);
+    setCompletionMessage(null);
+    savedOnFinishRef.current = false;
   };
 
   const saveActivity = () => {
@@ -301,6 +376,7 @@ export default function TrackPage() {
     const next = [activity, ...savedActivities].slice(0, 20);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setSavedActivities(next);
+    return activity;
   };
 
   const handlePhoto = (file?: File) => {
@@ -366,12 +442,30 @@ export default function TrackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7FAF9] px-4 py-5 sm:px-6 lg:px-0">
-      <section className="overflow-hidden rounded-[26px] bg-[#123F37] p-6 text-white shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#20C7A4]">Track you</p>
+    <div className="min-h-screen bg-[#071512] px-4 py-5 text-white sm:px-6 lg:px-0">
+      {completionMessage && (
+        <div className="fixed inset-x-4 top-24 z-50 mx-auto max-w-sm rounded-[22px] border border-[#20C7A4]/30 bg-white p-5 text-center shadow-xl">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EAF8F4] text-[#123F37]">
+            <Route className="h-8 w-8" />
+          </div>
+          <h2 className="mt-3 text-xl font-black text-[#17201E]">{completionMessage}</h2>
+          <p className="mt-2 text-sm font-semibold text-[#6B7773]">
+            {km(distanceMeters)} km • {formatTime(elapsedSeconds)} • {activityBurn.calories} kcal deducted from the daily food guide.
+          </p>
+          <button
+            type="button"
+            onClick={() => setCompletionMessage(null)}
+            className="mt-4 min-h-11 rounded-full bg-[#123F37] px-5 text-sm font-bold text-white"
+          >
+            Done
+          </button>
+        </div>
+      )}
+      <section className="overflow-hidden rounded-[28px] border border-emerald-100/10 bg-[radial-gradient(circle_at_30%_0%,rgba(32,199,164,0.28),transparent_32%),linear-gradient(145deg,#0B211D,#06110F)] p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">Track you</p>
         <h1 className="mt-3 text-3xl font-black tracking-normal">Record your walk or run</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">
-          GPS tracking, distance, speed, time, route review, photos, and share image export. Saved activities stay available offline on this device.
+          GPS distance, pace, route review, calories, and saved activity history inside the same dark training console.
         </p>
         {taskId && missionTargetMeters && (
           <div className="mt-5 rounded-[18px] bg-white/10 p-4">
@@ -389,8 +483,14 @@ export default function TrackPage() {
       </section>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="overflow-hidden rounded-[22px] border border-[#E3EAE7] bg-white shadow-sm">
-          <div className="relative h-[360px] bg-[#EAF8F4]">
+        <section
+          ref={trackStageRef}
+          className={cn(
+            "overflow-hidden border border-white/10 bg-white/10 shadow-[0_20px_70px_rgba(0,0,0,0.22)] backdrop-blur",
+            isFullscreen ? "fixed inset-0 z-[80] flex h-[100dvh] w-[100dvw] flex-col rounded-none bg-[#071512]" : "rounded-[28px]"
+          )}
+        >
+          <div className={cn("relative min-h-0 bg-[#0B211D]", isFullscreen ? "flex-1" : "h-[420px]")}>
             <div className="absolute inset-0 overflow-hidden">
               {tiles.map((tile) => (
                 <img
@@ -410,43 +510,61 @@ export default function TrackPage() {
                   <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#D8E6E1" strokeWidth="1" />
                 </pattern>
               </defs>
-              <rect width="640" height="360" fill={tiles.length ? "rgba(234,248,244,0.12)" : "url(#grid)"} />
-              {liveRoutePath && <path d={liveRoutePath} fill="none" stroke="#123F37" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />}
-              {!liveRoutePath && path && <path d={path} fill="none" stroke="#123F37" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />}
+              <rect width="640" height="360" fill={tiles.length ? "rgba(7,21,18,0.26)" : "url(#grid)"} />
+              {liveRoutePath && <path d={liveRoutePath} fill="none" stroke="#6EE7B7" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />}
+              {!liveRoutePath && path && <path d={path} fill="none" stroke="#6EE7B7" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />}
               {mapCenter && <circle cx="320" cy="180" r="9" fill="#20C7A4" stroke="#FFFFFF" strokeWidth="4" />}
             </svg>
-            <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-2 text-xs font-bold text-[#123F37] shadow-sm">
+            <div className="absolute left-3 top-3 max-w-[52vw] truncate rounded-full border border-white/15 bg-[#071512]/80 px-3 py-2 text-[11px] font-bold text-emerald-100 shadow-sm backdrop-blur sm:left-4 sm:top-4 sm:max-w-none sm:text-xs">
               {points.length ? `${points.length} GPS points` : "Waiting for GPS"}
             </div>
-            <div className="absolute bottom-3 right-3 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-[#6B7773] shadow-sm">
+            <div className="absolute bottom-3 right-3 hidden rounded-full border border-white/15 bg-[#071512]/80 px-3 py-1.5 text-[11px] font-semibold text-white/60 shadow-sm backdrop-blur sm:block">
               Map tiles © OpenStreetMap
+            </div>
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="absolute right-4 top-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#071512]/80 text-white shadow-sm backdrop-blur"
+              title={isFullscreen ? "Exit fullscreen" : "Fullscreen tracker"}
+            >
+              {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </button>
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[radial-gradient(circle,rgba(7,21,18,0.18),rgba(7,21,18,0.56))] p-4">
+              <div className="w-full max-w-[min(86vw,460px)] rounded-[28px] border border-white/10 bg-[#071512]/72 px-5 py-6 text-center shadow-[0_0_70px_rgba(32,199,164,0.22)] backdrop-blur sm:rounded-[32px] sm:px-8 sm:py-7">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200/80 sm:text-xs sm:tracking-[0.22em]">{mode === "run" ? "Run distance" : "Walk distance"}</p>
+                <p className="mt-2 text-[clamp(3.5rem,19vw,8rem)] font-black leading-none tracking-normal text-white">
+                  {km(distanceMeters)}
+                </p>
+                <p className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-100/80 sm:text-sm">km</p>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+          <div className={cn("grid shrink-0 grid-cols-2 gap-2 p-3 sm:grid-cols-4 sm:gap-3 sm:p-4", isFullscreen && "max-h-[42dvh] overflow-y-auto min-[520px]:grid-cols-5")}>
             {[
               ["Distance", `${km(distanceMeters)} km`],
               ["Time", formatTime(elapsedSeconds)],
               ["Pace", pace(distanceMeters, elapsedSeconds)],
               ["Speed", liveSpeed != null ? `${(liveSpeed * 3.6).toFixed(1)} km/h` : `${avgSpeed(distanceMeters, elapsedSeconds)} km/h`],
+              ...(isFullscreen ? ([["Calories", `${activityBurn.calories} kcal`]] as Array<[string, string]>) : []),
             ].map(([label, value]) => (
-              <div key={label} className="rounded-[16px] bg-[#F7FAF9] p-4">
-                <p className="text-xs font-semibold text-[#6B7773]">{label}</p>
-                <p className="mt-1 text-xl font-black tabular-nums text-[#17201E]">{value}</p>
+              <div key={label} className="min-w-0 rounded-[16px] border border-white/10 bg-white/10 p-3 sm:rounded-[18px] sm:p-4">
+                <p className="truncate text-[11px] font-semibold text-emerald-100/70 sm:text-xs">{label}</p>
+                <p className="mt-1 truncate text-lg font-black tabular-nums text-white sm:text-xl">{value}</p>
               </div>
             ))}
           </div>
         </section>
 
         <aside className="space-y-4">
-          <section className="rounded-[22px] border border-[#E3EAE7] bg-white p-4 shadow-sm">
-            <div className="grid grid-cols-2 gap-2 rounded-full bg-[#F7FAF9] p-1">
+          <section className="rounded-[28px] border border-white/10 bg-white/10 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.18)] backdrop-blur">
+            <div className="grid grid-cols-2 gap-2 rounded-full bg-white/10 p-1">
               {(["run", "walk"] as const).map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => setMode(item)}
-                  className={cn("min-h-11 rounded-full text-sm font-bold capitalize", mode === item ? "bg-[#123F37] text-white" : "text-[#6B7773]")}
+                  className={cn("min-h-11 rounded-full text-sm font-bold capitalize", mode === item ? "bg-emerald-200 text-[#071512]" : "text-white/60")}
                 >
                   {item}
                 </button>
@@ -454,25 +572,25 @@ export default function TrackPage() {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {status === "tracking" ? (
-                <button type="button" onClick={pauseTracking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] font-bold text-[#123F37]">
+                <button type="button" onClick={pauseTracking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white/12 font-bold text-white">
                   <Pause className="h-4 w-4" />
                   Pause
                 </button>
               ) : (
-                <button type="button" onClick={startTracking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#123F37] font-bold text-white">
+                <button type="button" onClick={startTracking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-emerald-200 font-bold text-[#071512]">
                   <Play className="h-4 w-4" />
                   {status === "paused" ? "Resume" : "Start"}
                 </button>
               )}
-              <button type="button" onClick={finishTracking} disabled={points.length < 2} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#20C7A4] font-bold text-[#123F37] disabled:opacity-50">
+              <button type="button" onClick={finishTracking} disabled={points.length < 2} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#20C7A4] font-bold text-[#071512] disabled:opacity-50">
                 <Square className="h-4 w-4" />
-                Finish
+                {logExercise.isPending ? "Saving..." : "Finish"}
               </button>
-              <button type="button" onClick={resetTracking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#E3EAE7] font-bold text-[#123F37]">
+              <button type="button" onClick={resetTracking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/15 font-bold text-white">
                 <RotateCcw className="h-4 w-4" />
                 Reset
               </button>
-              <button type="button" onClick={saveActivity} disabled={status !== "complete"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#E3EAE7] font-bold text-[#123F37] disabled:opacity-50">
+              <button type="button" onClick={saveActivity} disabled={status !== "complete"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/15 font-bold text-white disabled:opacity-50">
                 <Save className="h-4 w-4" />
                 Save
               </button>
@@ -480,34 +598,34 @@ export default function TrackPage() {
             {error && <p className="mt-3 rounded-[14px] bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           </section>
 
-          <section className="rounded-[22px] border border-[#E3EAE7] bg-white p-4 shadow-sm">
+          <section className="rounded-[28px] border border-white/10 bg-white/10 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.18)] backdrop-blur">
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => handlePhoto(event.target.files?.[0])} />
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#EAF8F4] font-bold text-[#123F37]">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-white/12 font-bold text-white">
               <Camera className="h-4 w-4" />
               Add activity photo
             </button>
             {photoDataUrl && <img src={photoDataUrl} alt="Activity" className="mt-3 aspect-video w-full rounded-[16px] object-cover" />}
-            <button type="button" onClick={exportImage} disabled={points.length < 2} className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#123F37] font-bold text-white disabled:opacity-50">
+            <button type="button" onClick={exportImage} disabled={points.length < 2} className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-200 font-bold text-[#071512] disabled:opacity-50">
               <Download className="h-4 w-4" />
               Export share image
             </button>
           </section>
 
-          <section className="rounded-[22px] border border-[#E3EAE7] bg-white p-4 shadow-sm">
-            <h2 className="text-lg font-black text-[#17201E]">Offline history</h2>
+          <section className="rounded-[28px] border border-white/10 bg-white/10 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.18)] backdrop-blur">
+            <h2 className="text-lg font-black text-white">Offline history</h2>
             <div className="mt-3 space-y-2">
               {savedActivities.slice(0, 5).map((activity) => (
-                <div key={activity.id} className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-[14px] bg-[#F7FAF9] p-3">
-                  <Route className="h-5 w-5 text-[#20C7A4]" />
+                <div key={activity.id} className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-[16px] border border-white/10 bg-white/10 p-3">
+                  <Route className="h-5 w-5 text-emerald-200" />
                   <div>
-                    <p className="text-sm font-bold capitalize text-[#17201E]">{activity.mode}</p>
-                    <p className="text-xs text-[#6B7773]">{km(activity.distanceMeters)} km - {formatTime(activity.elapsedSeconds)}</p>
+                    <p className="text-sm font-bold capitalize text-white">{activity.mode}</p>
+                    <p className="text-xs text-white/60">{km(activity.distanceMeters)} km - {formatTime(activity.elapsedSeconds)}</p>
                   </div>
-                  <Timer className="h-4 w-4 text-[#6B7773]" />
+                  <Timer className="h-4 w-4 text-white/50" />
                 </div>
               ))}
               {!savedActivities.length && (
-                <p className="rounded-[14px] bg-[#F7FAF9] p-3 text-sm text-[#6B7773]">Saved activities will appear here and remain available offline on this device.</p>
+                <p className="rounded-[16px] border border-white/10 bg-white/10 p-3 text-sm text-white/60">Saved activities will appear here and remain available offline on this device.</p>
               )}
             </div>
           </section>
@@ -515,4 +633,8 @@ export default function TrackPage() {
       </div>
     </div>
   );
+}
+
+export default function TrackPage() {
+  return <TrackExperience />;
 }

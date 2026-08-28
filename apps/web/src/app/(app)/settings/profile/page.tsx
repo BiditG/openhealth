@@ -17,6 +17,25 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 
+const teamOptions = {
+  blue: {
+    name: "Blue",
+    statement: "I let my game speak.",
+    traits: "Calm • Precise • Unshaken",
+    description: "For people who let results do the talking.",
+    selectedClass: "border-blue-500 bg-blue-50 text-blue-800",
+    iconClass: "bg-blue-600 text-white",
+  },
+  red: {
+    name: "Red",
+    statement: "I came to dominate.",
+    traits: "Fearless • Driven • Relentless",
+    description: "For people who want the top spot.",
+    selectedClass: "border-red-500 bg-red-50 text-red-800",
+    iconClass: "bg-red-600 text-white",
+  },
+} as const;
+
 export default function ProfilePage() {
   const { t } = useTranslation(["settings", "common"]);
   const { data: session, isPending: sessionPending } = useSession();
@@ -185,7 +204,7 @@ export default function ProfilePage() {
         </div>
         {achievementStats?.recentMedals?.length ? (
           <div className="mt-5">
-            <h3 className="text-sm font-semibold text-foreground">Recent medals</h3>
+            <h3 className="text-sm font-semibold text-foreground">Medals and rewards</h3>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {achievementStats.recentMedals.map((medal) => (
                 <div key={medal.id} className="rounded-2xl border border-border bg-secondary/40 p-3">
@@ -270,25 +289,31 @@ export default function ProfilePage() {
             </select>
           </Field>
           <Field label="Team">
-            <div className="grid grid-cols-2 gap-2">
-              {(["red", "blue"] as const).map((team) => (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(["blue", "red"] as const).map((team) => {
+                const option = teamOptions[team];
+                return (
                 <button
                   key={team}
                   type="button"
                   onClick={() => setTeamColor(team)}
                   className={cn(
-                    "flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold transition-colors",
-                    teamColor === team
-                      ? team === "red"
-                        ? "border-red-500 bg-red-50 text-red-700"
-                        : "border-blue-500 bg-blue-50 text-blue-700"
-                      : "border-input bg-white text-foreground dark:bg-card"
+                    "min-h-[170px] rounded-2xl border p-4 text-left transition-colors",
+                    teamColor === team ? option.selectedClass : "border-input bg-white text-foreground hover:border-primary dark:bg-card"
                   )}
                 >
-                  <Shield className="h-4 w-4" />
-                  {team === "red" ? "RED" : "Blue"}
+                  <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl", option.iconClass)}>
+                    <Shield className="h-5 w-5" />
+                  </span>
+                  <span className="mt-3 block text-xs font-black uppercase tracking-[0.16em] text-muted-foreground">
+                    Team {option.name}
+                  </span>
+                  <span className="mt-2 block text-lg font-black leading-6">{option.statement}</span>
+                  <span className="mt-2 block text-xs font-bold">{option.traits}</span>
+                  <span className="mt-2 block text-sm leading-5 text-muted-foreground">{option.description}</span>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </Field>
           <Field label="Diet preference">

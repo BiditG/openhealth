@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState, useTransition, useRef } from "react";
+import { Suspense, useEffect, useState, useTransition, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Activity, Camera, Leaf, RotateCcw, Loader2, ImageIcon, PersonStanding, Target } from "lucide-react";
+import { Activity, Camera, Dumbbell, Leaf, RotateCcw, Loader2, ImageIcon, Route, Target } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,8 @@ import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import { WorkoutAnalyzerMode } from "./workout-analyzer-mode";
 import { MeditationMode } from "./meditation-mode";
-import { StretchingMode } from "./stretching-mode";
 import { VirtualGamesMode } from "./virtual-games-mode";
+import { TrackExperience } from "../../track/page";
 
 function compressImage(dataUrl: string, maxWidth = 1600, quality = 0.8): Promise<string> {
   return new Promise((resolve) => {
@@ -81,13 +81,15 @@ function ScanLabelContent() {
       : requestedMode === "bowling"
         ? "bowling"
         : "batting";
-  const initialMode =
+  const initialMode: ExploreMode =
     requestedMode === "workout"
       ? "workout"
+      : requestedMode === "track" || requestedMode === "run" || requestedMode === "walk"
+        ? "track"
       : requestedMode === "meditation"
         ? "meditation"
-        : requestedMode === "stretching"
-          ? "stretching"
+        : requestedMode === "stretch" || requestedMode === "stretching"
+          ? "stretch"
           : requestedMode === "games" ||
               requestedMode === "batting" ||
               requestedMode === "fielding" ||
@@ -103,13 +105,37 @@ function ScanLabelContent() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<"food" | "workout" | "meditation" | "stretching" | "games">(initialMode);
+  const [mode, setMode] = useState<ExploreMode>(initialMode);
+  const [recentMode, setRecentMode] = useState<ExploreMode | null>(null);
+  const [hasLoadedRecentMode, setHasLoadedRecentMode] = useState(false);
   const [stage, setStage] = useState<"capture" | "recognizing" | "edit">("capture");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const utils = trpc.useUtils();
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("openhealth-explore-recent-mode") as ExploreMode | null;
+      if (saved && exploreActivities.some((activity) => activity.mode === saved)) {
+        setRecentMode(saved);
+      }
+    } catch {
+      setRecentMode(null);
+    } finally {
+      setHasLoadedRecentMode(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedRecentMode) return;
+    try {
+      window.localStorage.setItem("openhealth-explore-recent-mode", mode);
+    } catch {
+      // Recent shortcuts are helpful, but Explore should not depend on storage.
+    }
+  }, [hasLoadedRecentMode, mode]);
 
   // Form fields
   const [name, setName] = useState("");
@@ -299,75 +325,116 @@ function ScanLabelContent() {
     });
   };
 
+  const hour = new Date().getHours();
+  const recommendedMode: ExploreMode =
+    recentMode && recentMode !== mode
+      ? recentMode
+      : hour >= 17
+        ? "track"
+        : hour < 11
+          ? "food"
+          : "workout";
+  const recommendedActivity = exploreActivities.find((activity) => activity.mode === recommendedMode) ?? exploreActivities[0];
+  const RecommendedIcon = recommendedActivity.icon;
+  const recommendationText =
+    recommendedMode === "track"
+      ? "20-minute evening walk"
+      : recentMode && recentMode !== mode
+        ? `Continue ${recommendedActivity.title}`
+        : recommendedMode === "food"
+          ? "Scan your first meal"
+          : "Continue your workout";
+
   return (
     <div className="px-4 py-4">
-      <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1 sm:grid-cols-5">
-        <button
-          type="button"
-          onClick={() => setMode("food")}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
-            mode === "food"
-              ? "bg-white text-foreground shadow-sm dark:bg-card"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Camera className="h-4 w-4" />
-          Food label
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("workout")}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
-            mode === "workout"
-              ? "bg-white text-foreground shadow-sm dark:bg-card"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Activity className="h-4 w-4" />
-          Workout analyzer
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("meditation")}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
-            mode === "meditation"
-              ? "bg-white text-foreground shadow-sm dark:bg-card"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Leaf className="h-4 w-4" />
-          Meditation
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("stretching")}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
-            mode === "stretching"
-              ? "bg-white text-foreground shadow-sm dark:bg-card"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <PersonStanding className="h-4 w-4" />
-          Stretching
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("games")}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-all ${
-            mode === "games"
-              ? "bg-white text-foreground shadow-sm dark:bg-card"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Target className="h-4 w-4" />
-          Virtual games
-        </button>
-      </div>
+      <section className="mb-4 rounded-[24px] border border-[#DDE8E4] bg-[#F7FAF9] p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-[24px] font-black leading-tight text-[#17201E]">Explore</h1>
+            <p className="mt-1 text-sm leading-5 text-[#6B7773]">
+              Choose how you want to move, eat or recharge.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMode(recommendedMode)}
+            className="flex min-h-[78px] items-center gap-3 rounded-[18px] border border-[#CFECE4] bg-white px-4 py-3 text-left shadow-[0_10px_24px_rgba(21,72,63,0.06)] transition hover:border-[#20C7A4]/60"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#EAF8F4] text-[#15483F]">
+              <RecommendedIcon className="h-7 w-7" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-[#20C7A4]">Recommended for you</span>
+              <span className="mt-1 block truncate text-sm font-black text-[#17201E]">{recommendationText}</span>
+            </span>
+          </button>
+        </div>
+
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-[#6B7773]">Or choose an activity</p>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {exploreActivities.map((activity) => {
+            const Icon = activity.icon;
+            const isActive = mode === activity.mode;
+            return (
+              <button
+                key={activity.mode}
+                type="button"
+                onClick={() => setMode(activity.mode)}
+                className={`min-h-[126px] rounded-[18px] border p-4 text-left transition ${
+                  isActive
+                    ? "border-[#20C7A4] bg-white shadow-[0_12px_28px_rgba(21,72,63,0.09)]"
+                    : "border-[#E3EAE7] bg-white/72 hover:border-[#20C7A4]/45 hover:bg-white"
+                }`}
+              >
+                <span className="flex items-start justify-between gap-3">
+                  <span className={`flex h-[52px] w-[52px] items-center justify-center rounded-[16px] ${isActive ? "bg-[#EAF8F4] text-[#15483F]" : "bg-[#F1F7F4] text-[#6B7773]"}`}>
+                    <Icon className="h-7 w-7" />
+                  </span>
+                  {isActive && (
+                    <span className="rounded-full bg-[#EAF8F4] px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#15483F]">
+                      Active
+                    </span>
+                  )}
+                </span>
+                <span className="mt-4 block text-base font-black text-[#17201E]">{activity.title}</span>
+                <span className="mt-1 block text-sm leading-5 text-[#6B7773]">{activity.description}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {mode === "workout" && <WorkoutAnalyzerMode />}
+      {mode === "track" && <TrackExperience />}
       {mode === "meditation" && <MeditationMode />}
-      {mode === "stretching" && <StretchingMode />}
       {mode === "games" && <VirtualGamesMode initialGame={initialGame} initialCricketMode={initialCricketMode} />}
+      {mode === "stretch" && (
+        <section className="space-y-4 rounded-[24px] border border-[#DDE8E4] bg-white p-5 shadow-sm">
+          <div>
+            <p className="text-xl font-black text-[#17201E]">Mobility & recovery</p>
+            <p className="mt-1 text-sm leading-5 text-[#6B7773]">
+              Pick a light routine to loosen up and recover.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {stretchRoutines.map((routine) => (
+              <button
+                key={routine.title}
+                type="button"
+                onClick={() => toast.success(`${routine.title} selected. Start gently and breathe steadily.`)}
+                className="min-h-[132px] rounded-[18px] border border-[#E3EAE7] bg-[#F7FAF9] p-4 text-left transition hover:border-[#20C7A4]/45 hover:bg-white"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#15483F]">
+                  <Activity className="h-6 w-6" />
+                </span>
+                <span className="mt-4 block text-base font-black text-[#17201E]">{routine.title}</span>
+                <span className="mt-1 block text-xs font-bold text-[#20C7A4]">{routine.duration}</span>
+                <span className="mt-1 block text-sm leading-5 text-[#6B7773]">{routine.detail}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {mode === "food" && (
         <>
@@ -745,6 +812,28 @@ function ScanLabelContent() {
     </div>
   );
 }
+
+type ExploreMode = "food" | "workout" | "track" | "meditation" | "games" | "stretch";
+
+const exploreActivities: Array<{
+  mode: ExploreMode;
+  title: string;
+  description: string;
+  icon: typeof Camera;
+}> = [
+  { mode: "food", title: "Food Scan", description: "Check a meal or label", icon: Camera },
+  { mode: "workout", title: "Workout", description: "Train with your coach", icon: Dumbbell },
+  { mode: "meditation", title: "Meditation", description: "Relax & reset", icon: Leaf },
+  { mode: "track", title: "Run / Walk", description: "Track distance & pace", icon: Route },
+  { mode: "games", title: "Games", description: "Move, play & compete", icon: Target },
+  { mode: "stretch", title: "Stretch", description: "Mobility & recovery", icon: Activity },
+];
+
+const stretchRoutines = [
+  { title: "Morning Mobility", duration: "6 min", detail: "Neck rolls, shoulder circles, hip openers" },
+  { title: "Post-Walk Reset", duration: "8 min", detail: "Calves, hamstrings, quads, glutes" },
+  { title: "Desk Relief", duration: "5 min", detail: "Chest opener, upper back, wrists, hips" },
+];
 
 export default function ScanLabelPage() {
   return (

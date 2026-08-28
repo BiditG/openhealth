@@ -24,6 +24,7 @@ import { trpc } from "@/lib/trpc-client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { HubMuscleMap } from "@/components/hub/hub-muscle-map";
 import {
   DEFAULT_CALORIE_TARGET,
   DEFAULT_CARBS_G,
@@ -745,34 +746,43 @@ export default function HubPage() {
               View details -&gt;
             </Link>
           </div>
+          <HubMuscleMap compact />
         </section>
 
-        <section className="mt-4 rounded-[20px] border border-[#E3EAE7] bg-white p-[18px] shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#EAF8F4] text-[#123F37]">
-              <Medal className="h-6 w-6" />
-            </span>
-            <div>
-              <p className="text-[16px] font-bold text-[#17201E]">Guidance, tasks, and ranks</p>
-              <p className="mt-1 text-sm leading-5 text-[#6B7773]">Choose what you want to do next.</p>
+        <section className="mt-4 overflow-hidden rounded-[22px] border border-[#DDE8E4] bg-white shadow-sm">
+          <div className="border-b border-[#EDF2F0] p-[18px]">
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#EAF8F4] text-[#123F37]">
+                <Sparkles className="h-6 w-6" />
+              </span>
+              <div>
+                <p className="text-[16px] font-bold text-[#17201E]">Explore</p>
+                <p className="mt-1 text-sm leading-5 text-[#6B7773]">Pick the next health action without hunting through menus.</p>
+              </div>
             </div>
           </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-4">
-            <Link href="/hub/notifications" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-3 text-sm font-semibold text-[#123F37] transition hover:bg-[#DDF3ED]">
+          <div className="grid gap-3 p-[18px] sm:grid-cols-2">
+            <Link href="/hub/track" className="group min-h-[132px] rounded-[18px] border border-[#F2D0A0] bg-[#FFF8EB] p-4 transition hover:border-[#F1B65F]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#B35D00] shadow-sm">
+                <Route className="h-5 w-5" />
+              </span>
+              <span className="mt-4 block text-lg font-black text-[#17201E]">Track walk/run</span>
+              <span className="mt-1 block text-sm leading-5 text-[#6B7773]">Finish to save automatically and deduct burned calories.</span>
+            </Link>
+            <Link href="/hub/daily-tasks" className="group min-h-[132px] rounded-[18px] border border-[#CFECE4] bg-[#F4FBF8] p-4 transition hover:border-[#20C7A4]/45">
+              <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#123F37] shadow-sm">
+                <ListChecks className="h-5 w-5" />
+              </span>
+              <span className="mt-4 block text-lg font-black text-[#17201E]">Daily tasks</span>
+              <span className="mt-1 block text-sm leading-5 text-[#6B7773]">Fresh easy actions today, plus weekly missions.</span>
+            </Link>
+            <Link href="/hub/notifications" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-3 text-sm font-semibold text-[#123F37] transition hover:bg-[#DDF3ED]">
               <Bell className="h-4 w-4" />
               Notifications
             </Link>
-            <Link href="/hub/daily-tasks" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-3 text-sm font-semibold text-[#123F37] transition hover:bg-[#DDF3ED]">
-              <ListChecks className="h-4 w-4" />
-              Tasks
-            </Link>
-            <Link href="/hub/tasks" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-3 text-sm font-semibold text-[#123F37] transition hover:bg-[#DDF3ED]">
+            <Link href="/hub/tasks" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-3 text-sm font-semibold text-[#123F37] transition hover:bg-[#DDF3ED]">
               <Trophy className="h-4 w-4" />
               Leaderboard
-            </Link>
-            <Link href="/hub/track" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-3 text-sm font-semibold text-[#123F37] transition hover:bg-[#DDF3ED]">
-              <Route className="h-4 w-4" />
-              Track
             </Link>
           </div>
         </section>

@@ -24,6 +24,7 @@ const tierStyles = {
   silver: "border-slate-200 bg-slate-50 text-slate-700",
   gold: "border-yellow-200 bg-yellow-50 text-yellow-700",
   platinum: "border-[#20C7A4]/30 bg-[#EAF8F4] text-[#123F37]",
+  training: "border-[#20C7A4]/30 bg-[#EAF8F4] text-[#123F37]",
 };
 
 type TaskView = {
@@ -243,9 +244,9 @@ export default function DailyTasksPage() {
 
       <section className="rounded-[24px] bg-[#123F37] p-6 text-white shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#20C7A4]">Tasks</p>
-        <h1 className="mt-3 text-3xl font-black tracking-normal">Daily tasks</h1>
+        <h1 className="mt-3 text-3xl font-black tracking-normal">Daily tasks & weekly missions</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">
-          Start exercise tasks inside Swastha. Analyzer tasks unlock only after verified reps.
+          Daily tasks refresh every day with easy new actions. Weekly missions stay for the week and reward harder verified effort.
         </p>
         <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/15">
           <div className="h-full rounded-full bg-[#20C7A4] transition-all duration-700" style={{ width: `${progressPct}%` }} />
@@ -264,7 +265,7 @@ export default function DailyTasksPage() {
       <section className="mt-5 space-y-3">
         <div>
           <h2 className="text-xl font-black text-[#17201E]">Tasks</h2>
-          <p className="mt-1 text-sm text-[#6B7773]">Simple supporting actions that build consistency.</p>
+          <p className="mt-1 text-sm text-[#6B7773]">Daily, easy, and refreshed with a new mix every day.</p>
         </div>
         {simpleTasks.map((task) => (
           <TaskCard
@@ -281,7 +282,7 @@ export default function DailyTasksPage() {
       <section className="mt-6 space-y-3">
         <div>
           <h2 className="text-xl font-black text-[#17201E]">Missions</h2>
-          <p className="mt-1 text-sm text-[#6B7773]">Harder verified challenges with much higher leaderboard value.</p>
+          <p className="mt-1 text-sm text-[#6B7773]">Weekly, harder, and worth more leaderboard points.</p>
         </div>
         {missions.map((task) => (
           <TaskCard

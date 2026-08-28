@@ -62,6 +62,38 @@ const activityOptions: Array<{ id: ActivityLevel; label: string; example: string
   { id: "extremely_active", label: "Athlete level", example: "Intense training plus a highly active day." },
 ];
 
+const teamOptions: Record<
+  TeamColor,
+  {
+    name: string;
+    statement: string;
+    traits: string;
+    description: string;
+    accentClass: string;
+    selectedClass: string;
+    badgeClass: string;
+  }
+> = {
+  blue: {
+    name: "Blue",
+    statement: "I let my game speak.",
+    traits: "Calm • Precise • Unshaken",
+    description: "For people who let results do the talking.",
+    accentClass: "bg-blue-600 text-white",
+    selectedClass: "border-blue-500 bg-blue-50 shadow-[0_12px_28px_rgba(96,165,250,0.18)]",
+    badgeClass: "bg-blue-600 text-white",
+  },
+  red: {
+    name: "Red",
+    statement: "I came to dominate.",
+    traits: "Fearless • Driven • Relentless",
+    description: "For people who want the top spot.",
+    accentClass: "bg-red-600 text-white",
+    selectedClass: "border-red-500 bg-red-50 shadow-[0_12px_28px_rgba(248,113,113,0.18)]",
+    badgeClass: "bg-red-600 text-white",
+  },
+};
+
 interface LoginDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -413,9 +445,10 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
 
         {step === "team" && (
           <div className="space-y-4">
-            <StepIntro icon={Shield} title="Choose your team" description="Every point you earn joins your team score. Pick the side you want to carry." />
+            <StepIntro icon={Shield} title="Choose your team" description="Pick the color that matches how you compete. Every point you earn joins your team score." />
             <div className="grid gap-3 sm:grid-cols-2">
-              {(["red", "blue"] as const).map((team) => {
+              {(["blue", "red"] as const).map((team) => {
+                const option = teamOptions[team];
                 const score = teamScores?.teams.find((item) => item.teamColor === team);
                 const selected = teamColor === team;
                 const isLeader = teamScores?.leaderTeam === team;
@@ -426,11 +459,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
                     type="button"
                     onClick={() => setTeamColor(team)}
                     className={`relative overflow-hidden rounded-[18px] border p-4 text-left transition-all ${
-                      selected
-                        ? team === "red"
-                          ? "border-red-400 bg-red-50 shadow-[0_12px_28px_rgba(248,113,113,0.18)]"
-                          : "border-blue-400 bg-blue-50 shadow-[0_12px_28px_rgba(96,165,250,0.18)]"
-                        : "border-[#E3EAE7] bg-white hover:border-[#20C7A4]"
+                      selected ? option.selectedClass : "border-[#E3EAE7] bg-white hover:border-[#20C7A4]"
                     }`}
                   >
                     {isLeader && (
@@ -439,16 +468,23 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
                       </span>
                     )}
                     <span
-                      className={`flex h-12 w-12 items-center justify-center rounded-[14px] ${
-                        team === "red" ? "bg-red-600 text-white" : "bg-blue-600 text-white"
-                      }`}
+                      className={`flex h-12 w-12 items-center justify-center rounded-[14px] ${option.accentClass}`}
                     >
                       <Shield className="h-6 w-6" />
                     </span>
-                    <span className="mt-4 block text-lg font-black text-[#17201E]">
-                      {team === "red" ? "Team RED" : "Team Blue"}
+                    <span className="mt-4 block text-xs font-black uppercase tracking-[0.18em] text-[#6B7773]">
+                      Team {option.name}
                     </span>
-                    <span className="mt-1 block text-sm font-semibold text-[#6B7773]">
+                    <span className="mt-2 block text-xl font-black leading-6 text-[#17201E]">
+                      {option.statement}
+                    </span>
+                    <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-black ${option.badgeClass}`}>
+                      {option.traits}
+                    </span>
+                    <span className="mt-3 block text-sm font-semibold leading-5 text-[#17201E]">
+                      {option.description}
+                    </span>
+                    <span className="mt-3 block text-xs font-semibold text-[#6B7773]">
                       {Number(score?.points ?? 0).toLocaleString()} pts • {Number(score?.members ?? 0)} members
                     </span>
                     <span
