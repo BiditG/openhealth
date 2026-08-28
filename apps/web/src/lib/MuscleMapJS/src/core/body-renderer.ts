@@ -315,10 +315,6 @@ export class BodyRenderer {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
     // Walk through command chars and their coordinate pairs
-    let i = 0;
-    const chars = d.replace(/-?\d+\.?\d*(?:e[+-]?\d+)?/gi, '\0').replace(/[,\s]+/g, '');
-    let numIdx = 0;
-
     // Simple approach: just pair all numbers as x,y coordinates
     // This works because SVG path coordinates are always x,y pairs
     // (except for H, V, A which we approximate)

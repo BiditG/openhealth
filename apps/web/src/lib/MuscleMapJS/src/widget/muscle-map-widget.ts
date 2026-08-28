@@ -23,7 +23,7 @@ import { MUSCLE_DISPLAY_NAMES } from '../core/muscles';
 import { interpolateCSS } from '../utils/color';
 
 type EventType = 'muscleClick' | 'muscleEnter' | 'muscleLeave' | 'selectionChange';
-type EventHandler = (...args: any[]) => void;
+type EventHandler = (...args: never[]) => void;
 
 export class MuscleMapWidget {
   // ─── State ───────────────────────────────────────────────────────────────
@@ -818,11 +818,9 @@ export class MuscleMapWidget {
     };
   }
 
-  private emit(event: EventType | string, ...args: any[]) {
+  private emit(event: EventType | string, ...args: unknown[]) {
     const handlers = this.eventHandlers.get(event as EventType);
-    if (handlers) {
-      for (const h of handlers) h(...args);
-    }
+    if (handlers) for (const h of handlers) h(...(args as never[]));
   }
 }
 
