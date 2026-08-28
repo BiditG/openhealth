@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { WorkoutAnalyzerMode } from "./workout-analyzer-mode";
 import { MeditationMode } from "./meditation-mode";
 import { VirtualGamesMode } from "./virtual-games-mode";
-import { TrackExperience } from "../../track/page";
+import { TrackExperience } from "../../track/track-experience";
 
 function compressImage(dataUrl: string, maxWidth = 1600, quality = 0.8): Promise<string> {
   return new Promise((resolve) => {
