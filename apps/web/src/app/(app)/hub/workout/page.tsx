@@ -1,299 +1,125 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Plus,
-  Play,
+  BarChart3,
+  ChevronRight,
   Clock,
   Dumbbell,
-  Trophy,
-  ChevronRight,
-  BarChart3,
-  Trash2,
+  History,
+  ListChecks,
+  Plus,
 } from "lucide-react";
-import { trpc } from "@/lib/trpc-client";
-import { LoginDialog } from "@/components/auth/login-dialog";
-import { useAuthGuard } from "@/hooks/use-auth-guard";
 import { startWorkout } from "@/server/actions/workout";
-import { formatDuration } from "@/hooks/use-workout-timer";
-import { Dialog, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { deleteWorkoutTemplate } from "@/server/actions/workout";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useTranslation } from "react-i18next";
 
 export default function WorkoutPage() {
   const router = useRouter();
-  const { isAuthenticated, showLoginDialog, setShowLoginDialog } =
-    useAuthGuard();
+  const [startingLog, setStartingLog] = useState(false);
 
-  const { data: activeWorkout, isLoading: activeLoading } = trpc.workout.getActive.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
-  const { data: templates, isLoading: templatesLoading } = trpc.workout.getTemplates.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
-  const { data: history } = trpc.workout.getHistory.useQuery(
-    { limit: 5 },
-    { enabled: isAuthenticated }
-  );
-
-  const isLoading = isAuthenticated && (activeLoading || templatesLoading);
-
-  const { t } = useTranslation(["workout", "common"]);
-  const [starting, setStarting] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-
-  const handleQuickStart = async () => {
-    if (!isAuthenticated) {
-      setShowLoginDialog(true);
-      return;
-    }
-    setStarting(true);
+  const startBlankLog = async () => {
+    setStartingLog(true);
     try {
       await startWorkout({});
-      router.push(`/hub/workout/active`);
+      router.push("/hub/workout/active");
     } catch {
-      toast.error(t("workout:startFailed"));
+      toast.error("Could not start workout log.");
     } finally {
-      setStarting(false);
+      setStartingLog(false);
     }
   };
-
-  const handleStartFromTemplate = async (templateId: string, name: string) => {
-    if (!isAuthenticated) {
-      setShowLoginDialog(true);
-      return;
-    }
-    setStarting(true);
-    try {
-      await startWorkout({ templateId, name });
-      router.push(`/hub/workout/active`);
-    } catch {
-      toast.error(t("workout:startFailed"));
-    } finally {
-      setStarting(false);
-    }
-  };
-
-  const handleDeleteTemplate = async (templateId: string) => {
-    try {
-      await deleteWorkoutTemplate({ templateId });
-      toast.success(t("workout:templateDeleted"));
-      setDeleteConfirm(null);
-      router.refresh();
-    } catch {
-      toast.error(t("workout:deleteFailed"));
-    }
-  };
-
-  const formatDate = (date: Date | string) => {
-    const d = typeof date === "string" ? new Date(date) : date;
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      weekday: "short",
-    });
-  };
-
-  if (isLoading) return <LoadingSpinner />;
 
   return (
-    <div className="px-4 py-6 space-y-6">
+    <div className="space-y-6 px-4 py-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-light tracking-wide">{t("workout:title")}</h1>
+        <div>
+          <h1 className="text-[26px] font-black leading-tight text-[#17201E]">Workout</h1>
+          <p className="mt-1 text-sm leading-5 text-[#6B7773]">
+            Choose how you want to train today.
+          </p>
+        </div>
         <Link
           href="/hub/workout/stats"
-          className="text-neutral-400 hover:text-foreground transition-colors"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-[#DDE8E4] bg-white text-[#15483F] shadow-sm"
+          aria-label="Workout stats"
         >
-          <BarChart3 className="h-5 w-5" strokeWidth={1.5} />
+          <BarChart3 className="h-5 w-5" />
         </Link>
       </div>
 
-      {/* Active workout banner */}
-      {activeWorkout && (
+      <section className="grid gap-3 sm:grid-cols-2">
         <Link
-          href="/hub/workout/active"
-          className="block rounded-lg border border-primary/30 bg-primary/5 p-4 transition-all hover:border-primary/50"
+          href="/hub/workout/quick"
+          className="group min-h-[164px] rounded-[22px] border border-[#DDE8E4] bg-[#F7FAF9] p-4 text-left shadow-sm transition hover:border-[#20C7A4]/60 hover:bg-white"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Play className="h-4 w-4 text-primary" strokeWidth={2} />
-              </div>
-              <div>
-                <p className="text-sm font-medium">{activeWorkout.name}</p>
-                <p className="text-xs text-neutral-400">{t("workout:inProgress")}</p>
-              </div>
-            </div>
-            <ChevronRight
-              className="h-5 w-5 text-neutral-400"
-              strokeWidth={1.5}
-            />
-          </div>
+          <span className="flex items-start justify-between gap-3">
+            <span className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#EAF8F4] text-[#15483F]">
+              <Dumbbell className="h-7 w-7" />
+            </span>
+            <ChevronRight className="h-5 w-5 text-[#6B7773] transition group-hover:translate-x-0.5 group-hover:text-[#20C7A4]" />
+          </span>
+          <span className="mt-5 block text-lg font-black text-[#17201E]">Quick workout</span>
+          <span className="mt-1 block text-sm leading-5 text-[#6B7773]">
+            Pick one exercise, set reps or timer, then start.
+          </span>
         </Link>
-      )}
 
-      {/* Quick start */}
-      <button
-        onClick={handleQuickStart}
-        disabled={starting}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg bg-primary text-white text-sm font-medium transition-colors hover:bg-primary/90 disabled:opacity-50"
-      >
-        <Plus className="h-4 w-4" strokeWidth={2} />
-        {starting ? t("workout:starting") : t("workout:startBlank")}
-      </button>
+        <Link
+          href="/hub/workout/programs"
+          className="group min-h-[164px] rounded-[22px] border border-[#DDE8E4] bg-[#F7FAF9] p-4 text-left shadow-sm transition hover:border-[#20C7A4]/60 hover:bg-white"
+        >
+          <span className="flex items-start justify-between gap-3">
+            <span className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#FFF4D7] text-[#8B5B00]">
+              <ListChecks className="h-7 w-7" />
+            </span>
+            <ChevronRight className="h-5 w-5 text-[#6B7773] transition group-hover:translate-x-0.5 group-hover:text-[#20C7A4]" />
+          </span>
+          <span className="mt-5 block text-lg font-black text-[#17201E]">Program workout</span>
+          <span className="mt-1 block text-sm leading-5 text-[#6B7773]">
+            Follow a guided plan with fixed targets and automatic breaks.
+          </span>
+        </Link>
+      </section>
 
-      {/* Templates */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-            {t("workout:templates")}
-          </p>
-          <Link
-            href="/hub/workout/templates"
-            className="text-xs text-neutral-400 hover:text-foreground transition-colors"
+      <section className="rounded-[22px] border border-[#DDE8E4] bg-white p-4 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6B7773]">Workout log</p>
+        <div className="mt-3 grid gap-2">
+          <button
+            type="button"
+            onClick={startBlankLog}
+            disabled={startingLog}
+            className="flex min-h-12 items-center justify-between rounded-[16px] bg-[#F7FAF9] px-4 text-sm font-bold text-[#17201E]"
           >
-            {t("workout:manage")}
-          </Link>
-        </div>
-
-        {templates && templates.length > 0 ? (
-          <div className="space-y-2">
-            {templates.map((tmpl) => (
-              <div
-                key={tmpl.id}
-                className="flex items-center justify-between rounded-lg border border-black/[0.06] dark:border-white/[0.06] p-3 transition-all hover:border-foreground/20"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-light truncate">{tmpl.name}</p>
-                  <p className="text-xs text-neutral-400 truncate">
-                    {tmpl.exerciseNames.join("、") || t("workout:noActions")}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 ml-2">
-                  <button
-                    onClick={() => {
-                      setDeleteConfirm(tmpl.id);
-                    }}
-                    className="p-1.5 text-neutral-300 dark:text-neutral-700 hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  </button>
-                  <button
-                    onClick={() => handleStartFromTemplate(tmpl.id, tmpl.name)}
-                    disabled={starting}
-                    className="px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
-                  >
-                    {t("common:buttons.start")}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm font-light text-neutral-300 dark:text-neutral-700">
-            {t("workout:noTemplates")}
-          </p>
-        )}
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-black/[0.06] dark:border-white/[0.06]" />
-
-      {/* Recent history */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-400 dark:text-neutral-600">
-            {t("workout:recentWorkouts")}
-          </p>
+            <span className="flex items-center gap-2">
+              <Plus className="h-4 w-4 text-[#20C7A4]" />
+              {startingLog ? "Starting..." : "Blank strength log"}
+            </span>
+            <ChevronRight className="h-4 w-4 text-[#6B7773]" />
+          </button>
           <Link
             href="/hub/workout/history"
-            className="text-xs text-neutral-400 hover:text-foreground transition-colors"
+            className="flex min-h-12 items-center justify-between rounded-[16px] bg-[#F7FAF9] px-4 text-sm font-bold text-[#17201E]"
           >
-            {t("workout:viewAll")}
+            <span className="flex items-center gap-2">
+              <History className="h-4 w-4 text-[#20C7A4]" />
+              History
+            </span>
+            <ChevronRight className="h-4 w-4 text-[#6B7773]" />
+          </Link>
+          <Link
+            href="/hub/workout/templates"
+            className="flex min-h-12 items-center justify-between rounded-[16px] bg-[#F7FAF9] px-4 text-sm font-bold text-[#17201E]"
+          >
+            <span className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-[#20C7A4]" />
+              Saved templates
+            </span>
+            <ChevronRight className="h-4 w-4 text-[#6B7773]" />
           </Link>
         </div>
-
-        {history?.items && history.items.length > 0 ? (
-          <div className="space-y-0">
-            {history.items.map((w) => (
-              <Link
-                key={w.id}
-                href={`/hub/workout/history/${w.id}`}
-                className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04] last:border-b-0 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors -mx-1 px-1 rounded"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-light truncate">
-                      {w.name}
-                    </span>
-                    {w.prCount > 0 && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-amber-500">
-                        <Trophy className="h-3 w-3" strokeWidth={2} />
-                        {w.prCount}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 mt-0.5">
-                    <span className="text-xs text-neutral-400">
-                      {formatDate(w.startedAt)}
-                    </span>
-                    <span className="text-xs text-neutral-400 tabular-nums">
-                      <Clock className="h-3 w-3 inline mr-0.5" strokeWidth={1.5} />
-                      {w.durationSec ? formatDuration(w.durationSec) : "-"}
-                    </span>
-                    <span className="text-xs text-neutral-400 tabular-nums">
-                      <Dumbbell className="h-3 w-3 inline mr-0.5" strokeWidth={1.5} />
-                      {t("workout:exerciseCount", { count: w.exerciseCount })}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right ml-2">
-                  <span className="text-sm font-light tabular-nums text-primary">
-                    {Math.round(w.totalVolume).toLocaleString()} kg
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm font-light text-neutral-300 dark:text-neutral-700">
-            {t("workout:noWorkouts")}
-          </p>
-        )}
-      </div>
-
-      {/* Delete template confirm dialog */}
-      <Dialog
-        open={!!deleteConfirm}
-        onOpenChange={(open) => !open && setDeleteConfirm(null)}
-      >
-        <DialogHeader>
-          <DialogTitle>{t("workout:confirmDeleteTemplate")}</DialogTitle>
-        </DialogHeader>
-        <div className="mt-4 space-y-4">
-          <p className="text-sm text-neutral-500">{t("workout:deleteIrreversible")}</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setDeleteConfirm(null)}
-              className="flex-1 py-2 rounded-lg border border-black/10 dark:border-white/10 text-sm font-light"
-            >
-              {t("common:buttons.cancel")}
-            </button>
-            <button
-              onClick={() => deleteConfirm && handleDeleteTemplate(deleteConfirm)}
-              className="flex-1 py-2 rounded-lg bg-destructive text-white text-sm font-medium"
-            >
-              {t("common:buttons.delete")}
-            </button>
-          </div>
-        </div>
-      </Dialog>
-
-      <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
+      </section>
     </div>
   );
 }

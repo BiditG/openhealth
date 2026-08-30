@@ -43,14 +43,16 @@ export function HubMuscleMap({ compact = false }: HubMuscleMapProps) {
   const mapRef = useRef<MuscleMapWidget | null>(null);
   const [gender, setGender] = useState<BodyGender>("male");
   const [side, setSide] = useState<BodySide>("front");
-  const [selectedMuscles, setSelectedMuscles] = useState<Muscle[]>(["chest"]);
+  const [selectedMuscles, setSelectedMuscles] = useState<Muscle[]>([]);
   const [trainingProfile, setTrainingProfile] = useState<MuscleTrainingProfile>({});
 
-  const primaryMuscle = selectedMuscles[0] ?? "chest";
-  const workout = getWorkoutForMuscle(primaryMuscle);
-  const primaryProfile = trainingProfile[primaryMuscle];
-  const primaryScore = primaryProfile ? getDecayedMuscleScore(primaryProfile) : 0;
-  const primarySuggestion = getMuscleSuggestion(primaryScore, primaryProfile?.lastTrainedAt);
+  const primaryMuscle = selectedMuscles[0] ?? null;
+  const workout = primaryMuscle ? getWorkoutForMuscle(primaryMuscle) : null;
+  const primaryProfile = primaryMuscle ? trainingProfile[primaryMuscle] : undefined;
+  const primaryScore = primaryMuscle && primaryProfile ? getDecayedMuscleScore(primaryProfile) : 0;
+  const primarySuggestion = primaryMuscle
+    ? getMuscleSuggestion(primaryScore, primaryProfile?.lastTrainedAt)
+    : "Tap a muscle to plan training.";
   const selectedLabel = selectedMuscles.length
     ? selectedMuscles.map(formatMuscleName).join(", ")
     : "Tap the map";
@@ -106,7 +108,6 @@ export function HubMuscleMap({ compact = false }: HubMuscleMapProps) {
     map.enableTooltip((muscle, muscleSide) => `${formatMuscleName(muscle)}<br><small>${muscleSide} side</small>`);
     map.enableHistory(30);
     map.enablePulse(1.4, 0.64, 1);
-    map.select("chest");
 
     mapRef.current = map;
 
@@ -190,20 +191,28 @@ export function HubMuscleMap({ compact = false }: HubMuscleMapProps) {
               <p className="mt-2 text-xs font-bold text-[#EAF8F4]">{primarySuggestion}</p>
             </div>
             <div className="mt-3 grid gap-2">
-              <Link
-                href={`/hub/muscle/${encodeURIComponent(primaryMuscle)}`}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white px-3 text-xs font-black text-[#15483F]"
-              >
-                <Images className="h-4 w-4" />
-                See more
-              </Link>
-              <Link
-                href={`/hub/food/scan-label?mode=workout&exercise=${workout.exercise}&tracking=audio&muscle=${encodeURIComponent(primaryMuscle)}`}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#20C7A4] px-3 text-xs font-black text-white"
-              >
-                <Dumbbell className="h-4 w-4" />
-                Train
-              </Link>
+              {primaryMuscle && workout ? (
+                <>
+                  <Link
+                    href={`/hub/muscle/${encodeURIComponent(primaryMuscle)}`}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white px-3 text-xs font-black text-[#15483F]"
+                  >
+                    <Images className="h-4 w-4" />
+                    See more
+                  </Link>
+                  <Link
+                    href={`/hub/workout/quick?exercise=${workout.exercise}&tracking=manual&muscle=${encodeURIComponent(primaryMuscle)}`}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#20C7A4] px-3 text-xs font-black text-white"
+                  >
+                    <Dumbbell className="h-4 w-4" />
+                    Train
+                  </Link>
+                </>
+              ) : (
+                <span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white/10 px-3 text-xs font-black text-white/58">
+                  Select a muscle first
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -274,20 +283,28 @@ export function HubMuscleMap({ compact = false }: HubMuscleMapProps) {
               <p className="mt-2 text-xs font-bold text-[#15483F]">{primarySuggestion}</p>
             </div>
             <div className="mt-4 grid gap-2">
-              <Link
-                href={`/hub/muscle/${encodeURIComponent(primaryMuscle)}`}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#20C7A4] px-4 text-sm font-black text-white transition hover:bg-[#1BB392]"
-              >
-                <Images className="h-4 w-4" />
-                See more exercises
-              </Link>
-              <Link
-                href={`/hub/food/scan-label?mode=workout&exercise=${workout.exercise}&tracking=audio&muscle=${encodeURIComponent(primaryMuscle)}`}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#15483F] px-4 text-sm font-black text-white transition hover:bg-[#123F37]"
-              >
-                <Dumbbell className="h-4 w-4" />
-                Train {workout.label}
-              </Link>
+              {primaryMuscle && workout ? (
+                <>
+                  <Link
+                    href={`/hub/muscle/${encodeURIComponent(primaryMuscle)}`}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#20C7A4] px-4 text-sm font-black text-white transition hover:bg-[#1BB392]"
+                  >
+                    <Images className="h-4 w-4" />
+                    See more exercises
+                  </Link>
+                  <Link
+                    href={`/hub/workout/quick?exercise=${workout.exercise}&tracking=manual&muscle=${encodeURIComponent(primaryMuscle)}`}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#15483F] px-4 text-sm font-black text-white transition hover:bg-[#123F37]"
+                  >
+                    <Dumbbell className="h-4 w-4" />
+                    Train {workout.label}
+                  </Link>
+                </>
+              ) : (
+                <span className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-4 text-sm font-black text-[#6B7773]">
+                  Select a muscle first
+                </span>
+              )}
             </div>
           </div>
 

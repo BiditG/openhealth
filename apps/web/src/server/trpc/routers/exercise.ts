@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../trpc";
 import { exercises, exerciseLogs, weightLogs } from "@/server/db/schema";
-import { eq, and, desc, ilike, or } from "drizzle-orm";
+import { eq, and, desc, gte, ilike, or } from "drizzle-orm";
 import { requireFeature } from "@/server/services/plan";
 import { DEFAULT_WEIGHT_KG } from "@open-health/shared/constants";
 import { logExerciseSchema, createCustomExerciseSchema } from "@open-health/shared/schemas";
@@ -40,6 +40,55 @@ export const exerciseRouter = router({
       );
 
       return { logs, totalCalories };
+    }),
+
+  getRecent: protectedProcedure
+    .input(
+      z
+        .object({
+          days: z.number().int().min(1).max(90).optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const days = input?.days ?? 14;
+      const since = new Date();
+      since.setDate(since.getDate() - (days - 1));
+      const sinceDate = since.toISOString().slice(0, 10);
+
+      const logs = await ctx.db
+        .select({
+          id: exerciseLogs.id,
+          date: exerciseLogs.date,
+          durationMin: exerciseLogs.durationMin,
+          caloriesBurned: exerciseLogs.caloriesBurned,
+          intensity: exerciseLogs.intensity,
+          note: exerciseLogs.note,
+          createdAt: exerciseLogs.createdAt,
+          exerciseId: exerciseLogs.exerciseId,
+          exerciseName: exercises.name,
+          exerciseCategory: exercises.category,
+        })
+        .from(exerciseLogs)
+        .innerJoin(exercises, eq(exerciseLogs.exerciseId, exercises.id))
+        .where(
+          and(
+            eq(exerciseLogs.userId, ctx.user.id),
+            gte(exerciseLogs.date, sinceDate)
+          )
+        )
+        .orderBy(desc(exerciseLogs.date), desc(exerciseLogs.createdAt));
+
+      const totalMinutes = logs.reduce(
+        (sum, log) => sum + Number(log.durationMin || 0),
+        0
+      );
+      const totalCalories = logs.reduce(
+        (sum, log) => sum + Number(log.caloriesBurned || 0),
+        0
+      );
+
+      return { logs, totalMinutes, totalCalories };
     }),
 
   getPresets: protectedProcedure

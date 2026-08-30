@@ -114,7 +114,7 @@ export default function MuscleExercisePage() {
               </p>
             </div>
             <Link
-              href={`/hub/food/scan-label?mode=workout&exercise=${workout.exercise}&tracking=audio&muscle=${encodeURIComponent(muscle)}`}
+              href={`/hub/workout/quick?exercise=${workout.exercise}&tracking=manual&muscle=${encodeURIComponent(muscle)}`}
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-[#15483F] transition hover:bg-[#EAF8F4]"
             >
               <Dumbbell className="h-4 w-4" />
@@ -216,7 +216,7 @@ export default function MuscleExercisePage() {
                       </ol>
                     ) : null}
                     <Link
-                      href={`/hub/food/scan-label?mode=workout&exercise=${workout.exercise}&tracking=audio&muscle=${encodeURIComponent(muscle)}&exerciseName=${encodeURIComponent(exercise.name)}`}
+                      href={`/hub/workout/quick?exercise=${workout.exercise}&tracking=manual&muscle=${encodeURIComponent(muscle)}&exerciseName=${encodeURIComponent(exercise.name)}`}
                       className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#15483F] px-4 text-sm font-black text-white"
                     >
                       <Dumbbell className="h-4 w-4" />

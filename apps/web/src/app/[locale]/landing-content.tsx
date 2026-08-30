@@ -6,15 +6,16 @@ import {
   ArrowRight,
   Bot,
   Camera,
-  CheckCircle2,
-  Droplets,
+  ChevronRight,
   FileText,
   HeartPulse,
   Lock,
   Salad,
   ShieldCheck,
+  Sparkles,
+  TimerReset,
   TrendingUp,
-  Upload,
+  Waves,
 } from "lucide-react";
 
 interface BlogPost {
@@ -28,79 +29,120 @@ interface BlogPost {
   createdAt: Date;
 }
 
-const tools = [
+const primaryActions = [
   {
     href: "/hub/food/scan-label",
-    title: "Snap Food",
-    body: "Understand calories and nutrition.",
+    title: "Scan food",
+    body: "Calories, macros, and one practical next step.",
     icon: Camera,
   },
   {
-    href: "/hub/chat",
-    title: "Ask Health AI",
-    body: "Get simple wellness explanations.",
-    icon: Bot,
-  },
-  {
-    href: "/hub/documents",
-    title: "Upload Report",
-    body: "Read lab values in plain language.",
-    icon: Upload,
-  },
-  {
-    href: "/today",
-    title: "Track Health",
-    body: "See your food, water, and trends.",
+    href: "/hub",
+    title: "Open hub",
+    body: "Food, movement, hydration, sleep, and progress.",
     icon: HeartPulse,
+  },
+  {
+    href: "/hub/chat",
+    title: "Ask AI",
+    body: "Plain-language answers for everyday wellness.",
+    icon: Bot,
   },
 ];
 
-function ProductPhone() {
+const rhythmRows = [
+  ["Food", "82", "Balanced"],
+  ["Water", "6/8", "On track"],
+  ["Move", "34m", "Good"],
+];
+
+const learnTiles = [
+  {
+    title: "What changed today?",
+    summary: "See the few signals that matter without sorting through a full dashboard.",
+  },
+  {
+    title: "What should I eat next?",
+    summary: "Use your recent meals to make the next plate a little easier to balance.",
+  },
+  {
+    title: "What does this report mean?",
+    summary: "Turn dense health language into careful, readable explanations.",
+  },
+];
+
+function HealthSignal() {
   return (
-    <div className="mx-auto w-full max-w-[320px] rounded-2xl border border-border bg-[#17211d] p-2.5">
-      <div className="overflow-hidden rounded-xl bg-[#fafaf7]">
-        <div className="flex items-center justify-between border-b border-border bg-white px-5 py-4">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">Today</p>
-            <p className="text-base font-semibold text-foreground">Dal Bhat Tarkari</p>
-          </div>
-          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">Meal score</span>
-        </div>
-        <div className="p-5">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[#ddf3eb]">
-            <Image
-              src="/screenshots/en/04-food-search.png"
-              alt="Swastha food analysis preview"
-              fill
-              className="object-cover object-top"
-              priority
-            />
-          </div>
-          <div className="mt-5 flex items-end justify-between">
-            <div>
-              <p className="text-4xl font-semibold leading-none text-primary">82</p>
-              <p className="mt-1 text-sm font-medium text-muted-foreground">Great balance</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xl font-semibold text-foreground">620</p>
-              <p className="text-sm text-muted-foreground">kcal</p>
-            </div>
-          </div>
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            {[
-              ["Protein", "21g"],
-              ["Carbs", "89g"],
-              ["Fiber", "12g"],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-border bg-white p-3">
-                <p className="text-base font-semibold text-foreground">{value}</p>
-                <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="pointer-events-none absolute inset-x-5 top-7 h-20 overflow-hidden rounded-lg border border-white/45 bg-white/30 backdrop-blur-sm">
+      <svg viewBox="0 0 520 96" className="h-full w-full" role="img" aria-label="Animated wellness signal">
+        <path
+          d="M0 58 C 40 58, 54 58, 80 58 S 120 58, 144 58 L 164 58 L 176 36 L 190 76 L 208 20 L 228 58 C 264 58, 278 58, 310 58 L 332 58 L 344 42 L 358 68 L 374 50 L 396 58 C 438 58, 470 58, 520 58"
+          fill="none"
+          stroke="rgba(19, 92, 74, 0.82)"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="4"
+          className="landing-signal-line"
+        />
+        <path
+          d="M0 58 C 40 58, 54 58, 80 58 S 120 58, 144 58 L 164 58 L 176 36 L 190 76 L 208 20 L 228 58 C 264 58, 278 58, 310 58 L 332 58 L 344 42 L 358 68 L 374 50 L 396 58 C 438 58, 470 58, 520 58"
+          fill="none"
+          stroke="rgba(101, 215, 189, 0.36)"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="12"
+          className="landing-signal-glow"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function ProductStage() {
+  return (
+    <div className="relative mx-auto w-full max-w-[370px] lg:max-w-[420px]">
+      <div className="absolute left-1/2 top-10 h-[84%] w-[72%] -translate-x-1/2 rounded-full border border-primary/15" />
+      <div className="absolute left-1/2 top-16 h-[70%] w-[58%] -translate-x-1/2 rounded-full border border-[#3976b9]/15" />
+      <div className="landing-phone relative mx-auto overflow-hidden rounded-[28px] border border-[#d8e8e2] bg-[#0f1f19] p-2 shadow-[0_24px_80px_rgba(23,32,30,0.14)]">
+        <div className="relative overflow-hidden rounded-[22px] bg-[#f8fbf8]">
+          <HealthSignal />
+          <div className="relative px-5 pb-5 pt-32">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase text-[#3976b9]">Today</p>
+                <h2 className="mt-1 text-2xl font-semibold leading-tight text-[#17201e]">Your health, simplified.</h2>
               </div>
-            ))}
-          </div>
-          <div className="mt-4 rounded-xl bg-muted p-4">
-            <p className="text-sm font-semibold text-primary">Try this</p>
-            <p className="mt-1 text-sm leading-6 text-[#315149]">Add a little more vegetables to balance the rice portion.</p>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#ddf8ef] text-[#12745e]">
+                <HeartPulse className="h-5 w-5" strokeWidth={1.8} />
+              </div>
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-lg border border-[#e1ece8] bg-white">
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <Image
+                  src="/screenshots/en/01-hub.png"
+                  alt="Swastha hub preview"
+                  fill
+                  className="object-cover object-top"
+                  priority
+                />
+                <span className="landing-scan-beam absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#65d7bd]/35 to-transparent" />
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              {rhythmRows.map(([label, value, status], index) => (
+                <div
+                  key={label}
+                  className="landing-row flex items-center justify-between rounded-lg border border-[#e4eee9] bg-white px-3 py-2.5"
+                  style={{ animationDelay: `${220 + index * 120}ms` }}
+                >
+                  <span className="text-sm font-medium text-[#52645d]">{label}</span>
+                  <span className="text-sm font-semibold text-[#17201e]">{value}</span>
+                  <span className="text-xs font-semibold text-[#12745e]">{status}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -110,89 +152,82 @@ function ProductPhone() {
 
 function Hero() {
   return (
-    <section className="px-4 pb-20 pt-24 sm:px-6 lg:pb-24 lg:pt-28">
-      <div className="mx-auto grid max-w-[1120px] items-center gap-14 lg:grid-cols-[1fr_380px]">
-        <div>
-          <p className="text-xs font-semibold uppercase text-primary">Personal health, food, and wellness for Nepal</p>
-          <h1 className="mt-4 max-w-3xl text-3xl font-semibold leading-tight text-foreground sm:text-4xl lg:text-5xl">
-            Understand your health, one day at a time.
+    <section className="relative isolate px-4 pb-16 pt-24 sm:px-6 lg:pb-24 lg:pt-28">
+      <div className="absolute inset-x-0 top-0 -z-10 h-[680px] bg-[linear-gradient(180deg,#effbf6_0%,#f7faf9_58%,rgba(247,250,249,0)_100%)] dark:bg-[linear-gradient(180deg,#13221c_0%,#101513_72%,rgba(16,21,19,0)_100%)]" />
+      <div className="absolute inset-x-0 top-16 -z-10 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
+
+      <div className="mx-auto grid max-w-[1120px] items-center gap-12 lg:grid-cols-[1fr_430px]">
+        <div className="landing-hero-copy max-w-3xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/70 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur dark:bg-card/70">
+            <Sparkles className="h-3.5 w-3.5" strokeWidth={1.8} />
+            Built for daily health, not dashboard fatigue
+          </div>
+          <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.05] text-foreground sm:text-5xl lg:text-6xl">
+            Swastha makes health feel simple.
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
-            Scan your meals, track your health, understand your reports, and get simple AI-powered guidance.
+          <p className="mt-5 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">
+            Scan meals, understand reports, ask questions, and see what to do next in one calm mobile-first space.
           </p>
+
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/hub/food/scan-label"
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#125745]"
+              href="/hub"
+              className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition duration-200 hover:-translate-y-0.5 hover:bg-[#14745e]"
             >
-              <Camera className="h-4 w-4" strokeWidth={1.8} />
-              Snap My Food
+              Get Started
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={1.8} />
             </Link>
             <Link
-              href="/hub"
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-white px-5 text-sm font-medium text-primary transition-colors hover:bg-muted dark:bg-card"
+              href="/hub/food/scan-label"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border bg-white/80 px-5 text-sm font-semibold text-primary backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:bg-muted dark:bg-card/80"
             >
-              Explore Health Tools
-              <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
+              <Camera className="h-4 w-4" strokeWidth={1.8} />
+              Scan a meal
             </Link>
           </div>
-          <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
-            {["Private by design", "Nepali food friendly", "Educational, not diagnostic"].map((item) => (
-              <div key={item} className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <CheckCircle2 className="h-5 w-5 text-primary" strokeWidth={1.8} />
-                {item}
+
+          <div className="mt-9 grid max-w-2xl gap-3 sm:grid-cols-3">
+            {[
+              [ShieldCheck, "Private by design"],
+              [Salad, "Nepali food friendly"],
+              [TimerReset, "Tiny next steps"],
+            ].map(([Icon, label]) => (
+              <div key={label as string} className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-primary shadow-sm dark:bg-card">
+                  <Icon className="h-4 w-4" strokeWidth={1.8} />
+                </span>
+                {label as string}
               </div>
             ))}
           </div>
         </div>
-        <ProductPhone />
+
+        <ProductStage />
       </div>
     </section>
   );
 }
 
-function ValueStatement() {
+function ActionGrid() {
   return (
-    <section className="border-y border-border bg-white px-4 py-12 sm:px-6 dark:bg-card">
-      <div className="mx-auto max-w-[920px] text-center">
-        <p className="text-xl font-semibold leading-snug text-foreground sm:text-2xl">
-          A health companion for everyday decisions, not a dashboard you have to manage.
-        </p>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">
-          Open Swastha, understand what matters today, and take one small next step.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function ToolCards() {
-  return (
-    <section className="px-4 py-20 sm:px-6">
+    <section className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-[1120px]">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">What can you do?</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Start with the task that matters right now.</p>
-          </div>
-        </div>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {tools.map(({ href, title, body, icon: Icon }) => (
+        <div className="grid gap-3 md:grid-cols-3">
+          {primaryActions.map(({ href, title, body, icon: Icon }, index) => (
             <Link
               key={title}
               href={href}
-              className="group rounded-2xl border border-border bg-white p-6 transition-colors duration-200 hover:border-primary/30 dark:bg-card"
+              className="landing-action group rounded-lg border border-border bg-white/82 p-5 backdrop-blur transition duration-200 hover:-translate-y-1 hover:border-primary/40 hover:bg-white dark:bg-card/82"
+              style={{ animationDelay: `${index * 110}ms` }}
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-primary">
-                <Icon className="h-5 w-5" strokeWidth={1.8} />
+              <div className="flex items-start justify-between gap-4">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-primary">
+                  <Icon className="h-5 w-5" strokeWidth={1.8} />
+                </span>
+                <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
               </div>
-              <div className="mt-6 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-semibold text-foreground">{title}</h3>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{body}</p>
-                </div>
-                <ArrowRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
-              </div>
+              <h2 className="mt-5 text-lg font-semibold text-foreground">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
             </Link>
           ))}
         </div>
@@ -201,122 +236,114 @@ function ToolCards() {
   );
 }
 
-function ExampleSections() {
+function FlowSection() {
   return (
-    <section className="bg-background px-4 py-20 sm:px-6 dark:bg-background">
-      <div className="mx-auto grid max-w-[1120px] gap-5 lg:grid-cols-3">
-        {[
-          {
-            icon: Salad,
-            title: "Food scanner example",
-            body: "See calories, protein, carbs, fat, and one gentle improvement idea after scanning a meal.",
-          },
-          {
-            icon: TrendingUp,
-            title: "Health dashboard example",
-            body: "Track the basics without tiny widgets: water, weight, meals, steps, and recent changes.",
-          },
-          {
-            icon: Bot,
-            title: "AI assistant example",
-            body: "Ask common questions like HbA1c, ghee, protein, or blood pressure in simple language.",
-          },
-        ].map(({ icon: Icon, title, body }) => (
-          <div key={title} className="rounded-2xl border border-border bg-white p-6 dark:bg-card">
-            <Icon className="h-6 w-6 text-primary" strokeWidth={1.8} />
-            <h3 className="mt-6 text-lg font-semibold text-foreground">{title}</h3>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">{body}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function TrustSection() {
-  return (
-    <section className="px-4 py-20 sm:px-6">
-      <div className="mx-auto grid max-w-[1120px] gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+    <section className="px-4 py-16 sm:px-6 lg:py-20">
+      <div className="mx-auto grid max-w-[1120px] gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <div>
-          <h2 className="text-2xl font-semibold text-foreground">Built for trust.</h2>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Health data is personal. Swastha keeps explanations calm, privacy visible, and medical claims limited.
+          <p className="text-xs font-semibold uppercase text-primary">One daily rhythm</p>
+          <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
+            Less tracking. More clarity.
+          </h2>
+          <p className="mt-4 max-w-lg text-sm leading-7 text-muted-foreground">
+            Swastha turns food, activity, hydration, reports, and questions into a clean status you can understand quickly.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {[
-            [ShieldCheck, "General wellness information, not diagnosis."],
-            [Lock, "Your reports and health data stay private."],
-            [FileText, "Reference ranges stay visible where available."],
-            [Droplets, "Delete your information anytime."],
-          ].map(([Icon, text]) => (
-            <div key={text as string} className="flex gap-3 rounded-xl border border-border bg-white p-4 dark:bg-card">
-              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" strokeWidth={1.8} />
-              <p className="text-sm leading-6 text-muted-foreground">{text as string}</p>
-            </div>
-          ))}
+
+        <div className="relative rounded-lg border border-border bg-white p-4 dark:bg-card sm:p-5">
+          <div className="absolute left-8 right-8 top-1/2 h-px bg-gradient-to-r from-primary/10 via-primary/50 to-[#3976b9]/25" />
+          <div className="relative grid gap-3 sm:grid-cols-4">
+            {[
+              [Camera, "Scan"],
+              [FileText, "Explain"],
+              [TrendingUp, "Track"],
+              [Waves, "Adjust"],
+            ].map(([Icon, label], index) => (
+              <div
+                key={label as string}
+                className="landing-step rounded-lg border border-border bg-background p-4 text-center dark:bg-background"
+                style={{ animationDelay: `${180 + index * 130}ms` }}
+              >
+                <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-primary">
+                  <Icon className="h-5 w-5" strokeWidth={1.8} />
+                </span>
+                <p className="mt-3 text-sm font-semibold text-foreground">{label as string}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function BlogPreview({ posts }: { posts: BlogPost[] }) {
+function TrustBand() {
   return (
-    <section className="bg-muted px-4 py-20 sm:px-6">
+    <section className="px-4 py-6 sm:px-6">
+      <div className="mx-auto flex max-w-[1120px] flex-col gap-3 rounded-lg border border-border bg-[#10231d] p-5 text-white sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-[#65d7bd]">
+            <Lock className="h-5 w-5" strokeWidth={1.8} />
+          </span>
+          <p className="text-sm leading-6 text-white/80">
+            Educational wellness guidance only. Your health data stays personal, and medical claims stay careful.
+          </p>
+        </div>
+        <Link href="/privacy" className="inline-flex items-center gap-2 text-sm font-semibold text-[#9ee7d5]">
+          Privacy
+          <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function LearnPreview({ posts }: { posts: BlogPost[] }) {
+  return (
+    <section className="px-4 py-16 sm:px-6 lg:py-20">
       <div className="mx-auto max-w-[1120px]">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <h2 className="text-2xl font-semibold text-foreground">Learn in plain language.</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Short explanations for everyday health choices.</p>
+            <p className="text-xs font-semibold uppercase text-primary">Learn</p>
+            <h2 className="mt-3 text-3xl font-semibold leading-tight text-foreground">Plain answers for real days.</h2>
           </div>
-          <Link href="/learn" className="inline-flex items-center gap-2 font-semibold text-primary">
-            Explore courses
-            <ArrowRight className="h-4 w-4" />
+          <Link href="/learn" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+            Explore lessons
+            <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
           </Link>
         </div>
 
-        {posts.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-border bg-white p-6 text-muted-foreground">
-            Articles will appear here once your content database is connected.
-          </div>
-        ) : (
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {posts.slice(0, 3).map((post) => (
-              <Link key={post.id} href={`/blog/${post.slug}`} className="overflow-hidden rounded-2xl border border-border bg-white">
-                {post.thumbnailUrl && (
-                  <div className="relative aspect-video overflow-hidden">
-                    <Image src={post.thumbnailUrl} alt={post.title} fill className="object-cover" />
+        <div className="mt-8 grid gap-3 md:grid-cols-3">
+          {posts.length > 0
+            ? posts.slice(0, 3).map((post, index) => (
+                <Link
+                  key={post.id}
+                  href={`/blog/${post.slug}`}
+                  className="landing-action overflow-hidden rounded-lg border border-border bg-white transition duration-200 hover:-translate-y-1 hover:border-primary/40 dark:bg-card"
+                  style={{ animationDelay: `${index * 120}ms` }}
+                >
+                  {post.thumbnailUrl && (
+                    <div className="relative aspect-[16/9] overflow-hidden">
+                      <Image src={post.thumbnailUrl} alt={post.title} fill className="object-cover" />
+                    </div>
+                  )}
+                  <div className="p-5">
+                    <h3 className="line-clamp-2 text-base font-semibold leading-snug text-foreground">{post.title}</h3>
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{post.summary}</p>
                   </div>
-                )}
-                <div className="p-5">
-                  <h3 className="line-clamp-2 text-base font-semibold text-foreground">{post.title}</h3>
-                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{post.summary}</p>
+                </Link>
+              ))
+            : learnTiles.map((tile, index) => (
+                <div
+                  key={tile.title}
+                  className="landing-action rounded-lg border border-border bg-white p-5 dark:bg-card"
+                  style={{ animationDelay: `${index * 120}ms` }}
+                >
+                  <h3 className="text-base font-semibold leading-snug text-foreground">{tile.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{tile.summary}</p>
                 </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function FinalCta() {
-  return (
-    <section className="px-4 py-20 sm:px-6">
-      <div className="mx-auto max-w-[760px] text-center">
-        <h2 className="text-2xl font-semibold text-foreground">Start with your next meal.</h2>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          A small, clear health habit is easier to keep than a complicated dashboard.
-        </p>
-        <Link
-          href="/hub/food/scan-label"
-          className="mt-6 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#125745]"
-        >
-          Snap My Food
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+              ))}
+        </div>
       </div>
     </section>
   );
@@ -324,21 +351,21 @@ function FinalCta() {
 
 function Footer() {
   return (
-    <footer className="border-t border-border bg-white px-4 py-10 sm:px-6 dark:bg-card">
-      <div className="mx-auto flex max-w-[1120px] flex-col justify-between gap-6 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-primary">
-            <HeartPulse className="h-4.5 w-4.5" />
+    <footer className="px-4 pb-10 pt-8 sm:px-6">
+      <div className="mx-auto flex max-w-[1120px] flex-col justify-between gap-5 border-t border-border pt-7 sm:flex-row sm:items-center">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary">
+            <HeartPulse className="h-4.5 w-4.5" strokeWidth={1.8} />
           </span>
           <div>
             <p className="font-semibold text-foreground">Swastha</p>
-            <p className="text-sm text-muted-foreground">Understand your health, one day at a time.</p>
+            <p className="text-sm text-muted-foreground">Health made simple.</p>
           </div>
-        </div>
+        </Link>
         <div className="flex flex-wrap gap-4 text-sm font-medium text-muted-foreground">
-          <Link href="/hub/food/scan-label">Food</Link>
-          <Link href="/hub/chat">AI Assistant</Link>
-          <Link href="/hub/documents">Reports</Link>
+          <Link href="/hub">Hub</Link>
+          <Link href="/learn">Learn</Link>
+          <Link href="/support">Support</Link>
           <Link href="/privacy">Privacy</Link>
         </div>
       </div>
@@ -350,12 +377,10 @@ export function LandingContent({ posts }: { posts: BlogPost[] }) {
   return (
     <>
       <Hero />
-      <ValueStatement />
-      <ToolCards />
-      <ExampleSections />
-      <TrustSection />
-      <BlogPreview posts={posts} />
-      <FinalCta />
+      <ActionGrid />
+      <FlowSection />
+      <TrustBand />
+      <LearnPreview posts={posts} />
       <Footer />
     </>
   );

@@ -83,7 +83,7 @@ export default function FoodBrowsePage() {
               Snap Food
             </Button>
           </Link>
-          <Link href="/hub/food/scan-label?mode=workout">
+          <Link href="/hub/workout/quick">
             <Button variant="outline">
               <Activity className="h-4 w-4" />
               Workout Analyzer

@@ -24,6 +24,7 @@ import { trpc } from "@/lib/trpc-client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { HubCardioEngine } from "@/components/hub/hub-cardio-engine";
 import { HubMuscleMap } from "@/components/hub/hub-muscle-map";
 import {
   DEFAULT_CALORIE_TARGET,
@@ -206,6 +207,7 @@ export default function HubPage() {
   const { data: dateWeight } = trpc.progress.getDateWeight.useQuery({ date: today }, { enabled: isAuthed });
   const { data: weightHistory } = trpc.progress.getWeightHistory.useQuery({ limit: 7 }, { enabled: isAuthed });
   const { data: exerciseData } = trpc.exercise.getDay.useQuery({ date: today }, { enabled: isAuthed });
+  const { data: exerciseHistory } = trpc.exercise.getRecent.useQuery({ days: 14 }, { enabled: isAuthed });
   const { data: micronutrients } = trpc.diary.getDayNutrients.useQuery(
     { date: today, nutrientIds: micronutrientIds },
     { enabled: isAuthed }
@@ -235,7 +237,10 @@ export default function HubPage() {
   const createFood = trpc.food.createCustomFood.useMutation();
   const logExercise = trpc.exercise.logExercise.useMutation({
     onSuccess: async () => {
-      await utils.exercise.getDay.invalidate({ date: today });
+      await Promise.all([
+        utils.exercise.getDay.invalidate({ date: today }),
+        utils.exercise.getRecent.invalidate(),
+      ]);
     },
   });
   const logWeight = trpc.progress.logWeight.useMutation({
@@ -747,6 +752,7 @@ export default function HubPage() {
             </Link>
           </div>
           <HubMuscleMap compact />
+          <HubCardioEngine logs={exerciseHistory?.logs ?? []} />
         </section>
 
         <section className="mt-4 overflow-hidden rounded-[22px] border border-[#DDE8E4] bg-white shadow-sm">

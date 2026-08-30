@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Activity,
   Bookmark,
@@ -77,6 +77,7 @@ type AnalyzerStatus = "idle" | "loading" | "ready" | "countdown" | "running" | "
 type ProgramKey = "free" | "custom";
 type RoutinePhase = "idle" | "work" | "timed" | "rest" | "summary" | "complete";
 type AnalyzerTab = "quick" | "programs";
+type WorkoutFlowStep = "activity" | "setup" | "active";
 type TrackingMode = "camera" | "motion" | "interactive" | "trust";
 type InteractiveMode = "tap" | "audio";
 type ProofSource = "analyzer" | "motion" | "tempo" | "tap" | "audio" | "trust";
@@ -202,6 +203,12 @@ type WorkoutProgram = {
   label: string;
   description: string;
   steps: RoutineStep[];
+};
+
+type WorkoutAnalyzerExperience = "combined" | "quick" | "programs";
+
+type WorkoutAnalyzerModeProps = {
+  experience?: WorkoutAnalyzerExperience;
 };
 
 const EXERCISES: ExerciseDefinition[] = [
@@ -337,8 +344,8 @@ const TIMED_EXERCISES = new Set<ExerciseKey>(["plank", "wallSit", "sidePlank"]);
 
 const TRACKING_PROFILES: Record<ExerciseKey, ExerciseTrackingProfile> = {
   squat: { recommended: "camera", motion: true, motionHint: "Phone in pocket or waistband; count the down-up rhythm." },
-  pushup: { recommended: "camera", motion: false, motionHint: "Motion is less reliable for push-ups; use tap, audio, or trust if camera is weak." },
-  plank: { recommended: "interactive", motion: false, motionHint: "Use Audio Cue or Trust Mode for timer-based hold work." },
+  pushup: { recommended: "camera", motion: false, motionHint: "Motion is less reliable for push-ups; use tap, audio, or Manual Mode if camera is weak." },
+  plank: { recommended: "interactive", motion: false, motionHint: "Use Voice Assisted Mode or Manual Mode for timer-based hold work." },
   gluteBridge: { recommended: "camera", motion: true, motionHint: "Phone at waistband; count hip lift rhythm." },
   reverseLunge: { recommended: "camera", motion: true, motionHint: "Phone in pocket; count each return to standing." },
   forwardLunge: { recommended: "camera", motion: true, motionHint: "Phone in pocket; count each return to standing." },
@@ -349,8 +356,8 @@ const TRACKING_PROFILES: Record<ExerciseKey, ExerciseTrackingProfile> = {
   situp: { recommended: "camera", motion: true, motionHint: "Phone near torso or waistband; count sit-up rhythm." },
   burpee: { recommended: "motion", motion: true, motionHint: "Phone secure in pocket; large motion and impact count burpees." },
   calfRaise: { recommended: "camera", motion: true, motionHint: "Phone in pocket; count rise-lower rhythm." },
-  wallSit: { recommended: "interactive", motion: false, motionHint: "Use Audio Cue or Trust Mode for timer-based hold work." },
-  sidePlank: { recommended: "interactive", motion: false, motionHint: "Use Audio Cue or Trust Mode for timer-based hold work." },
+  wallSit: { recommended: "interactive", motion: false, motionHint: "Use Voice Assisted Mode or Manual Mode for timer-based hold work." },
+  sidePlank: { recommended: "interactive", motion: false, motionHint: "Use Voice Assisted Mode or Manual Mode for timer-based hold work." },
   legRaise: { recommended: "camera", motion: true, motionHint: "Phone near waistband; count controlled raise rhythm." },
   shoulderTaps: { recommended: "camera", motion: true, motionHint: "Phone secured near torso; count tap rhythm." },
   squatJump: { recommended: "motion", motion: true, motionHint: "Phone in pocket; impact rhythm counts each jump." },
@@ -368,7 +375,7 @@ const TRACKING_OPTIONS: Array<{
   { mode: "camera", title: "Camera Mode", description: "Pose tracking with the strongest proof.", proof: "4x points" },
   { mode: "motion", title: "Motion Mode", description: "Pocket accelerometer/gyroscope rhythm counting.", proof: "4x points" },
   { mode: "interactive", title: "Interactive Mode", description: "Tap or audio reps without camera.", proof: "2x points" },
-  { mode: "trust", title: "Trust Mode", description: "Complete the timer and self-confirm.", proof: "1x points" },
+  { mode: "trust", title: "Manual Mode", description: "Complete the timer and self-confirm.", proof: "1x points" },
 ];
 
 const INTERACTIVE_OPTIONS: Array<{
@@ -377,7 +384,7 @@ const INTERACTIVE_OPTIONS: Array<{
   description: string;
 }> = [
   { mode: "tap", title: "Tap-to-Rep", description: "Tap the big button, space, enter, or supported volume keys after each rep." },
-  { mode: "audio", title: "Audio Rep", description: "Say each rep or make a clear breath/impact rhythm for the microphone." },
+  { mode: "audio", title: "Voice Assisted Mode", description: "Say each rep or make a clear breath/impact rhythm for the microphone." },
 ];
 
 const PROOF_LABELS: Record<ProofSource, string> = {
@@ -1654,9 +1661,12 @@ async function loadPoseLandmarker(): Promise<PoseLandmarkerLike> {
   }
 }
 
-export function WorkoutAnalyzerMode() {
+export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzerModeProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const utils = trpc.useUtils();
+  const isCombinedExperience = experience === "combined";
+  const isProgramsExperience = experience === "programs";
   const analyzerShellRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1726,7 +1736,12 @@ export function WorkoutAnalyzerMode() {
   const [customReps, setCustomReps] = useState(15);
   const [customSets, setCustomSets] = useState(2);
   const [customRestSeconds, setCustomRestSeconds] = useState(20);
-  const [activeTab, setActiveTab] = useState<AnalyzerTab>("quick");
+  const [workoutFlowStep, setWorkoutFlowStep] = useState<WorkoutFlowStep>(
+    isCombinedExperience ? "activity" : "setup"
+  );
+  const [activeTab, setActiveTab] = useState<AnalyzerTab>(
+    isProgramsExperience ? "programs" : "quick"
+  );
   const [selectedPreset, setSelectedPreset] = useState<WorkoutPreset | null>(null);
   const [activePreset, setActivePreset] = useState<WorkoutPreset | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>("All Programs");
@@ -1758,6 +1773,7 @@ export function WorkoutAnalyzerMode() {
   const requestedExercise = searchParams.get("exercise");
   const requestedTracking = searchParams.get("tracking");
   const requestedMuscle = searchParams.get("muscle") ?? undefined;
+  const requestedExerciseName = searchParams.get("exerciseName")?.trim() ?? "";
   const taskExercise = EXERCISES.some((item) => item.key === requestedExercise)
     ? (requestedExercise as ExerciseKey)
     : null;
@@ -1799,12 +1815,24 @@ export function WorkoutAnalyzerMode() {
   });
 
   useEffect(() => {
+    if (isCombinedExperience) return;
+    setWorkoutFlowStep("setup");
+    setActiveTab(isProgramsExperience ? "programs" : "quick");
+    if (!isProgramsExperience) {
+      setActivePreset(null);
+      setProgram("custom");
+      programRef.current = "custom";
+    }
+  }, [isCombinedExperience, isProgramsExperience]);
+
+  useEffect(() => {
     exerciseRef.current = exercise;
   }, [exercise]);
 
   useEffect(() => {
     if (!isTaskMode || !taskExercise || !taskTarget) return;
-    setActiveTab("quick");
+    setWorkoutFlowStep("setup");
+    setActiveTab(isProgramsExperience ? "programs" : "quick");
     setActivePreset(null);
     setProgram("free");
     programRef.current = "free";
@@ -1823,12 +1851,27 @@ export function WorkoutAnalyzerMode() {
 
   useEffect(() => {
     if (isTaskMode || !taskExercise) return;
-    setActiveTab("quick");
+    setWorkoutFlowStep("setup");
+    setActiveTab(isProgramsExperience ? "programs" : "quick");
     setActivePreset(null);
     setProgram("custom");
     programRef.current = "custom";
     setExercise(taskExercise);
     exerciseRef.current = taskExercise;
+    if (requestedTracking === "manual") {
+      setTrackingMode("trust");
+      trackingModeRef.current = "trust";
+      stopCamera();
+      setStatus("ready");
+      metricsRef.current = {
+        ...metricsRef.current,
+        confidence: 55,
+        feedback: "Manual Mode selected. Press Start set when ready.",
+        quality: "tracking",
+      };
+      setMetrics(metricsRef.current);
+      return;
+    }
     if (requestedTracking === "audio") {
       setTrackingMode("interactive");
       trackingModeRef.current = "interactive";
@@ -1839,7 +1882,7 @@ export function WorkoutAnalyzerMode() {
       metricsRef.current = {
         ...metricsRef.current,
         confidence: 70,
-        feedback: "Audio Cue Mode selected. Press Start set when ready.",
+        feedback: "Voice Assisted Mode selected. Press Start set when ready.",
         quality: "tracking",
       };
       setMetrics(metricsRef.current);
@@ -1886,6 +1929,8 @@ export function WorkoutAnalyzerMode() {
     () => EXERCISES.find((item) => item.key === exercise) ?? EXERCISES[0],
     [exercise]
   );
+  const manualExerciseLaunch = !isTaskMode && taskExercise != null && requestedTracking === "manual";
+  const selectedExerciseLabel = manualExerciseLaunch && requestedExerciseName ? requestedExerciseName : selectedExercise.label;
   const filteredExercises = useMemo(() => {
     const query = exerciseSearch.trim().toLowerCase();
     if (!query) return EXERCISES;
@@ -1903,16 +1948,16 @@ export function WorkoutAnalyzerMode() {
     const steps: RoutineStep[] = [];
     for (let setIndex = 0; setIndex < customSets; setIndex += 1) {
       if (TIMED_EXERCISES.has(exercise)) {
-        steps.push({ type: "timed", exercise, label: getExerciseLabel(exercise), seconds: customReps });
+        steps.push({ type: "timed", exercise, label: selectedExerciseLabel, seconds: customReps });
       } else {
-        steps.push({ type: "work", exercise, reps: customReps });
+        steps.push({ type: "work", exercise, label: selectedExerciseLabel, reps: customReps });
       }
       if (setIndex < customSets - 1 && customRestSeconds > 0) {
         steps.push({ type: "rest", seconds: customRestSeconds });
       }
     }
     return steps;
-  }, [customReps, customRestSeconds, customSets, exercise]);
+  }, [customReps, customRestSeconds, customSets, exercise, selectedExerciseLabel]);
   const presetRoutineSteps = useMemo(
     () => (activePreset ? buildPresetSteps(activePreset) : []),
     [activePreset]
@@ -2166,6 +2211,21 @@ export function WorkoutAnalyzerMode() {
     [completeWorkoutSet, evaluateSetEffort, interactiveMode, isTaskMode, recentSets.length, saveCoachLearning, saveMuscleTraining, trackingMode]
   );
 
+  const finishWorkoutSession = useCallback(
+    (message = "Workout finished.") => {
+      setActivePreset(null);
+      setProgram("custom");
+      programRef.current = "custom";
+      setRoutinePhase("complete");
+      routinePhaseRef.current = "complete";
+      setStatus(streamRef.current ? "ready" : "idle");
+      setWorkoutFlowStep("activity");
+      playSound("finish");
+      speak(message);
+    },
+    [playSound, speak]
+  );
+
   const enterRoutineStep = useCallback(
     (index: number, delayMs = 0) => {
       const routine =
@@ -2175,18 +2235,9 @@ export function WorkoutAnalyzerMode() {
       const step = routine.steps[index];
 
       if (!step) {
-        routinePhaseRef.current = "complete";
-        setRoutinePhase("complete");
         setRoutineRemaining(null);
-        setStatus(streamRef.current ? "ready" : "idle");
-        setMetrics((current) => ({
-          ...current,
-          feedback: "Routine complete. Nice work.",
-          quality: "good",
-        }));
         window.setTimeout(() => {
-          playSound("finish");
-          speak("Routine complete. Nice work.");
+          finishWorkoutSession("Workout finished. Great job.");
         }, delayMs);
         return;
       }
@@ -2202,12 +2253,12 @@ export function WorkoutAnalyzerMode() {
         setStatus("rest");
         setMetrics((current) => ({
           ...current,
-          feedback: `Set complete. Rest for ${step.seconds} seconds.`,
+          feedback: `Now ${step.seconds} seconds break.`,
           quality: "good",
         }));
         window.setTimeout(() => {
           playSound("setComplete");
-          speak(`Set complete. ${step.seconds} seconds rest. ${step.seconds}.`);
+          speak(`Now ${step.seconds} seconds break.`, true);
         }, delayMs);
         return;
       }
@@ -2224,18 +2275,18 @@ export function WorkoutAnalyzerMode() {
         setTimedRemaining(step.seconds);
         setCountdown(3);
         setStatus("countdown");
-        setMetrics((current) => ({
-          ...current,
-          phase: "ready",
-          feedback: `Get ready: ${step.label} for ${step.seconds} seconds.`,
-          quality: "tracking",
-        }));
-        window.setTimeout(() => {
-          playSound("start");
-          speak(`Now do ${step.label} for ${step.seconds} seconds. Three.`);
-        }, delayMs);
-        return;
-      }
+      setMetrics((current) => ({
+        ...current,
+        phase: "ready",
+        feedback: `Get ready: ${step.label} for ${step.seconds} seconds.`,
+        quality: "tracking",
+      }));
+      window.setTimeout(() => {
+        playSound("start");
+        speak(`${index > 0 ? "Continue doing" : "Do"} ${step.label} for ${step.seconds} seconds. Three.`, true);
+      }, delayMs);
+      return;
+    }
 
       exerciseRef.current = step.exercise;
       setExercise(step.exercise);
@@ -2256,10 +2307,27 @@ export function WorkoutAnalyzerMode() {
       }));
       window.setTimeout(() => {
         playSound("start");
-        speak(`Now do ${step.reps} ${getExerciseLabel(step.exercise)} reps. Three.`);
+        speak(`${index > 0 ? "Continue doing" : "Do"} ${step.reps} ${getExerciseLabel(step.exercise)} reps. Three.`, true);
       }, delayMs);
     },
-    [activeRoutineSteps, playSound, resetCoachSignals, speak]
+    [activeRoutineSteps, finishWorkoutSession, playSound, resetCoachSignals, speak]
+  );
+
+  const advanceAfterCompletedSet = useCallback(
+    (delayMs = 400) => {
+      const nextIndex = routineStepIndexRef.current + 1;
+      const nextStep = activeRoutineSteps[nextIndex];
+      if (programRef.current === "custom" && nextStep) {
+        enterRoutineStep(nextIndex, delayMs);
+        return true;
+      }
+      if (programRef.current === "custom") {
+        window.setTimeout(() => finishWorkoutSession("Workout finished. Great job."), delayMs);
+        return true;
+      }
+      return false;
+    },
+    [activeRoutineSteps, enterRoutineStep, finishWorkoutSession]
   );
 
   const registerFallbackRep = useCallback(
@@ -2312,6 +2380,9 @@ export function WorkoutAnalyzerMode() {
             step.exercise
           );
           coachExtraRepsRef.current = null;
+          metricsRef.current = next;
+          setMetrics(next);
+          if (activePreset && advanceAfterCompletedSet()) return;
           routinePhaseRef.current = "summary";
           setRoutinePhase("summary");
           setStatus("paused");
@@ -2321,7 +2392,7 @@ export function WorkoutAnalyzerMode() {
       metricsRef.current = next;
       setMetrics(next);
     },
-    [activeRoutineSteps, playSound, recordRepSignal, recordSetSummary, sessionSeconds, speak]
+    [activePreset, activeRoutineSteps, advanceAfterCompletedSet, playSound, recordRepSignal, recordSetSummary, sessionSeconds, speak]
   );
 
   const drawPose = useCallback((landmarks?: Landmark[]) => {
@@ -2472,9 +2543,15 @@ export function WorkoutAnalyzerMode() {
                 step.exercise
               );
               coachExtraRepsRef.current = null;
-              routinePhaseRef.current = "summary";
-              setRoutinePhase("summary");
-              setStatus("paused");
+              metricsRef.current = next;
+              setMetrics(next);
+              if (activePreset) {
+                advanceAfterCompletedSet();
+              } else {
+                routinePhaseRef.current = "summary";
+                setRoutinePhase("summary");
+                setStatus("paused");
+              }
             }
           }
         } else {
@@ -2509,7 +2586,7 @@ export function WorkoutAnalyzerMode() {
     }
 
     animationRef.current = requestAnimationFrame(runDetectionLoop);
-  }, [activeRoutineSteps, drawPose, playSound, recordRepSignal, recordSetSummary, sessionSeconds, speak]);
+  }, [activePreset, activeRoutineSteps, advanceAfterCompletedSet, drawPose, playSound, recordRepSignal, recordSetSummary, sessionSeconds, speak]);
 
   const stopCamera = useCallback(() => {
     stopLoop();
@@ -2699,12 +2776,8 @@ export function WorkoutAnalyzerMode() {
   useEffect(() => {
     if (status !== "rest" || routineRemaining == null) return;
     if (routineRemaining <= 0) {
-      setStatus("paused");
-      routinePhaseRef.current = "summary";
-      setRoutinePhase("summary");
       setRoutineRemaining(null);
-      setCoachSuggestion({ type: "same", message: "Your break is over. Start next set?" });
-      speak("Your break is over. Start next set?");
+      enterRoutineStep(routineStepIndexRef.current + 1, 200);
       return;
     }
 
@@ -2730,13 +2803,14 @@ export function WorkoutAnalyzerMode() {
       if (step?.type === "timed") {
         recordSetSummary(step.label, 0, step.seconds);
       }
+      setTimedRemaining(null);
+      timedEndsAtRef.current = null;
+      if (advanceAfterCompletedSet()) return;
       playSound("setComplete");
       speak("Set complete. Good job.", true);
       setStatus("paused");
       routinePhaseRef.current = "summary";
       setRoutinePhase("summary");
-      setTimedRemaining(null);
-      timedEndsAtRef.current = null;
     };
 
     const announced = new Set<number>();
@@ -2767,6 +2841,7 @@ export function WorkoutAnalyzerMode() {
     recordSetSummary,
     routinePhase,
     speak,
+    advanceAfterCompletedSet,
     status,
   ]);
 
@@ -2774,7 +2849,7 @@ export function WorkoutAnalyzerMode() {
     if (trackingMode !== "motion" || status !== "running") return;
     const profile = TRACKING_PROFILES[exerciseRef.current];
     if (!profile.motion) {
-      setError(`${getExerciseLabel(exerciseRef.current)} is not reliable in Motion Mode. Try Interactive or Trust Mode.`);
+      setError(`${getExerciseLabel(exerciseRef.current)} is not reliable in Motion Mode. Try Interactive or Manual Mode.`);
       return;
     }
 
@@ -2928,10 +3003,8 @@ export function WorkoutAnalyzerMode() {
     status === "countdown";
   const isWorkoutSurfaceActive = trackingMode !== "camera" || isCameraActive;
   const repProgress = metrics.repProgress;
-  const currentRoutineStep = selectedProgram.steps[routineStepIndex];
-  const currentCustomStep = customRoutineSteps[routineStepIndex];
-  const activeRoutineStep = program === "custom" ? currentCustomStep : currentRoutineStep;
-  const activeStep = program === "custom" ? activeRoutineSteps[routineStepIndex] : null;
+  const activeRoutineStep = program === "custom" ? activeRoutineSteps[routineStepIndex] : selectedProgram.steps[routineStepIndex];
+  const activeStep = program === "custom" ? activeRoutineStep : null;
   const targetReps = activeRoutineStep?.type === "work" ? activeRoutineStep.reps : null;
   const targetSeconds = activeRoutineStep?.type === "timed" ? activeRoutineStep.seconds : null;
   const displayTargetReps = coachExtraRepsRef.current ?? (isTaskMode ? taskTarget : targetReps);
@@ -2945,10 +3018,12 @@ export function WorkoutAnalyzerMode() {
     : targetSeconds && timedRemaining != null
       ? Math.min(100, ((targetSeconds - timedRemaining) / targetSeconds) * 100)
       : repProgress;
-  const modeLocked = isTaskMode || (program !== "free" && routinePhase !== "idle" && routinePhase !== "complete");
-  const customDescription = isTimedExercise
-    ? `${customSets} set${customSets === 1 ? "" : "s"} x ${customReps}s ${getExerciseLabel(exercise)}, ${customRestSeconds}s rest.`
-    : `${customSets} set${customSets === 1 ? "" : "s"} x ${customReps} ${getExerciseLabel(exercise)} reps, ${customRestSeconds}s rest.`;
+  const modeLocked = isTaskMode || Boolean(activePreset) || (program !== "free" && routinePhase !== "idle" && routinePhase !== "complete");
+  const customDescription = activePreset
+    ? `${activePreset.name}: ${activePreset.exercises.length} guided moves, ${activePreset.durationMin} min estimate.`
+    : isTimedExercise
+      ? `${customSets} set${customSets === 1 ? "" : "s"} x ${customReps}s ${selectedExerciseLabel}, ${customRestSeconds}s rest.`
+      : `${customSets} set${customSets === 1 ? "" : "s"} x ${customReps} ${selectedExerciseLabel} reps, ${customRestSeconds}s rest.`;
   const stageLabel =
     status === "rest"
       ? `${routineRemaining ?? 0}s rest`
@@ -3017,26 +3092,39 @@ export function WorkoutAnalyzerMode() {
     });
   }, [completeTask, interactiveMode, isTaskMode, metrics.repCount, playSound, speak, taskCompleted, taskId, taskTarget, trackingMode]);
 
-  const endCurrentSet = () => {
+  const endCurrentSet = (confirmedReps?: number, feedback = "Set complete") => {
     const label =
       activeStep?.type === "work"
         ? activeStep.label ?? getExerciseLabel(activeStep.exercise)
         : activeStep?.type === "timed"
           ? activeStep.label
-          : selectedExercise.label;
-    const reps = routinePhase === "timed" ? 0 : currentSetReps;
+          : selectedExerciseLabel;
+    const reps = routinePhase === "timed" ? 0 : confirmedReps ?? currentSetReps;
     const elapsed =
       activeStep?.type === "timed"
         ? activeStep.seconds - (timedRemaining ?? 0)
         : sessionSeconds;
+    if (confirmedReps != null) {
+      const nextRepCount = setStartRepRef.current + confirmedReps;
+      metricsRef.current = {
+        ...metricsRef.current,
+        repCount: nextRepCount,
+        repProgress: displayTargetReps ? 100 : metricsRef.current.repProgress,
+        feedback: `${feedback}.`,
+        confidence: Math.max(metricsRef.current.confidence, 55),
+        quality: "good",
+      };
+      setMetrics(metricsRef.current);
+    }
     const summary = recordSetSummary(label, reps, Math.max(0, elapsed));
     metricsRef.current = {
       ...metricsRef.current,
-      feedback: `Set complete - ${reps ? `${reps} reps` : label} • ${formatSessionTime(summary.seconds)}`,
+      feedback: `${feedback} - ${reps ? `${reps} reps` : label} • ${formatSessionTime(summary.seconds)}`,
       quality: "good",
     };
     setMetrics(metricsRef.current);
     setLastSetSummary(summary);
+    if (activePreset && advanceAfterCompletedSet()) return;
     setRoutinePhase("summary");
     routinePhaseRef.current = "summary";
     setStatus("paused");
@@ -3065,10 +3153,12 @@ export function WorkoutAnalyzerMode() {
     if (!document.fullscreenElement && analyzerShellRef.current) {
       void analyzerShellRef.current.requestFullscreen().catch(() => undefined);
     }
+    setWorkoutFlowStep("active");
     beginCountdown();
   };
 
   const chooseTrackingMode = async (mode: TrackingMode, interactive: InteractiveMode = interactiveMode) => {
+    if (manualExerciseLaunch && (mode === "camera" || mode === "motion")) return;
     const wasRunning = statusRef.current === "running";
     setTrackingMode(mode);
     setInteractiveMode(interactive);
@@ -3081,6 +3171,7 @@ export function WorkoutAnalyzerMode() {
     if (!document.fullscreenElement && analyzerShellRef.current) {
       void analyzerShellRef.current.requestFullscreen().catch(() => undefined);
     }
+    setWorkoutFlowStep("active");
 
     if (mode === "camera") {
       if (!streamRef.current) {
@@ -3113,6 +3204,7 @@ export function WorkoutAnalyzerMode() {
 
   const updateTrackingModeSelection = (value: string) => {
     const [modeValue, interactiveValue] = value.split(":") as [TrackingMode, InteractiveMode | undefined];
+    if (manualExerciseLaunch && (modeValue === "camera" || modeValue === "motion")) return;
     const nextInteractive = interactiveValue ?? interactiveMode;
     if (statusRef.current === "running") {
       void chooseTrackingMode(modeValue, nextInteractive);
@@ -3150,6 +3242,7 @@ export function WorkoutAnalyzerMode() {
   };
 
   const startNextSet = () => {
+    setWorkoutFlowStep("active");
     if (program === "custom") {
       enterRoutineStep(routineStepIndexRef.current + 1);
       return;
@@ -3174,17 +3267,8 @@ export function WorkoutAnalyzerMode() {
 
   const confirmTrustSet = () => {
     if (status !== "running") return;
-    const missingReps = displayTargetReps ? Math.max(0, displayTargetReps - currentSetReps) : 1;
-    if (missingReps <= 0) {
-      endCurrentSet();
-      return;
-    }
-    for (let index = 0; index < missingReps; index += 1) {
-      registerFallbackRep(
-        "trust",
-        index === missingReps - 1 ? "Self-confirmed set complete." : "Self-confirmed rep."
-      );
-    }
+    const confirmedReps = displayTargetReps ?? currentSetReps;
+    endCurrentSet(Math.max(0, confirmedReps), "Self-confirmed set complete");
   };
 
   const nudgeRepCount = (delta: 1 | -1, source: ProofSource = "tap") => {
@@ -3312,14 +3396,7 @@ export function WorkoutAnalyzerMode() {
   };
 
   const finishWorkout = () => {
-    setActivePreset(null);
-    setProgram("custom");
-    programRef.current = "custom";
-    setRoutinePhase("complete");
-    routinePhaseRef.current = "complete";
-    setStatus(streamRef.current ? "ready" : "idle");
-    playSound("finish");
-    speak("Workout finished.");
+    finishWorkoutSession();
   };
 
   const startPresetWorkout = (preset: WorkoutPreset) => {
@@ -3327,6 +3404,7 @@ export function WorkoutAnalyzerMode() {
     setActivePreset(preset);
     setSelectedPreset(null);
     setActiveTab("quick");
+    setWorkoutFlowStep("setup");
     setProgram("custom");
     programRef.current = "custom";
     setExercise(firstCameraExercise);
@@ -3529,7 +3607,17 @@ export function WorkoutAnalyzerMode() {
   const nextExerciseLabel =
     activeRoutineSteps.find((step, index) => index > routineStepIndex && step.type === "work")?.type === "work"
       ? getExerciseLabel((activeRoutineSteps.find((step, index) => index > routineStepIndex && step.type === "work") as Extract<RoutineStep, { type: "work" }>).exercise)
-      : selectedExercise.label;
+      : selectedExerciseLabel;
+  const hasNextRoutineStep =
+    program === "custom" && activeRoutineSteps.some((_, index) => index > routineStepIndex);
+  const continueSetLabel = hasNextRoutineStep ? "Start next" : "Finish";
+  const handleContinueAfterSet = () => {
+    if (hasNextRoutineStep) {
+      startNextSet();
+      return;
+    }
+    finishWorkout();
+  };
   const wholeWorkoutProgress =
     program === "custom" && activeRoutineSteps.length > 0
       ? Math.min(100, ((routineStepIndex + (status === "running" ? routineProgress / 100 : 0)) / activeRoutineSteps.length) * 100)
@@ -3566,23 +3654,72 @@ export function WorkoutAnalyzerMode() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 rounded-full border border-border bg-white p-1 shadow-sm dark:bg-card">
-        {(["quick", "programs"] as AnalyzerTab[]).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "min-h-11 rounded-full text-sm font-semibold transition",
-              activeTab === tab ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-            )}
-          >
-            {tab === "quick" ? "Quick workout" : "Programs"}
-          </button>
-        ))}
-      </div>
+      {isCombinedExperience && workoutFlowStep === "activity" && (
+        <section className="space-y-4 rounded-[22px] border border-border bg-white p-4 shadow-sm dark:bg-card">
+          <div>
+            <h2 className="text-xl font-black text-[#17201E] dark:text-foreground">Choose workout activity</h2>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              Start with a custom set or pick a guided challenge.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("quick");
+                setProgram("custom");
+                programRef.current = "custom";
+                setActivePreset(null);
+                setWorkoutFlowStep("setup");
+                resetSession();
+              }}
+              className="min-h-[148px] rounded-[20px] border border-[#DDE8E4] bg-[#F7FAF9] p-4 text-left transition hover:border-[#20C7A4]/60 hover:bg-white"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#EAF8F4] text-[#15483F]">
+                <Dumbbell className="h-7 w-7" />
+              </span>
+              <span className="mt-4 block text-base font-black text-[#17201E]">Quick workout</span>
+              <span className="mt-1 block text-sm leading-5 text-[#6B7773]">Choose exercise, reps, sets, rest, and tracking mode.</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("programs");
+                setWorkoutFlowStep("setup");
+              }}
+              className="min-h-[148px] rounded-[20px] border border-[#DDE8E4] bg-[#F7FAF9] p-4 text-left transition hover:border-[#20C7A4]/60 hover:bg-white"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#FFF4D7] text-[#8B5B00]">
+                <ListChecks className="h-7 w-7" />
+              </span>
+              <span className="mt-4 block text-base font-black text-[#17201E]">Programs</span>
+              <span className="mt-1 block text-sm leading-5 text-[#6B7773]">Pick a guided routine with exercise order and rewards.</span>
+            </button>
+          </div>
+        </section>
+      )}
 
-      {activeTab === "programs" ? (
+      {workoutFlowStep === "setup" && (
+      <>
+      {isCombinedExperience && (
+        <div className="grid grid-cols-2 gap-2 rounded-full border border-border bg-white p-1 shadow-sm dark:bg-card">
+          {(["quick", "programs"] as AnalyzerTab[]).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "min-h-11 rounded-full text-sm font-semibold transition",
+                activeTab === tab ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              )}
+            >
+              {tab === "quick" ? "Quick workout" : "Programs"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeTab === "programs" && !activePreset ? (
         <section className="space-y-5">
           <div>
             <h2 className="text-xl font-black text-[#17201E]">Programs</h2>
@@ -3639,11 +3776,15 @@ export function WorkoutAnalyzerMode() {
           <button
             type="button"
             onClick={() => {
-              setActiveTab("quick");
-              setProgram("custom");
-              programRef.current = "custom";
-              setActivePreset(null);
-              resetSession();
+              if (isCombinedExperience) {
+                setActiveTab("quick");
+                setProgram("custom");
+                programRef.current = "custom";
+                setActivePreset(null);
+                resetSession();
+                return;
+              }
+              router.push("/hub/workout/quick");
             }}
             className="flex w-full items-center justify-between rounded-[22px] border border-dashed border-primary/40 bg-white p-4 text-left dark:bg-card"
           >
@@ -3659,10 +3800,10 @@ export function WorkoutAnalyzerMode() {
       ) : (
         <>
           <section className="rounded-[22px] border border-border bg-white p-4 shadow-sm dark:bg-card">
-            <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+            <div className={cn("grid gap-4 lg:items-end", activePreset ? "lg:grid-cols-1" : "lg:grid-cols-[1.4fr_1fr]")}>
               <div className="relative">
                 <label className="text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">
-                  Exercise
+                  {activePreset ? "First program move" : "Exercise"}
                 </label>
                 <button
                   type="button"
@@ -3670,7 +3811,7 @@ export function WorkoutAnalyzerMode() {
                   onClick={() => setShowExerciseMenu((value) => !value)}
                   className="mt-2 flex min-h-12 w-full items-center justify-between rounded-2xl border border-input bg-background px-4 text-left text-sm font-semibold disabled:opacity-70"
                 >
-                  <span className="truncate">{activeStep?.type === "timed" ? activeStep.label : selectedExercise.label}</span>
+                  <span className="truncate">{activeStep?.type === "timed" ? activeStep.label : selectedExerciseLabel}</span>
                   <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                 </button>
                 {showExerciseMenu && !modeLocked && (
@@ -3710,26 +3851,49 @@ export function WorkoutAnalyzerMode() {
                 )}
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {([
-                  [isTimedExercise ? "Seconds" : "Reps", customReps, setCustomReps, isTimedExercise ? 5 : 1, isTimedExercise ? 600 : 100],
-                  ["Sets", customSets, setCustomSets, 1, 20],
-                  ["Break", customRestSeconds, setCustomRestSeconds, 0, 300],
-                ] as Array<[string, number, (value: number) => void, number, number]>).map(([label, value, setter, min, max]) => (
-                  <label key={String(label)} className="space-y-1">
-                    <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">{label}</span>
-                    <input
-                      type="number"
-                      min={Number(min)}
-                      max={Number(max)}
-                      disabled={modeLocked || isTaskMode}
-                      value={Number(value)}
-                      onChange={(event) => setter(Math.max(min, Math.min(max, Number(event.target.value) || min)))}
-                      className="h-12 w-full rounded-2xl border border-input bg-background px-3 text-sm font-semibold tabular-nums outline-none disabled:opacity-60"
-                    />
-                  </label>
-                ))}
-              </div>
+              {activePreset ? (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-[16px] bg-[#F7FAF9] p-3">
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6B7773]">Moves</p>
+                    <p className="mt-1 text-lg font-black text-[#17201E]">{activePreset.exercises.length}</p>
+                  </div>
+                  <div className="rounded-[16px] bg-[#F7FAF9] p-3">
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6B7773]">Estimate</p>
+                    <p className="mt-1 text-lg font-black text-[#17201E]">{activePreset.durationMin} min</p>
+                  </div>
+                  <div className="rounded-[16px] bg-[#F7FAF9] p-3">
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6B7773]">First target</p>
+                    <p className="mt-1 text-lg font-black text-[#17201E]">
+                      {activeRoutineStep?.type === "timed"
+                        ? `${activeRoutineStep.seconds}s`
+                        : activeRoutineStep?.type === "work"
+                          ? `${activeRoutineStep.reps} reps`
+                          : "Ready"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    [isTimedExercise ? "Seconds" : "Reps", customReps, setCustomReps, isTimedExercise ? 5 : 1, isTimedExercise ? 600 : 100],
+                    ["Sets", customSets, setCustomSets, 1, 20],
+                    ["Break", customRestSeconds, setCustomRestSeconds, 0, 300],
+                  ] as Array<[string, number, (value: number) => void, number, number]>).map(([label, value, setter, min, max]) => (
+                    <label key={String(label)} className="space-y-1">
+                      <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">{label}</span>
+                      <input
+                        type="number"
+                        min={Number(min)}
+                        max={Number(max)}
+                        disabled={modeLocked || isTaskMode}
+                        value={Number(value)}
+                        onChange={(event) => setter(Math.max(min, Math.min(max, Number(event.target.value) || min)))}
+                        className="h-12 w-full rounded-2xl border border-input bg-background px-3 text-sm font-semibold tabular-nums outline-none disabled:opacity-60"
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
             <p className="mt-3 text-xs font-medium text-muted-foreground">{customDescription}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
@@ -3754,15 +3918,68 @@ export function WorkoutAnalyzerMode() {
                   onChange={(event) => updateTrackingModeSelection(event.target.value)}
                   className="h-12 w-full rounded-2xl border border-input bg-background px-4 text-sm font-semibold outline-none"
                 >
-                  <option value="trust">Trust Mode - 1x points</option>
+                  <option value="trust">Manual Mode - 1x points</option>
                   <option value="interactive:tap">Tap Mode - 2x points</option>
-                  <option value="interactive:audio">Audio Cue Mode - 2x points</option>
-                  <option value="camera">Camera Coach - 4x points</option>
-                  <option value="motion" disabled={!activeTrackingProfile.motion}>Phone Motion - 4x points</option>
+                  <option value="interactive:audio">Voice Assisted Mode - 2x points</option>
+                  <option value="camera" disabled={manualExerciseLaunch}>Camera Coach - 4x points</option>
+                  <option value="motion" disabled={manualExerciseLaunch || !activeTrackingProfile.motion}>Phone Motion - 4x points</option>
                 </select>
               </label>
             </div>
           </section>
+
+          {activePreset && (
+            <section className="rounded-[22px] border border-[#CFECE4] bg-[#F7FAF9] p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-[#17201E]">{activePreset.name}</p>
+                  <p className="mt-1 text-xs leading-5 text-[#6B7773]">
+                    {activePreset.exercises.length} exercises • {activePreset.durationMin} min • {activePreset.pointsReward} points
+                  </p>
+                </div>
+                <Flame className="h-5 w-5 shrink-0 text-[#20C7A4]" />
+              </div>
+              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                {activePreset.exercises.map((item, index) => (
+                  <span key={`${item.label}-${index}`} className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#4C5F59]">
+                    {formatPresetLine(item)} {item.label}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="grid gap-2 sm:grid-cols-[auto_1fr]">
+            <button
+              type="button"
+              onClick={() => {
+                if (isCombinedExperience) {
+                  setWorkoutFlowStep("activity");
+                  return;
+                }
+                router.push("/hub/workout");
+              }}
+              className="min-h-12 rounded-full border border-border px-5 text-sm font-semibold text-muted-foreground"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={handleSetButtonClick}
+              disabled={status === "loading" || (hasActiveTracking && !canStartSession && status !== "running" && status !== "rest" && status !== "countdown")}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 text-sm font-black text-primary-foreground shadow-sm disabled:opacity-60"
+            >
+              {status === "loading" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" />}
+              {activePreset ? "Start program" : "Start workout"}
+            </button>
+          </div>
+        </>
+      )}
+      </>
+      )}
+
+      {workoutFlowStep === "active" && (
+        <>
 
           <section
             ref={analyzerShellRef}
@@ -3794,13 +4011,37 @@ export function WorkoutAnalyzerMode() {
                   <div className="relative z-10 flex h-full flex-col px-5 pb-5 pt-20">
                     <div className="text-center">
                       <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-200/80">
-                        {activeStep?.type === "timed" ? activeStep.label : selectedExercise.label}
+                        {activeStep?.type === "timed" ? activeStep.label : selectedExerciseLabel}
                       </p>
                       <p className="mt-3 text-2xl font-black tracking-normal text-white">{stageStatus}</p>
                     </div>
 
                     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 py-5">
-                      {status === "rest" ? (
+                      {routinePhase === "summary" && lastSetSummary ? (
+                        <div className="w-full max-w-md rounded-[28px] border border-emerald-100/20 bg-white/12 p-5 text-center shadow-[0_0_60px_rgba(32,199,164,0.18)] backdrop-blur">
+                          <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-200" />
+                          <p className="mt-3 text-2xl font-black">Set complete</p>
+                          <p className="mt-2 text-sm font-semibold text-emerald-50/80">
+                            {lastSetSummary.reps ? `${lastSetSummary.reps} reps` : lastSetSummary.label} • {formatSessionTime(lastSetSummary.seconds)}
+                          </p>
+                          {lastSetSummary.effort && (
+                            <p className="mt-3 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-emerald-50">
+                              {coachSuggestion?.message ?? lastSetSummary.coachNote}
+                            </p>
+                          )}
+                          <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                            <button type="button" onClick={handleContinueAfterSet} className="min-h-12 rounded-full bg-emerald-200 px-5 text-sm font-black text-[#071512] sm:col-span-1">
+                              {continueSetLabel}
+                            </button>
+                            <button type="button" onClick={() => takeShortBreak(10)} className="min-h-12 rounded-full border border-white/15 bg-white/10 px-5 text-sm font-black text-white">
+                              10s break
+                            </button>
+                            <button type="button" onClick={finishWorkout} className="min-h-12 rounded-full border border-white/15 bg-white/10 px-5 text-sm font-black text-white">
+                              Finish
+                            </button>
+                          </div>
+                        </div>
+                      ) : status === "rest" ? (
                         <div className="text-center">
                           <div className="mx-auto flex h-52 w-52 items-center justify-center rounded-full border border-emerald-200/20 bg-white/8 shadow-[0_0_70px_rgba(32,199,164,0.22)] animate-pulse">
                             <span className="text-6xl font-black tabular-nums">{routineRemaining ?? 0}</span>
@@ -3847,7 +4088,7 @@ export function WorkoutAnalyzerMode() {
 
                           {trackingMode === "trust" && (
                             <div className="rounded-[28px] border border-emerald-100/20 bg-white/10 px-8 py-6 text-center shadow-[0_0_60px_rgba(32,199,164,0.18)]">
-                              <p className="text-3xl font-black">{selectedExercise.label}</p>
+                              <p className="text-3xl font-black">{selectedExerciseLabel}</p>
                               <p className="mt-2 text-lg font-semibold text-emerald-100">
                                 {targetSeconds ? `${targetSeconds} sec` : displayTargetReps ? `${displayTargetReps} reps` : formatSessionTime(sessionSeconds)}
                               </p>
@@ -3884,7 +4125,7 @@ export function WorkoutAnalyzerMode() {
                               <button type="button" onClick={confirmTrustSet} className="min-h-14 rounded-full bg-emerald-200 px-5 text-sm font-black text-[#071512]">
                                 Completed
                               </button>
-                              <button type="button" onClick={endCurrentSet} className="min-h-14 rounded-full border border-white/20 bg-white/10 px-5 text-sm font-black text-white">
+                              <button type="button" onClick={() => endCurrentSet()} className="min-h-14 rounded-full border border-white/20 bg-white/10 px-5 text-sm font-black text-white">
                                 Did fewer
                               </button>
                             </div>
@@ -3909,19 +4150,7 @@ export function WorkoutAnalyzerMode() {
                         <span>{targetSeconds ? `${targetSeconds}s` : `Target ${displayTargetReps ?? "--"}`}</span>
                         <span>{status === "rest" ? `Rest ${formatSessionTime(routineRemaining ?? 0)}` : formatSessionTime(sessionSeconds)}</span>
                       </div>
-                      {routinePhase === "summary" ? (
-                        <div className="mt-3 grid grid-cols-3 gap-2">
-                          <button type="button" onClick={startNextSet} className="min-h-11 rounded-full bg-emerald-200 px-5 text-sm font-black text-[#071512]">
-                            Start next
-                          </button>
-                          <button type="button" onClick={() => takeShortBreak(10)} className="min-h-11 rounded-full border border-white/15 bg-white/10 px-5 text-sm font-black text-white">
-                            10s break
-                          </button>
-                          <button type="button" onClick={finishWorkout} className="min-h-11 rounded-full border border-white/15 bg-white/10 px-5 text-sm font-black text-white">
-                            Finish
-                          </button>
-                        </div>
-                      ) : (
+                      {routinePhase !== "summary" && (
                         <div className="mt-3 grid grid-cols-[auto_1fr_auto] gap-2">
                           <button type="button" onClick={() => nudgeRepCount(-1, activeProofSource)} className="min-h-11 rounded-full border border-white/15 bg-white/10 px-5 text-lg font-black text-white">
                             -1
@@ -3946,7 +4175,7 @@ export function WorkoutAnalyzerMode() {
 
               <div className="absolute left-4 right-4 top-4 z-10 flex items-center justify-between gap-3">
                 <div className="min-w-0 rounded-full bg-white/92 px-4 py-2 text-sm font-semibold text-foreground shadow-sm backdrop-blur">
-                  <span className="block max-w-[180px] truncate">{activeStep?.type === "timed" ? activeStep.label : selectedExercise.label}</span>
+                  <span className="block max-w-[180px] truncate">{activeStep?.type === "timed" ? activeStep.label : selectedExerciseLabel}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {trackingMode === "camera" && (
@@ -4065,10 +4294,19 @@ export function WorkoutAnalyzerMode() {
               )}
 
               {trackingMode === "camera" && (
-              <div className="absolute bottom-4 left-4 right-4 z-10 space-y-4">
+              <div
+                className={cn(
+                  "absolute left-4 right-4 z-10 space-y-4",
+                  routinePhase === "summary" && lastSetSummary
+                    ? "top-1/2 -translate-y-1/2"
+                    : "bottom-4"
+                )}
+              >
                 {routinePhase === "summary" && lastSetSummary ? (
                   <div className="rounded-[22px] bg-white/94 p-4 text-foreground shadow-sm backdrop-blur">
-                    <p className="text-sm font-semibold">
+                    <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
+                    <p className="mt-3 text-center text-lg font-black">Set complete</p>
+                    <p className="mt-1 text-center text-sm font-semibold">
                       Set complete - {lastSetSummary.reps ? `${lastSetSummary.reps} reps` : lastSetSummary.label} • {formatSessionTime(lastSetSummary.seconds)}
                     </p>
                     {lastSetSummary.effort && (
@@ -4096,8 +4334,8 @@ export function WorkoutAnalyzerMode() {
                       </div>
                     )}
                     <div className="mt-3 grid grid-cols-3 gap-2">
-                      <button type="button" onClick={startNextSet} className="min-h-11 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground">
-                        Start next set
+                      <button type="button" onClick={handleContinueAfterSet} className="min-h-11 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground">
+                        {continueSetLabel}
                       </button>
                       <button type="button" onClick={() => takeShortBreak(10)} className="min-h-11 rounded-full border border-border bg-white px-4 text-sm font-semibold">
                         10s break
@@ -4324,7 +4562,7 @@ export function WorkoutAnalyzerMode() {
             >
               <span className="flex items-start justify-between gap-3">
                 <span>
-                  <span className="block text-sm font-black text-foreground">Recommended: Trust Mode</span>
+                  <span className="block text-sm font-black text-foreground">Recommended: Manual Mode</span>
                   <span className="mt-1 block text-xs leading-5 text-muted-foreground">
                     Works on every phone. No camera, microphone, or setup needed.
                   </span>
@@ -4339,8 +4577,12 @@ export function WorkoutAnalyzerMode() {
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
+                disabled={manualExerciseLaunch}
                 onClick={() => void chooseTrackingMode("camera")}
-                className="min-h-[118px] rounded-[20px] border border-border bg-background p-4 text-left transition hover:border-primary/50"
+                className={cn(
+                  "min-h-[118px] rounded-[20px] border border-border bg-background p-4 text-left transition hover:border-primary/50",
+                  manualExerciseLaunch && "cursor-not-allowed opacity-50"
+                )}
               >
                 <span className="block text-sm font-black text-foreground">Camera Coach</span>
                 <span className="mt-1 block text-xs leading-5 text-muted-foreground">Automatic rep counting plus form guidance.</span>
@@ -4349,11 +4591,11 @@ export function WorkoutAnalyzerMode() {
 
               <button
                 type="button"
-                disabled={!activeTrackingProfile.motion}
+                disabled={manualExerciseLaunch || !activeTrackingProfile.motion}
                 onClick={() => void chooseTrackingMode("motion")}
                 className={cn(
                   "min-h-[118px] rounded-[20px] border border-border bg-background p-4 text-left transition hover:border-primary/50",
-                  !activeTrackingProfile.motion && "cursor-not-allowed opacity-50"
+                  (manualExerciseLaunch || !activeTrackingProfile.motion) && "cursor-not-allowed opacity-50"
                 )}
               >
                 <span className="block text-sm font-black text-foreground">Phone Motion</span>
@@ -4392,7 +4634,7 @@ export function WorkoutAnalyzerMode() {
                 onClick={() => void chooseTrackingMode("trust")}
                 className="mt-3 min-h-11 w-full rounded-full border border-border bg-white px-4 text-sm font-semibold text-muted-foreground dark:bg-card"
               >
-                Trust Mode
+                Manual Mode
                 <span className="ml-2 text-xs text-muted-foreground">1x</span>
               </button>
             </div>

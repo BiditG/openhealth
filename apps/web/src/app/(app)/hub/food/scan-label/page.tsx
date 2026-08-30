@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useTransition, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Activity, Camera, Dumbbell, Leaf, RotateCcw, Loader2, ImageIcon, Route, Target } from "lucide-react";
+import { Activity, ArrowLeft, Camera, Dumbbell, Leaf, RotateCcw, Loader2, ImageIcon, Route, Target } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -344,6 +344,74 @@ function ScanLabelContent() {
         : recommendedMode === "food"
           ? "Scan your first meal"
           : "Continue your workout";
+  const openActivity = (nextMode: ExploreMode) => {
+    if (nextMode === "workout") {
+      router.push("/hub/workout");
+      return;
+    }
+    setMode(nextMode);
+    router.push(`/hub/food/scan-label?mode=${nextMode}`);
+  };
+  const focusedActivity =
+    requestedMode && mode !== "food"
+      ? exploreActivities.find((activity) => activity.mode === mode)
+      : null;
+
+  if (focusedActivity) {
+    return (
+      <div className="px-4 py-4">
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("food");
+              router.push("/hub/food/scan-label");
+            }}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#DDE8E4] bg-white text-[#15483F] shadow-sm"
+            aria-label="Back to activities"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="min-w-0">
+            <h1 className="truncate text-[24px] font-black leading-tight text-[#17201E]">{focusedActivity.title}</h1>
+            <p className="mt-1 text-sm leading-5 text-[#6B7773]">{focusedActivity.description}</p>
+          </div>
+        </div>
+
+        {mode === "workout" && <WorkoutAnalyzerMode />}
+        {mode === "track" && <TrackExperience />}
+        {mode === "meditation" && <MeditationMode />}
+        {mode === "games" && <VirtualGamesMode initialGame={initialGame} initialCricketMode={initialCricketMode} />}
+        {mode === "stretch" && (
+          <section className="space-y-4 rounded-[24px] border border-[#DDE8E4] bg-white p-5 shadow-sm">
+            <div>
+              <p className="text-xl font-black text-[#17201E]">Mobility & recovery</p>
+              <p className="mt-1 text-sm leading-5 text-[#6B7773]">
+                Pick a light routine to loosen up and recover.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {stretchRoutines.map((routine) => (
+                <button
+                  key={routine.title}
+                  type="button"
+                  onClick={() => toast.success(`${routine.title} selected. Start gently and breathe steadily.`)}
+                  className="min-h-[132px] rounded-[18px] border border-[#E3EAE7] bg-[#F7FAF9] p-4 text-left transition hover:border-[#20C7A4]/45 hover:bg-white"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#15483F]">
+                    <Activity className="h-6 w-6" />
+                  </span>
+                  <span className="mt-4 block text-base font-black text-[#17201E]">{routine.title}</span>
+                  <span className="mt-1 block text-xs font-bold text-[#20C7A4]">{routine.duration}</span>
+                  <span className="mt-1 block text-sm leading-5 text-[#6B7773]">{routine.detail}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 py-4">
@@ -357,7 +425,7 @@ function ScanLabelContent() {
           </div>
           <button
             type="button"
-            onClick={() => setMode(recommendedMode)}
+            onClick={() => openActivity(recommendedMode)}
             className="flex min-h-[78px] items-center gap-3 rounded-[18px] border border-[#CFECE4] bg-white px-4 py-3 text-left shadow-[0_10px_24px_rgba(21,72,63,0.06)] transition hover:border-[#20C7A4]/60"
           >
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#EAF8F4] text-[#15483F]">
@@ -379,7 +447,7 @@ function ScanLabelContent() {
               <button
                 key={activity.mode}
                 type="button"
-                onClick={() => setMode(activity.mode)}
+                onClick={() => openActivity(activity.mode)}
                 className={`min-h-[126px] rounded-[18px] border p-4 text-left transition ${
                   isActive
                     ? "border-[#20C7A4] bg-white shadow-[0_12px_28px_rgba(21,72,63,0.09)]"
