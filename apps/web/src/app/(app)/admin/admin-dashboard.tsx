@@ -28,6 +28,7 @@ type AdminUser = {
   plan: string;
   isActive: boolean;
   isAdmin: boolean;
+  planExpiresAt: string | Date | null;
   taskCompletions: number;
   points: number;
 };
@@ -98,7 +99,10 @@ export function AdminDashboard() {
     onError: (error) => toast.error(error.message),
   });
   const setActive = trpc.admin.setActive.useMutation({
-    onSuccess: invalidateAdmin,
+    onSuccess: async () => {
+      await invalidateAdmin();
+      toast.success("Activation updated.");
+    },
     onError: (error) => toast.error(error.message),
   });
   const deleteUser = trpc.admin.deleteUser.useMutation({
@@ -145,17 +149,17 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7FAF9] px-4 py-5 sm:px-6 lg:px-0">
+    <div className="premium-page-bg min-h-screen px-4 py-5 sm:px-6 lg:px-0">
       <section className="overflow-hidden rounded-[26px] bg-[#123F37] p-6 text-white shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#20C7A4]">Admin</p>
-            <h1 className="mt-3 text-3xl font-black tracking-normal">Swastha control center</h1>
+            <h1 className="mt-3 text-3xl font-black tracking-normal">FitNMove control center</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">
               Manage users, activation, access, notifications, and system health from one place.
             </p>
           </div>
-          <Button onClick={() => setUserForm(emptyUserForm)} className="rounded-full bg-white text-[#123F37] hover:bg-[#EAF8F4]">
+          <Button onClick={() => setUserForm(emptyUserForm)} className="rounded-full bg-primary text-primary-foreground hover:bg-[#C8FA69]">
             <UserPlus className="h-4 w-4" />
             Add user
           </Button>
@@ -171,22 +175,22 @@ export function AdminDashboard() {
           ["Completions", overview?.completions, Crown],
           ["Push tokens", overview?.pushTokenCount, Bell],
         ].map(([label, value, Icon]) => (
-          <div key={String(label)} className="rounded-[18px] border border-[#E3EAE7] bg-white p-4 shadow-sm">
-            <Icon className="h-5 w-5 text-[#20C7A4]" />
-            <p className="mt-3 text-2xl font-black tabular-nums text-[#17201E]">
+          <div key={String(label)} className="rounded-[18px] border border-[#1A4D40] bg-[#0B2C24] p-4 shadow-sm">
+            <Icon className="h-5 w-5 text-[#B8F34A]" />
+            <p className="mt-3 text-2xl font-black tabular-nums text-[#F4F8F5]">
               {overviewLoading ? "-" : Number(value ?? 0).toLocaleString()}
             </p>
-            <p className="text-xs font-semibold text-[#6B7773]">{String(label)}</p>
+            <p className="text-xs font-semibold text-[#C0D1CA]">{String(label)}</p>
           </div>
         ))}
       </section>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="rounded-[22px] border border-[#E3EAE7] bg-white p-4 shadow-sm">
+        <section className="rounded-[22px] border border-[#1A4D40] bg-[#0B2C24] p-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-black text-[#17201E]">Users</h2>
-              <p className="mt-1 text-sm text-[#6B7773]">Search, activate, edit access, and remove non-admin accounts.</p>
+              <h2 className="text-lg font-black text-[#F4F8F5]">Users</h2>
+              <p className="mt-1 text-sm text-[#C0D1CA]">Search, activate, edit access, set plan duration, and remove non-admin accounts.</p>
             </div>
             <form onSubmit={submitSearch} className="flex gap-2">
               <div className="relative min-w-0 flex-1">
@@ -205,7 +209,7 @@ export function AdminDashboard() {
                 onClick={() => setStatus(item)}
                 className={cn(
                   "shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize",
-                  status === item ? "bg-[#123F37] text-white" : "bg-[#F7FAF9] text-[#6B7773]"
+                  status === item ? "bg-primary text-primary-foreground" : "bg-[#10372D] text-[#C0D1CA]"
                 )}
               >
                 {item}
@@ -213,8 +217,8 @@ export function AdminDashboard() {
             ))}
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-[18px] border border-[#E3EAE7]">
-            <div className="hidden grid-cols-[44px_1.35fr_0.8fr_0.7fr_0.7fr_150px] gap-3 border-b border-[#E3EAE7] bg-[#F7FAF9] px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-[#6B7773] xl:grid">
+          <div className="mt-4 overflow-hidden rounded-[18px] border border-[#1A4D40]">
+            <div className="hidden grid-cols-[44px_1.25fr_0.85fr_0.75fr_0.75fr_210px] gap-3 border-b border-[#1A4D40] bg-[#10372D] px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-[#C0D1CA] xl:grid">
               <span />
               <span>User</span>
               <span>Status</span>
@@ -222,35 +226,55 @@ export function AdminDashboard() {
               <span>Activity</span>
               <span className="text-right">Actions</span>
             </div>
-            <div className="divide-y divide-[#E3EAE7]">
+            <div className="divide-y divide-[#1A4D40]">
               {usersLoading ? (
                 <div className="flex min-h-40 items-center justify-center">
                   <Loader2 className="h-6 w-6 animate-spin text-[#20C7A4]" />
                 </div>
               ) : users.length ? (
                 users.map((user) => (
-                  <div key={user.id} className="grid gap-3 px-4 py-4 xl:grid-cols-[44px_1.35fr_0.8fr_0.7fr_0.7fr_150px] xl:items-center">
+                  <div key={user.id} className="grid gap-3 px-4 py-4 xl:grid-cols-[44px_1.25fr_0.85fr_0.75fr_0.75fr_210px] xl:items-center">
                     <label className="flex items-center">
                       <input type="checkbox" checked={selectedIds.has(user.id)} onChange={() => toggleSelected(user.id)} className="h-4 w-4 accent-[#20C7A4]" />
                     </label>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-[#17201E]">{user.name}</p>
-                      <p className="truncate text-xs text-[#6B7773]">{user.email}</p>
+                      <p className="truncate text-sm font-bold text-[#F4F8F5]">{user.name}</p>
+                      <p className="truncate text-xs text-[#C0D1CA]">{user.email}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <span className={cn("rounded-full px-2.5 py-1 text-xs font-bold", user.isActive ? "bg-[#EAF8F4] text-[#123F37]" : "bg-amber-50 text-amber-700")}>
+                      <span className={cn("rounded-full px-2.5 py-1 text-xs font-bold", user.isActive ? "bg-[#35D39A] text-[#041A15]" : "bg-[#FF9F43] text-[#041A15]")}>
                         {user.isActive ? "Active" : "Pending"}
                       </span>
-                      {user.isAdmin && <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700">Admin</span>}
+                      {user.isAdmin && <span className="rounded-full bg-[#67B7E8] px-2.5 py-1 text-xs font-bold text-[#041A15]">Admin</span>}
                     </div>
-                    <p className="text-sm font-semibold uppercase text-[#17201E]">{user.plan}</p>
-                    <p className="text-xs text-[#6B7773]">{user.taskCompletions} completions • {user.points} pts</p>
-                    <div className="flex justify-start gap-2 xl:justify-end">
+                    <div>
+                      <p className="text-sm font-semibold uppercase text-[#F4F8F5]">{user.plan}</p>
+                      <p className="text-[10px] font-semibold text-[#8BA59B]">
+                        {user.planExpiresAt ? `Until ${new Date(user.planExpiresAt).toLocaleDateString()}` : "No expiry"}
+                      </p>
+                    </div>
+                    <p className="text-xs text-[#C0D1CA]">{user.taskCompletions} completions / {user.points} pts</p>
+                    <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
+                      {[
+                        ["1M", "1m"],
+                        ["6M", "6m"],
+                        ["1Y", "1y"],
+                      ].map(([label, duration]) => (
+                        <Button
+                          key={`${user.id}-${duration}`}
+                          type="button"
+                          variant="outline"
+                          className="h-9 rounded-xl px-2 text-xs"
+                          onClick={() => setActive.mutate({ userId: user.id, isActive: true, duration: duration as "1m" | "6m" | "1y" })}
+                        >
+                          {label}
+                        </Button>
+                      ))}
                       <Button
                         type="button"
                         variant="outline"
                         className="h-9 rounded-xl px-3 text-xs"
-                        onClick={() => setActive.mutate({ userId: user.id, isActive: !user.isActive })}
+                        onClick={() => setActive.mutate({ userId: user.id, isActive: !user.isActive, duration: user.isActive ? "none" : "1m" })}
                       >
                         {user.isActive ? "Deactivate" : "Activate"}
                       </Button>
@@ -275,7 +299,7 @@ export function AdminDashboard() {
                   </div>
                 ))
               ) : (
-                <div className="px-4 py-12 text-center text-sm text-[#6B7773]">No users found.</div>
+                <div className="px-4 py-12 text-center text-sm text-[#C0D1CA]">No users found.</div>
               )}
             </div>
           </div>

@@ -32,6 +32,17 @@ const userUpdateSchema = z.object({
   isAdmin: z.boolean(),
 });
 
+const activationDurationSchema = z.enum(["none", "1m", "6m", "1y"]).default("none");
+
+function getPlanExpiry(duration: z.infer<typeof activationDurationSchema>) {
+  if (duration === "none") return null;
+  const expiresAt = new Date();
+  if (duration === "1m") expiresAt.setMonth(expiresAt.getMonth() + 1);
+  if (duration === "6m") expiresAt.setMonth(expiresAt.getMonth() + 6);
+  if (duration === "1y") expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+  return expiresAt;
+}
+
 export const adminRouter = router({
   getOverview: protectedProcedure.query(async ({ ctx }) => {
     await assertAdmin(ctx);
@@ -97,15 +108,36 @@ export const adminRouter = router({
           isAdmin: users.isAdmin,
           createdAt: users.createdAt,
           updatedAt: users.updatedAt,
-          taskCompletions: sql<number>`count(${healthTaskCompletions.id})`,
-          points: sql<number>`coalesce(sum(${healthTaskCompletions.medalPoints}), 0)`,
         })
         .from(users)
-        .leftJoin(healthTaskCompletions, eq(users.id, healthTaskCompletions.userId))
         .where(where)
-        .groupBy(users.id)
         .orderBy(desc(users.createdAt))
         .limit(input.limit);
+
+      const completionRows = rows.length
+        ? await ctx.db
+            .select({
+              userId: healthTaskCompletions.userId,
+              taskCompletions: count(),
+              points: sql<number>`coalesce(sum(${healthTaskCompletions.medalPoints}), 0)`,
+            })
+            .from(healthTaskCompletions)
+            .where(inArray(healthTaskCompletions.userId, rows.map((row) => row.id)))
+            .groupBy(healthTaskCompletions.userId)
+            .catch((error) => {
+              console.warn("Admin completion stats unavailable; showing zeroes.", error);
+              return [];
+            })
+        : [];
+      const completionsByUser = new Map(
+        completionRows.map((row) => [
+          row.userId,
+          {
+            taskCompletions: Number(row.taskCompletions ?? 0),
+            points: Number(row.points ?? 0),
+          },
+        ])
+      );
 
       const tokenRows = await ctx.db
         .select({
@@ -113,13 +145,18 @@ export const adminRouter = router({
           value: count(),
         })
         .from(pushTokens)
-        .groupBy(pushTokens.userId);
+        .groupBy(pushTokens.userId)
+        .catch((error) => {
+          console.warn("Admin push token stats unavailable; showing zeroes.", error);
+          return [];
+        });
       const tokensByUser = new Map(tokenRows.map((row) => [row.userId, row.value]));
 
       return rows.map((row) => ({
         ...row,
-        points: Number(row.points ?? 0),
-        taskCompletions: Number(row.taskCompletions ?? 0),
+        planExpiresAt: null,
+        points: completionsByUser.get(row.id)?.points ?? 0,
+        taskCompletions: completionsByUser.get(row.id)?.taskCompletions ?? 0,
         pushTokens: Number(tokensByUser.get(row.id) ?? 0),
       }));
     }),
@@ -169,12 +206,18 @@ export const adminRouter = router({
   }),
 
   setActive: protectedProcedure
-    .input(z.object({ userId: z.string().min(1), isActive: z.boolean() }))
+    .input(z.object({ userId: z.string().min(1), isActive: z.boolean(), duration: activationDurationSchema.optional() }))
     .mutation(async ({ ctx, input }) => {
       await assertAdmin(ctx);
+      const planExpiresAt = input.isActive ? getPlanExpiry(input.duration ?? "1m") : null;
       await ctx.db
         .update(users)
-        .set({ isActive: input.isActive, updatedAt: new Date() })
+        .set({
+          isActive: input.isActive,
+          plan: input.isActive ? "pro" : "free",
+          planExpiresAt,
+          updatedAt: new Date(),
+        })
         .where(eq(users.id, input.userId));
       return { success: true };
     }),

@@ -231,7 +231,9 @@ export function useSession() {
           verifiedUser = userData.user;
         }
 
-        const nextData = verifiedUser ? toSessionData(sessionData.session, verifiedUser) : null;
+        const nextData = sessionData.session
+          ? toSessionData(sessionData.session, verifiedUser ?? sessionData.session.user)
+          : null;
         setData(nextData);
         setIsPending(false);
 
@@ -260,7 +262,7 @@ export function useSession() {
       supabase.auth.getUser().then(({ data: userData, error: userError }) => {
         if (!active) return;
         if (userError) setError(userError);
-        const nextData = userData.user ? toSessionData(session, userData.user) : null;
+        const nextData = toSessionData(session, userData.user ?? session.user);
         setData(nextData);
         setIsPending(false);
         if (nextData) {

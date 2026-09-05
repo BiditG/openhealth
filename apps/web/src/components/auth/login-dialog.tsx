@@ -425,20 +425,20 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
     const totalSteps = registrationSteps.length;
 
     return (
-      <div className="rounded-[22px] border border-[#E3EAE7] bg-[#F7FAF9] p-4 sm:p-5">
+      <div className="rounded-[22px] border border-[#35D39A]/20 bg-[#0B2C24] p-4 sm:p-5">
         <div className="mb-5 space-y-2">
           <div className="flex items-center justify-between gap-3 text-xs font-bold uppercase text-[#6B7773]">
             <span>Step {stepNumber} of {totalSteps}</span>
             <span>{Math.round((stepNumber / totalSteps) * 100)}%</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white">
-            <div className="h-full rounded-full bg-[#20C7A4] transition-all" style={{ width: `${(stepNumber / totalSteps) * 100}%` }} />
+          <div className="h-2 overflow-hidden rounded-full bg-[#07251E]">
+            <div className="h-full rounded-full bg-[#B8F34A] transition-all" style={{ width: `${(stepNumber / totalSteps) * 100}%` }} />
           </div>
         </div>
 
         {step === "name" && (
           <div className="space-y-4">
-            <StepIntro icon={User} title="What should we call you?" description="We are happy you are here. Let us make Swastha feel personal from the first screen." />
+            <StepIntro icon={User} title="What should we call you?" description="We are happy you are here. Let us make FitNMove feel personal from the first screen." />
             <Input id="register-name" placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" required />
           </div>
         )}
@@ -582,7 +582,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
 
         {step === "basics" && (
           <div className="space-y-4">
-            <StepIntro icon={CalendarDays} title="Your basics" description="This helps Swastha set a realistic daily guide." />
+            <StepIntro icon={CalendarDays} title="Your basics" description="This helps FitNMove set a realistic daily guide." />
             <div className="grid grid-cols-3 gap-2">
               {[
                 ["male", "Male"],
@@ -630,7 +630,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
             </div>
             {weightKg && targetWeightKg && (
               <div className="rounded-[16px] bg-[#EAF8F4] p-4 text-sm font-bold text-[#15483F]">
-                {Number(weightKg).toFixed(1)} kg to {Number(targetWeightKg).toFixed(1)} kg. Swastha will make the daily guide easier to read from this.
+                {Number(weightKg).toFixed(1)} kg to {Number(targetWeightKg).toFixed(1)} kg. FitNMove will make the daily guide easier to read from this.
               </div>
             )}
           </div>
@@ -668,11 +668,11 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) resetForm(); }}>
       <DialogHeader>
-        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#EAF8F4] text-primary">
+        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#B8F34A] text-[#041A15]">
           <HeartPulse className="h-6 w-6" />
         </div>
         <DialogTitle className="text-center text-primary">
-          {mode === "login" ? t("auth.loginToContinue") : "Set up Swastha"}
+          {mode === "login" ? t("auth.loginToContinue") : "Set up FitNMove"}
         </DialogTitle>
         <DialogDescription className="text-center">
           {mode === "login" ? t("auth.loginDescription") : "A short, friendly setup so your hub tells you what the numbers mean."}

@@ -44,7 +44,7 @@
     "perDay": "{{count}}/day"
   },
   "faq": {
-    "openSource": "Open Health is open-source. The full source code is publicly available.",
+    "openSource": "FitNMove is built for personal training, movement tracking, and progress accountability.",
     "tryNow": "Try it free now →"
   }
 }

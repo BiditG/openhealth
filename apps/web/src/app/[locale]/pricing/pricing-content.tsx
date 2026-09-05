@@ -50,7 +50,7 @@ export function PricingContent() {
   const { t } = useTranslation("pricing");
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="premium-page-bg min-h-screen text-foreground">
       <SiteNav />
 
       <main className="mx-auto max-w-6xl px-6 pb-24 pt-28">

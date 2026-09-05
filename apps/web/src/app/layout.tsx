@@ -9,30 +9,30 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Swastha — Personal Health, Food, and Wellness AI for Nepal",
+  title: "FitNMove — Train, Move, Compete",
   description:
-    "A mobile-first health platform for Nepal: understand food, track wellness, explain reports, and ask educational health questions with AI.",
+    "FitNMove helps you train smarter, move daily, track progress, and compete with momentum in one mobile-first fitness hub.",
   manifest: "/manifest.json",
   metadataBase: new URL("https://openhealth.blog"),
   openGraph: {
-    title: "Swastha — Personal Health, Food, and Wellness AI for Nepal",
+    title: "FitNMove — Train, Move, Compete",
     description:
-      "Understand meals, track wellness, explain reports, and ask educational health questions with a Nepal-focused personal health platform.",
+      "Train smarter, move daily, track progress, and compete with momentum in one mobile-first fitness hub.",
     url: "https://openhealth.blog",
-    siteName: "Swastha",
+    siteName: "FitNMove",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Swastha — Personal Health, Food, and Wellness AI for Nepal",
+    title: "FitNMove — Train, Move, Compete",
     description:
-      "A Nepal-focused personal health, food, wellness, and educational AI platform.",
+      "A mobile-first fitness hub for training, movement, progress, and competition.",
   },
   keywords: [
-    "health AI agent",
-    "personal health AI",
-    "Nepal health app",
+    "FitNMove",
+    "Train Move Compete",
+    "fitness app",
     "AI health assistant",
     "nutrition tracking",
     "sleep tracking",
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Swastha",
+    title: "FitNMove",
   },
 };
 

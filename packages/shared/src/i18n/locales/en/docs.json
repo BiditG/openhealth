@@ -1,10 +1,10 @@
 {
   "metadata": {
-    "title": "User Guide — Open Health",
-    "description": "Learn how to install Open Health on your device and enable notifications. Supports iOS, Android, and desktop browsers."
+    "title": "User Guide — FitNMove",
+    "description": "Learn how to install FitNMove on your device and enable notifications. Supports iOS, Android, and desktop browsers."
   },
   "title": "User Guide",
-  "intro": "Open Health is a Progressive Web App (PWA). No need to download from the App Store or Google Play — install directly from your browser to your device's home screen, and your all-in-one Health OS is available anytime, anywhere.",
+  "intro": "FitNMove is a Progressive Web App (PWA). No need to download from the App Store or Google Play — install directly from your browser to your device's home screen, and your training hub is available anytime, anywhere.",
   "quickStart": {
     "title": "Quick Start",
     "step1Title": "1. Add to Home Screen",
@@ -48,20 +48,20 @@
     "step02": "Go to Website",
     "step02Desc": "Enter openhealth.blog in the address bar.",
     "step03": "Install",
-    "step03Desc": "Click the install icon (⊕) on the right side of the address bar, or select \"Install Open Health\" from the menu."
+    "step03Desc": "Click the install icon (⊕) on the right side of the address bar, or select \"Install FitNMove\" from the menu."
   },
   "notifications": {
     "title": "Enable Notifications",
-    "desc": "Open Health supports push notifications to remind you to drink water, adjust your posture, and other daily health habits. After installing as a PWA, you need to enable notification permission to receive reminders.",
+    "desc": "FitNMove supports push notifications to remind you to drink water, adjust your posture, train, and keep moving. After installing as a PWA, you need to enable notification permission to receive reminders.",
     "iosStep01": "Open Settings App",
     "iosStep01Desc": "Go to \"Settings\" on your iPhone / iPad.",
-    "iosStep02": "Find Open Health",
-    "iosStep02Desc": "Scroll down and find \"Open Health PWA\" in the app list.",
+    "iosStep02": "Find FitNMove",
+    "iosStep02Desc": "Scroll down and find \"FitNMove PWA\" in the app list.",
     "iosStep03": "Enable Notifications",
     "iosStep03Desc": "Tap \"Notifications\", then turn on \"Allow Notifications\". We recommend also enabling \"Lock Screen\", \"Notification Center\", and \"Banners\".",
     "iosStep04": "Return to App",
-    "iosStep04Desc": "Go back to Open Health and navigate to \"Settings → Notifications\" to enable reminder features.",
-    "androidDesc": "Android devices will show a notification permission dialog when the app first requests it. Tap \"Allow\". If you accidentally declined, go to \"Settings → Apps → Open Health → Notifications\" to re-enable.",
+    "iosStep04Desc": "Go back to FitNMove and navigate to \"Settings → Notifications\" to enable reminder features.",
+    "androidDesc": "Android devices will show a notification permission dialog when the app first requests it. Tap \"Allow\". If you accidentally declined, go to \"Settings → Apps → FitNMove → Notifications\" to re-enable.",
     "desktopDesc": "The browser will show a notification permission dialog when first requested. Click \"Allow\". If notifications are blocked, click the lock icon on the left side of the address bar and change the notification permission to \"Allow\"."
   },
   "faq": {

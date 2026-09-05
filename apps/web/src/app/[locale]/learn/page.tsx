@@ -12,7 +12,7 @@ interface Props {
 }
 
 const descriptions: Record<Locale, string> = {
-  en: "Structured wellness courses for yoga, gym training, meditation, nutrition, sleep, and mobility from Swastha.",
+  en: "Structured courses for training, movement, nutrition, sleep, and mobility from FitNMove.",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const lang = (locale as Locale) || defaultLocale;
 
   return {
-    title: "Learn — Swastha Courses",
+    title: "Learn — FitNMove Courses",
     description: descriptions[lang],
     alternates: {
       canonical: `${BASE_URL}/learn`,
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default function LearnPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="premium-page-bg min-h-screen text-foreground">
       <SiteNav />
       <LearnContent />
     </div>

@@ -9,6 +9,7 @@ import {
   getWorkoutForMuscle,
   type ExerciseMedia,
 } from "@/lib/exercise-media";
+import { getWorkoutClipsForMuscle } from "@/lib/workout-clips";
 
 type ExerciseLibraryResponse = {
   success: boolean;
@@ -43,8 +44,10 @@ export default function MuscleExercisePage() {
   const muscle = decodeURIComponent(Array.isArray(params.muscle) ? params.muscle[0] : params.muscle);
   const muscleLabel = formatMuscleName(muscle);
   const workout = getWorkoutForMuscle(muscle);
+  const workoutClips = getWorkoutClipsForMuscle(muscle);
   const [exercises, setExercises] = useState<ExerciseMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showMoreExercises, setShowMoreExercises] = useState(false);
   const [message, setMessage] = useState("");
   const [cacheNote, setCacheNote] = useState("");
 
@@ -97,7 +100,7 @@ export default function MuscleExercisePage() {
   }, [muscle]);
 
   return (
-    <div className="min-h-screen bg-[#F7FAF9]">
+    <div className="premium-page-bg min-h-screen">
       <div className="mx-auto max-w-[1120px] px-[18px] pb-[110px] pt-6 sm:px-6 lg:px-8 lg:pb-12">
         <Link href="/hub" className="inline-flex min-h-11 items-center gap-2 text-sm font-black text-[#15483F]">
           <ArrowLeft className="h-4 w-4" />
@@ -130,7 +133,7 @@ export default function MuscleExercisePage() {
             </span>
             <div>
               <p className="text-sm font-black text-[#17201E]">Exercise demos</p>
-              <p className="mt-1 text-xs leading-5 text-[#6B7773]">Videos and images come from the saved exercise library.</p>
+              <p className="mt-1 text-xs leading-5 text-[#6B7773]">Your workout clips appear first. Extra library exercises are available below.</p>
             </div>
           </div>
           <button
@@ -146,25 +149,66 @@ export default function MuscleExercisePage() {
           </button>
         </div>
 
-        {message && (
+        {message && showMoreExercises && (
           <div className="mt-4 rounded-[18px] border border-[#F2D0A0] bg-[#FFF8EB] p-4 text-sm font-semibold leading-6 text-[#9A5A00]">
             {message}
           </div>
         )}
 
-        {cacheNote && (
+        {cacheNote && showMoreExercises && (
           <div className="mt-4 rounded-[18px] border border-[#CFECE4] bg-[#EAF8F4] p-4 text-sm font-semibold leading-6 text-[#15483F]">
             {cacheNote}
           </div>
         )}
 
-        {isLoading ? (
+        {workoutClips.length > 0 && (
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {workoutClips.map((clip) => (
+              <article key={clip.id} className="overflow-hidden rounded-[22px] border border-[#DDE8E4] bg-white shadow-sm">
+                <div className="relative aspect-[4/3] overflow-hidden bg-[#0B211D]">
+                  <video
+                    src={clip.src}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="p-4">
+                  <p className="text-lg font-black leading-tight text-[#17201E]">{clip.name}</p>
+                  <p className="mt-2 text-sm leading-5 text-[#6B7773]">{clip.muscle} focused bodyweight movement</p>
+                  <Link
+                    href={`/hub/workout/quick?exercise=${clip.exerciseKey ?? workout.exercise}&tracking=manual&muscle=${encodeURIComponent(muscle)}&exerciseName=${encodeURIComponent(clip.name)}`}
+                    className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#15483F] px-4 text-sm font-black text-white"
+                  >
+                    <Dumbbell className="h-4 w-4" />
+                    Start workout
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {workoutClips.length > 0 && exercises.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowMoreExercises((value) => !value)}
+            className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[#DDE8E4] bg-white px-5 text-sm font-black text-[#15483F] shadow-sm"
+          >
+            {showMoreExercises ? "Hide extra exercises" : "See more exercises"}
+          </button>
+        )}
+
+        {isLoading && workoutClips.length === 0 ? (
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="h-[360px] animate-pulse rounded-[22px] bg-white" />
             ))}
           </div>
-        ) : exercises.length ? (
+        ) : exercises.length && (showMoreExercises || workoutClips.length === 0) ? (
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {exercises.map((exercise) => {
               const image = getBestImage(exercise);
@@ -175,10 +219,11 @@ export default function MuscleExercisePage() {
                       <video
                         src={exercise.videoUrl}
                         poster={image || undefined}
-                        controls
+                        autoPlay
                         muted
                         loop
                         playsInline
+                        preload="metadata"
                         className="h-full w-full object-cover"
                       />
                     ) : image ? (
@@ -227,12 +272,12 @@ export default function MuscleExercisePage() {
               );
             })}
           </div>
-        ) : (
+        ) : workoutClips.length === 0 ? (
           <div className="mt-5 rounded-[22px] border border-[#DDE8E4] bg-white p-6 text-center">
             <p className="text-lg font-black text-[#17201E]">No exercises found</p>
             <p className="mt-2 text-sm text-[#6B7773]">Try another muscle from the hub map.</p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

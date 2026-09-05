@@ -1,11 +1,11 @@
 {
-  "name": "Open Health",
-  "short_name": "Open Health",
-  "description": "Your open-source health AI agent — understands your nutrition, sleep, fitness, and becomes the health companion that knows you best",
+  "name": "FitNMove",
+  "short_name": "FitNMove",
+  "description": "Train smarter, move daily, track progress, and compete with momentum in one mobile-first fitness hub.",
   "start_url": "/hub",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "theme_color": "#20C7A4",
   "orientation": "portrait-primary",
   "categories": ["health", "fitness", "food"],
   "icons": [

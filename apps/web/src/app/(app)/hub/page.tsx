@@ -4,13 +4,11 @@ import { format, subDays } from "date-fns";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
+  ArrowRight,
   Bike,
-  Bell,
   Check,
   Flame,
   Footprints,
-  ListChecks,
-  Medal,
   Route,
   Search,
   Scale,
@@ -43,10 +41,6 @@ function getFirstName(name?: string | null) {
 function pct(current: number, target: number) {
   if (!target) return 0;
   return Math.max(0, Math.min(100, Math.round((current / target) * 100)));
-}
-
-function formatKg(value: number) {
-  return Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1);
 }
 
 function macroStatus(current: number, target: number) {
@@ -205,7 +199,6 @@ export default function HubPage() {
   const { data: goals } = trpc.user.getGoals.useQuery(undefined, { enabled: isAuthed });
   const { data: profile } = trpc.user.getProfile.useQuery(undefined, { enabled: isAuthed });
   const { data: dateWeight } = trpc.progress.getDateWeight.useQuery({ date: today }, { enabled: isAuthed });
-  const { data: weightHistory } = trpc.progress.getWeightHistory.useQuery({ limit: 7 }, { enabled: isAuthed });
   const { data: exerciseData } = trpc.exercise.getDay.useQuery({ date: today }, { enabled: isAuthed });
   const { data: exerciseHistory } = trpc.exercise.getRecent.useQuery({ days: 14 }, { enabled: isAuthed });
   const { data: micronutrients } = trpc.diary.getDayNutrients.useQuery(
@@ -297,27 +290,10 @@ export default function HubPage() {
   const fatTarget = goals?.fatG ? Number(goals.fatG) : DEFAULT_FAT_G;
   const fiberTarget = goals?.fiberG ? Number(goals.fiberG) : DEFAULT_FIBER_G;
   const currentWeight = dateWeight ? Number(dateWeight.weightKg) : profile?.currentWeightKg ? Number(profile.currentWeightKg) : null;
-  const displayWeight = currentWeight ?? 63;
-  const targetWeight = goals?.targetWeightKg
-    ? Number(goals.targetWeightKg)
-    : !currentWeight || profile?.primaryGoal === "weight_reduction"
-      ? displayWeight - 5
-      : null;
-  const firstTrackedWeight = weightHistory?.length ? Number(weightHistory[0].weightKg) : null;
-  const latestTrackedWeight = weightHistory?.length ? Number(weightHistory[weightHistory.length - 1].weightKg) : currentWeight;
-  const journeyStartWeight = firstTrackedWeight ?? displayWeight;
-  const journeyTotal = targetWeight == null ? 0 : Math.abs(journeyStartWeight - targetWeight);
-  const journeyCompleted = targetWeight == null ? 0 : Math.abs(journeyStartWeight - displayWeight);
-  const journeyPercent = journeyTotal > 0 ? Math.max(8, Math.min(92, Math.round((journeyCompleted / journeyTotal) * 100))) : 0;
-  const weeklyWeightDelta =
-    latestTrackedWeight != null && firstTrackedWeight != null
-      ? Number((latestTrackedWeight - firstTrackedWeight).toFixed(1))
-      : null;
   const weightForBurn = currentWeight ?? 70;
   const exerciseCalories = exerciseData?.totalCalories ?? 0;
   const netCalories = Math.max(0, Math.round(totals.calories - exerciseCalories));
   const calorieBalance = Math.round(netCalories - calorieTarget);
-  const balanceAbs = Math.abs(calorieBalance);
   const remainingCalories = Math.max(0, calorieTarget - netCalories);
   const burnPreview = useMemo(
     () => estimateBurn(activity, Number(activityMinutes), weightForBurn),
@@ -365,38 +341,6 @@ export default function HubPage() {
         : remainingCalories <= 650
           ? "You have room for one more meal."
           : "On track today";
-  const weightProgressText =
-    targetWeight == null
-      ? "Set a target weight to track progress"
-      : goals?.goalType === "gain" || targetWeight > displayWeight
-        ? targetWeight - displayWeight <= 0
-          ? "You are at your goal"
-          : `${formatKg(targetWeight - displayWeight)} kg to gain`
-        : displayWeight - targetWeight <= 0
-          ? "You are at your goal"
-          : `${formatKg(displayWeight - targetWeight)} kg to go`;
-  const foodMessage =
-    remainingCalories > 0
-      ? `You can still eat about ${remainingCalories.toLocaleString()} kcal today`
-      : `${balanceAbs.toLocaleString()} kcal over your daily guide`;
-  const foodGuidePercent = pct(totals.calories, calorieTarget);
-  const TodayIcon = totals.calories === 0 ? Utensils : calorieBalance > 0 ? Flame : Check;
-  const todayStatusTone =
-    calorieBalance > 0
-      ? "border-[#F2D0A0] bg-[#FFF8EB] text-[#9A5A00]"
-      : remainingCalories <= 650 && totals.calories > 0
-        ? "border-[#F2D0A0] bg-[#FFF8EB] text-[#9A5A00]"
-        : "border-[#E3EAE7] bg-[#EAF8F4] text-[#15483F]";
-  const foodDetailText =
-    totals.calories === 0
-      ? "You haven't logged food yet."
-      : `${Math.round(totals.calories).toLocaleString()} of ${calorieTarget.toLocaleString()} kcal used today`;
-  const weeklyProgressText =
-    weeklyWeightDelta == null || weeklyWeightDelta === 0
-      ? null
-      : weeklyWeightDelta < 0
-        ? `${Math.abs(weeklyWeightDelta)} kg progress this week`
-        : `${weeklyWeightDelta} kg change this week`;
   const macroRows = [
     ["Protein", totals.protein, proteinTarget],
     ["Carbs", totals.carbs, carbsTarget],
@@ -601,9 +545,8 @@ export default function HubPage() {
       fiberG: Math.round(suggestion.fiberG),
     });
   };
-
   return (
-    <div className="min-h-screen bg-[#F7FAF9]">
+    <div className="premium-page-bg min-h-screen">
       <Dialog open={Boolean(foodConfirmation)} onOpenChange={(open) => !open && setFoodConfirmation(null)}>
         {foodConfirmation && (
           <div className="text-center">
@@ -651,147 +594,74 @@ export default function HubPage() {
           </div>
         )}
       </Dialog>
-      <div className="mx-auto max-w-[1180px] px-[18px] pb-[110px] pt-6 sm:px-6 lg:px-8 lg:pb-12">
-        <section className="mb-5 mt-6 lg:mb-7 lg:flex lg:items-end lg:justify-between lg:gap-6">
-          <h1 className="text-[24px] font-bold leading-[1.2] text-[#17201E] sm:text-[30px] lg:text-[34px]">
-            Good morning, {firstName} 👋
-          </h1>
-          <p className="mt-1.5 text-sm font-normal text-[#6B7773] lg:max-w-[360px] lg:text-right">
-            Here&apos;s your health summary today.
-          </p>
-        </section>
+      <div className="pb-[110px] lg:pb-12">
+        <section className="relative min-h-[100svh] overflow-hidden bg-transparent text-white shadow-[0_26px_80px_rgba(3,27,21,0.22)]">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-x-0 top-0 z-0 flex h-[52svh] min-h-[320px] items-start justify-center overflow-hidden bg-[#031B15] sm:min-h-[420px] lg:min-h-[460px]"
+          >
+            <img
+              src="/Workout/herobannerhubmobile.png"
+              alt=""
+              className="h-full w-full object-contain sm:hidden"
+            />
+            <img
+              src="/Workout/herobannerhub.png"
+              alt=""
+              className="hidden h-full w-full object-contain sm:block"
+            />
+            <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-[#031B15]" />
+          </div>
 
-        <div className="lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:items-start lg:gap-5 xl:gap-6">
-          <div className="min-w-0">
-        <section className="overflow-hidden rounded-[24px] bg-[#15483F] p-[22px] text-white lg:min-h-[286px] lg:p-7">
-          <div>
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.04em] text-white/65">Your weight goal</p>
-              <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/10 px-3 text-xs font-bold text-[#EAF8F4]">
-                <Scale className="h-4 w-4" />
-                {weightProgressText}
-              </span>
-            </div>
-
-            <div className="mt-6">
-              <div className="mb-3 flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-medium text-white/60">Current</p>
-                  <p className="text-3xl font-bold leading-none tabular-nums">{formatKg(displayWeight)} kg</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-medium text-white/60">Goal</p>
-                  <p className="text-3xl font-bold leading-none tabular-nums">
-                    {targetWeight ? `${formatKg(targetWeight)} kg` : "Set goal"}
-                  </p>
-                </div>
-              </div>
-              <div className="relative h-14">
-                <div className="absolute left-0 right-0 top-6 h-2 rounded-full bg-white/14" />
-                <div
-                  className="animate-weight-journey-fill absolute left-0 top-6 h-2 origin-left rounded-full bg-[#20C7A4]"
-                  style={{ width: `${targetWeight ? journeyPercent : 0}%` }}
-                />
-                <div
-                  className="animate-journey-marker absolute top-1 flex -translate-x-1/2 flex-col items-center"
-                  style={{ left: `${targetWeight ? journeyPercent : 0}%` }}
-                >
-                  <span className="animate-sparkle-once absolute -right-2 -top-1 h-2 w-2 rounded-full bg-[#F8D77C]" />
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/35 bg-white text-[#15483F] shadow-[0_10px_28px_rgba(0,0,0,0.18)]">
-                    <Scale className="h-5 w-5" />
+          <div className="relative z-30 pt-[calc(52svh+12px)]">
+            <div className="bg-[#031B15] pb-6 lg:pb-8">
+              <div className="mx-auto w-full max-w-[1180px] px-[18px] sm:px-6 lg:px-8">
+                <div className="grid min-h-[116px] grid-cols-[56px_minmax(0,1fr)] items-center gap-4 rounded-[22px] border border-white/12 bg-[#031B15]/72 p-4 backdrop-blur-md sm:grid-cols-[64px_minmax(0,1fr)_auto] sm:p-5">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-[16px] border border-[#20C7A4]/20 bg-[#041A15]/70 text-[#8FF5DE] sm:h-16 sm:w-16">
+                    <Flame className="h-7 w-7" />
                   </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/62 sm:text-xs">Today&apos;s Workout</p>
+                    <p className="mt-1 truncate text-xl font-black sm:text-2xl">Let&apos;s move, {firstName}.</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-white/68">{todayStatus}</p>
+                  </div>
+                  <Link href="/hub/workout/programs" className="col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#20C7A4] px-5 text-sm font-black text-[#041A15] shadow-[0_16px_40px_rgba(32,199,164,0.28)] sm:col-span-1 sm:min-w-[178px]">
+                    Start Workout
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  {[
+                    { label: "Track", detail: "Your Activity", href: "/hub/track", icon: Route },
+                    { label: "Progress", detail: "See Your Growth", href: "/hub/progress", icon: Scale },
+                    { label: "Compete", detail: "Climb the Ranks", href: "/hub/tasks", icon: Trophy },
+                    { label: "Fuel", detail: "Track Nutrition", href: "/hub/diary", icon: Utensils },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link key={item.label} href={item.href} className="group flex min-h-[124px] flex-col items-center justify-center rounded-[20px] border border-white/12 bg-[#05271F]/72 p-3 text-center backdrop-blur-md transition hover:bg-[#073328] sm:min-h-[134px] sm:p-4">
+                        <Icon className="h-8 w-8 text-[#20C7A4]" />
+                        <span className="mt-4 block text-base font-black text-white sm:text-lg">{item.label}</span>
+                        <span className="mt-1 block max-w-full truncate text-sm font-semibold text-white/58">{item.detail}</span>
+                        <ArrowRight className="mt-3 h-4 w-4 text-white/58 transition group-hover:translate-x-1 group-hover:text-[#20C7A4]" />
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
-              {weeklyProgressText && (
-                <p className="animate-status-pop mt-1 inline-flex min-h-8 items-center rounded-full bg-white/10 px-3 text-xs font-bold text-[#F8D77C]">
-                  {weeklyProgressText}
-                </p>
-              )}
             </div>
           </div>
-
-          <div className={`animate-status-pop mt-5 flex items-center gap-3 rounded-[16px] border px-4 py-3 ${todayStatusTone}`}>
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/70">
-              <TodayIcon className="h-5 w-5 animate-status-icon-once" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.04em] opacity-70">Today</p>
-              <p className="text-base font-bold leading-5">{todayStatus}</p>
-              <p className="mt-1 text-xs font-medium opacity-80">{foodDetailText}</p>
-            </div>
-          </div>
-
-          <div className="mt-5 border-t border-white/12 pt-5">
-            <div className="mb-3 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.04em] text-white/60">Daily food guide</p>
-                <p className="mt-1 text-xl font-bold tabular-nums">
-                  {Math.round(totals.calories).toLocaleString()} / {calorieTarget.toLocaleString()} kcal
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-medium text-white/60">Still available</p>
-                <p className="text-lg font-bold tabular-nums">{remainingCalories.toLocaleString()} kcal</p>
-              </div>
-            </div>
-            <div className="relative h-4 overflow-hidden rounded-full bg-white/14">
-              <div
-                className="animate-food-guide-fill h-full origin-left rounded-full bg-[#20C7A4]"
-                style={{ width: `${foodGuidePercent}%` }}
-              />
-              <span
-                className="absolute top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/45 bg-white text-[#15483F] shadow-sm"
-                style={{ left: `${Math.max(4, Math.min(96, foodGuidePercent))}%` }}
-              >
-                <Utensils className="h-3.5 w-3.5" />
-              </span>
-            </div>
-            <p className="mt-3 text-sm font-semibold text-[#EAF8F4]">{foodMessage}</p>
-            <Link href="/hub/diary" className="mt-3 inline-flex min-h-9 items-center text-sm font-semibold text-white/80 underline-offset-4 hover:underline">
-              View details -&gt;
-            </Link>
-          </div>
-          <HubMuscleMap compact />
-          <HubCardioEngine logs={exerciseHistory?.logs ?? []} />
         </section>
 
-        <section className="mt-4 overflow-hidden rounded-[22px] border border-[#DDE8E4] bg-white shadow-sm">
-          <div className="border-b border-[#EDF2F0] p-[18px]">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#EAF8F4] text-[#123F37]">
-                <Sparkles className="h-6 w-6" />
-              </span>
-              <div>
-                <p className="text-[16px] font-bold text-[#17201E]">Explore</p>
-                <p className="mt-1 text-sm leading-5 text-[#6B7773]">Pick the next health action without hunting through menus.</p>
-              </div>
-            </div>
+        <div className="relative z-30 mx-auto mt-6 max-w-[1180px] space-y-6 px-[18px] sm:px-6 lg:px-8">
+          <HubMuscleMap />
+          <div className="overflow-hidden rounded-[24px] bg-[#08251F] p-1">
+            <HubCardioEngine logs={exerciseHistory?.logs ?? []} />
           </div>
-          <div className="grid gap-3 p-[18px] sm:grid-cols-2">
-            <Link href="/hub/track" className="group min-h-[132px] rounded-[18px] border border-[#F2D0A0] bg-[#FFF8EB] p-4 transition hover:border-[#F1B65F]">
-              <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#B35D00] shadow-sm">
-                <Route className="h-5 w-5" />
-              </span>
-              <span className="mt-4 block text-lg font-black text-[#17201E]">Track walk/run</span>
-              <span className="mt-1 block text-sm leading-5 text-[#6B7773]">Finish to save automatically and deduct burned calories.</span>
-            </Link>
-            <Link href="/hub/daily-tasks" className="group min-h-[132px] rounded-[18px] border border-[#CFECE4] bg-[#F4FBF8] p-4 transition hover:border-[#20C7A4]/45">
-              <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#123F37] shadow-sm">
-                <ListChecks className="h-5 w-5" />
-              </span>
-              <span className="mt-4 block text-lg font-black text-[#17201E]">Daily tasks</span>
-              <span className="mt-1 block text-sm leading-5 text-[#6B7773]">Fresh easy actions today, plus weekly missions.</span>
-            </Link>
-            <Link href="/hub/notifications" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-3 text-sm font-semibold text-[#123F37] transition hover:bg-[#DDF3ED]">
-              <Bell className="h-4 w-4" />
-              Notifications
-            </Link>
-            <Link href="/hub/tasks" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-3 text-sm font-semibold text-[#123F37] transition hover:bg-[#DDF3ED]">
-              <Trophy className="h-4 w-4" />
-              Leaderboard
-            </Link>
-          </div>
-        </section>
+        </div>
+
+        <div className="mx-auto mt-6 max-w-[1180px] px-[18px] sm:px-6 lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:items-start lg:gap-5 lg:px-8 xl:gap-6">
+          <div className="min-w-0">
 
         <section className="mt-4">
           <div className="flex items-center justify-between gap-3">
@@ -1151,7 +1021,7 @@ export default function HubPage() {
         </div>
 
         {(statusMessage || nutritionStatus) && (
-          <div className="mt-6 flex items-center gap-2 rounded-[14px] bg-[#EAF8F4] px-[15px] py-[13px] text-sm font-semibold text-[#15483F]">
+          <div className="mx-auto mt-6 flex max-w-[1180px] items-center gap-2 rounded-[14px] bg-[#EAF8F4] px-[15px] py-[13px] text-sm font-semibold text-[#15483F] sm:px-6 lg:px-8">
             <Check className="h-4 w-4" />
             <span>{statusMessage || nutritionStatus}</span>
           </div>

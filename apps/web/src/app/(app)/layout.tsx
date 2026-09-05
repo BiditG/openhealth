@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   await requireActiveUser();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="premium-page-bg min-h-screen">
       <Header />
       <DeferredProviders />
       <PullToRefresh>

@@ -3,7 +3,7 @@ import { AlertTriangle, Database } from "lucide-react";
 
 export default function SetupErrorPage() {
   return (
-    <main className="min-h-screen bg-white px-4 py-10">
+    <main className="premium-page-bg min-h-screen px-4 py-10">
       <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-xl flex-col justify-center">
         <div className="rounded-2xl border border-[#E6DDD0] bg-[#FFFBF5] p-6 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
@@ -38,6 +38,11 @@ alter table users
 
 alter table users
   add column if not exists referral_code varchar(12);
+
+alter table users
+  add column if not exists plan text not null default 'free',
+  add column if not exists plan_expires_at timestamptz,
+  add column if not exists trial_expires_at timestamptz;
 
 create unique index if not exists users_referral_code_idx
   on users(referral_code);

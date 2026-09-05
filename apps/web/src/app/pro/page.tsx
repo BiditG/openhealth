@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { ArrowLeft, HeartPulse } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
 import { ProPlans } from "@/components/pro/pro-plans";
 
 export default function ProPage() {
   return (
-    <main className="min-h-screen bg-[#F7FAF9] px-4 py-8">
+    <main className="premium-page-bg min-h-screen px-4 py-8">
       <section className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between gap-4">
           <Link
@@ -15,16 +16,16 @@ export default function ProPage() {
             Back
           </Link>
           <Link href="/" className="flex items-center gap-2 text-[#123F37]">
-            <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#EAF8F4]">
-              <HeartPulse className="h-5 w-5" />
+            <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-[14px] bg-white">
+              <Image src="/icons/Logo.png" alt="" fill sizes="40px" className="object-contain" />
             </span>
-            <span className="text-base font-black">Swastha Pro</span>
+            <span className="text-base font-black">FitNMove Pro</span>
           </Link>
         </div>
 
         <div className="mb-8 rounded-[28px] bg-[#123F37] p-6 text-white sm:p-8">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#20C7A4]">Launch pricing</p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-normal">Choose Pro and get full Swastha access after activation.</h1>
+          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-normal">Choose Pro and get full FitNMove access after activation.</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
             Pay through eSewa using the QR or account number. Admin activation usually happens within around 24 hours.
           </p>

@@ -65,7 +65,7 @@ export default function ExportPage() {
       const a = document.createElement("a");
       a.href = url;
       const catItem = EXPORT_CATEGORIES.find((c) => c.key === category);
-      a.download = `OpenHealth_${catItem ? t(catItem.labelKey) : category}_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `FitNMove_${catItem ? t(catItem.labelKey) : category}_${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => {

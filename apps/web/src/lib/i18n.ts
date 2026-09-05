@@ -10,6 +10,7 @@ i18n
     defaultNS,
     lng: fallbackLng,
     supportedLngs: [...supportedLngs],
+    debug: false,
     interpolation: {
       escapeValue: false,
     },

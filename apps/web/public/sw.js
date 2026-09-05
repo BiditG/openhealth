@@ -61,7 +61,7 @@ self.addEventListener("message", (event) => {
 // Handle Web Push notifications (server-side push)
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || "Open Health";
+  const title = data.title || "FitNMove";
   const options = {
     body: data.body || "",
     icon: "/icon.svg",

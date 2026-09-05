@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const BASE_URL = "https://openhealth.blog";
 
 const notFoundTitles: Record<Locale, string> = {
-  en: "Not Found — Swastha",
+  en: "Not Found — FitNMove",
 };
 
 interface Props {
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return { title: notFoundTitles[lang] };
 
   return {
-    title: `${post.title} — Swastha`,
+    title: `${post.title} — FitNMove`,
     description: post.summary?.slice(0, 160) ?? "",
     openGraph: {
       title: post.title,
@@ -64,7 +64,7 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post) notFound();
 
   return (
-    <div className="bg-white dark:bg-black text-black dark:text-white min-h-screen selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
+    <div className="dark premium-page-bg min-h-screen text-white selection:bg-white selection:text-black">
       <SiteNav />
       <BlogPostContent post={post} />
     </div>

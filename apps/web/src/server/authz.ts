@@ -5,6 +5,13 @@ import { auth } from "@/server/auth";
 import { db } from "@/server/db";
 import { users } from "@/server/db/schema";
 
+function isExpectedLocalDbError(error: unknown) {
+  if (process.env.NODE_ENV === "production") return false;
+
+  const errorText = error instanceof Error ? `${error.message} ${String(error.cause ?? "")}` : String(error);
+  return ["EACCES", "ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT"].some((code) => errorText.includes(code));
+}
+
 export async function requireActiveUser() {
   try {
     const session = await auth.api.getSession();
@@ -33,10 +40,12 @@ export async function requireActiveUser() {
       const session = await auth.api.getSession().catch(() => null);
 
       if (session?.user) {
-        console.warn(
-          "Protected route DB check failed; allowing authenticated user in local development.",
-          error
-        );
+        if (!isExpectedLocalDbError(error)) {
+          console.warn(
+            "Protected route DB check failed; allowing authenticated user in local development.",
+            error
+          );
+        }
 
         return {
           session,

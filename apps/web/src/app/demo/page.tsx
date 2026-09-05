@@ -7,7 +7,7 @@ import { ArrowLeft, Camera, CheckCircle2, Dumbbell, Loader2, Play, RotateCcw, Ut
 import { ProPlans } from "@/components/pro/pro-plans";
 import { cn } from "@/lib/utils";
 
-const DEMO_STORAGE_KEY = "swastha.pending.demo";
+const DEMO_STORAGE_KEY = "fitnmove.pending.demo";
 
 type DemoUsage = {
   foodUsed: boolean;
@@ -115,7 +115,7 @@ export default function DemoPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F7FAF9] px-4 py-6">
+    <main className="premium-page-bg min-h-screen px-4 py-6">
       <section className="mx-auto max-w-6xl space-y-6">
         <div className="flex items-center justify-between gap-4">
           <Link href="/pending-activation" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#E3EAE7] bg-white px-4 text-sm font-bold text-[#123F37]">
@@ -134,7 +134,7 @@ export default function DemoPage() {
 
         <div className="overflow-hidden rounded-[28px] bg-[#123F37] p-6 text-white sm:p-8">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#20C7A4]">Limited waiting demo</p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-normal">Try a small taste of Swastha while your account is being activated.</h1>
+          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-normal">Try a small taste of FitNMove while your account is being activated.</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
             This demo is intentionally limited: one food photo preview, one bicep curl demo, and your intro video.
           </p>
@@ -230,7 +230,7 @@ export default function DemoPage() {
                 <iframe
                   className="h-full w-full"
                   src={`https://www.youtube.com/embed/${youtubeId}`}
-                  title="Swastha demo video"
+                  title="FitNMove demo video"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />

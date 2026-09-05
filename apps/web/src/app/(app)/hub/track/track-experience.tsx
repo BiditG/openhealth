@@ -5,15 +5,11 @@ import { useSearchParams } from "next/navigation";
 import {
   Camera,
   Download,
-  Maximize2,
-  Minimize2,
   Pause,
   Play,
   RotateCcw,
   Route,
-  Save,
   Square,
-  Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc-client";
@@ -195,7 +191,6 @@ export function TrackExperience() {
   const targetDistance = Number(searchParams.get("targetDistance"));
   const missionTargetMeters = Number.isFinite(targetDistance) && targetDistance > 0 ? targetDistance : null;
   const watchRef = useRef<number | null>(null);
-  const trackStageRef = useRef<HTMLElement>(null);
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -210,7 +205,6 @@ export function TrackExperience() {
   const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([]);
   const [missionCompleted, setMissionCompleted] = useState(false);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const { data: cardioPresets } = trpc.exercise.getPresets.useQuery({ category: "cardio" });
   const { data: profile } = trpc.user.getProfile.useQuery();
   const logExercise = trpc.exercise.logExercise.useMutation({
@@ -234,29 +228,7 @@ export function TrackExperience() {
     };
   }, []);
 
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(document.fullscreenElement === trackStageRef.current);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
-
-  const toggleFullscreen = async () => {
-    const stage = trackStageRef.current;
-    if (!stage) return;
-    if (document.fullscreenElement === stage) {
-      await document.exitFullscreen();
-      return;
-    }
-    await stage.requestFullscreen();
-  };
-
   const path = useMemo(() => routePath(points), [points]);
-  const mapCenter = points.at(-1) ?? points[0] ?? null;
-  const mapZoom = points.length > 1 && distanceMeters > 5000 ? 13 : points.length > 1 && distanceMeters > 1500 ? 14 : 15;
-  const tiles = useMemo(() => mapTiles(mapCenter, mapZoom), [mapCenter, mapZoom]);
-  const liveRoutePath = useMemo(() => mapRoutePath(points, mapCenter, mapZoom), [points, mapCenter, mapZoom]);
   const liveSpeed = points.at(-1)?.speed;
   const missionProgress = missionTargetMeters ? Math.min(100, Math.round((distanceMeters / missionTargetMeters) * 100)) : 0;
   const activityBurn = estimateCalories(mode, elapsedSeconds, Number(profile?.currentWeightKg ?? DEFAULT_TRACK_WEIGHT_KG));
@@ -365,7 +337,7 @@ export function TrackExperience() {
     const activity: SavedActivity = {
       id: `${Date.now()}`,
       mode,
-      title: `${mode === "run" ? "Run" : "Walk"} in Swastha`,
+      title: `${mode === "run" ? "Run" : "Walk"} in FitNMove`,
       points,
       distanceMeters,
       elapsedSeconds,
@@ -442,9 +414,10 @@ export function TrackExperience() {
   };
 
   return (
-    <div className="min-h-screen bg-[#071512] px-4 py-5 text-white sm:px-6 lg:px-0">
+    <div className="flex min-h-screen items-center justify-center bg-[#071512] px-5 py-8 text-white sm:px-6">
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => handlePhoto(event.target.files?.[0])} />
       {completionMessage && (
-        <div className="fixed inset-x-4 top-24 z-50 mx-auto max-w-sm rounded-[22px] border border-[#20C7A4]/30 bg-white p-5 text-center shadow-xl">
+        <div className="fixed inset-x-5 top-1/2 z-50 mx-auto max-w-sm -translate-y-1/2 rounded-[28px] border border-[#20C7A4]/30 bg-white p-6 text-center shadow-xl">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EAF8F4] text-[#123F37]">
             <Route className="h-8 w-8" />
           </div>
@@ -452,23 +425,39 @@ export function TrackExperience() {
           <p className="mt-2 text-sm font-semibold text-[#6B7773]">
             {km(distanceMeters)} km • {formatTime(elapsedSeconds)} • {activityBurn.calories} kcal deducted from the daily food guide.
           </p>
-          <button
-            type="button"
-            onClick={() => setCompletionMessage(null)}
-            className="mt-4 min-h-11 rounded-full bg-[#123F37] px-5 text-sm font-bold text-white"
-          >
-            Done
-          </button>
+          {photoDataUrl && <img src={photoDataUrl} alt="Activity" className="mt-4 aspect-video w-full rounded-[18px] object-cover" />}
+          <div className="mt-5 grid gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#EAF8F4] px-5 text-sm font-bold text-[#123F37]"
+            >
+              <Camera className="h-4 w-4" />
+              Add activity photo
+            </button>
+            <button
+              type="button"
+              onClick={exportImage}
+              disabled={points.length < 2}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#20C7A4] px-5 text-sm font-bold text-[#071512] disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </button>
+            <button
+              type="button"
+              onClick={resetTracking}
+              className="min-h-12 rounded-full border border-[#DDEAE5] px-5 text-sm font-bold text-[#123F37]"
+            >
+              End
+            </button>
+          </div>
         </div>
       )}
-      <section className="overflow-hidden rounded-[28px] border border-emerald-100/10 bg-[radial-gradient(circle_at_30%_0%,rgba(32,199,164,0.28),transparent_32%),linear-gradient(145deg,#0B211D,#06110F)] p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">Track you</p>
-        <h1 className="mt-3 text-3xl font-black tracking-normal">Record your walk or run</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">
-          GPS distance, pace, route review, calories, and saved activity history inside the same dark training console.
-        </p>
+
+      <main className="w-full max-w-[520px] text-center">
         {taskId && missionTargetMeters && (
-          <div className="mt-5 rounded-[18px] bg-white/10 p-4">
+          <div className="mb-8 rounded-[22px] border border-white/10 bg-white/10 p-4 text-left">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-semibold">{missionCompleted ? "Mission completed" : "Mission in progress"}</span>
               <span className="text-sm font-black tabular-nums">
@@ -480,157 +469,100 @@ export function TrackExperience() {
             </div>
           </div>
         )}
-      </section>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section
-          ref={trackStageRef}
-          className={cn(
-            "overflow-hidden border border-white/10 bg-white/10 shadow-[0_20px_70px_rgba(0,0,0,0.22)] backdrop-blur",
-            isFullscreen ? "fixed inset-0 z-[80] flex h-[100dvh] w-[100dvw] flex-col rounded-none bg-[#071512]" : "rounded-[28px]"
-          )}
-        >
-          <div className={cn("relative min-h-0 bg-[#0B211D]", isFullscreen ? "flex-1" : "h-[420px]")}>
-            <div className="absolute inset-0 overflow-hidden">
-              {tiles.map((tile) => (
-                <img
-                  key={tile.key}
-                  src={tile.url}
-                  alt=""
-                  className="absolute h-64 w-64 select-none"
-                  style={{ left: tile.x, top: tile.y }}
-                  draggable={false}
-                  referrerPolicy="no-referrer"
-                />
-              ))}
+        <div className="mx-auto grid w-full max-w-[220px] grid-cols-2 gap-2 rounded-full bg-white/10 p-1">
+          {(["run", "walk"] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => status === "idle" && setMode(item)}
+              disabled={status !== "idle"}
+              className={cn("min-h-11 rounded-full text-sm font-bold capitalize transition", mode === item ? "bg-emerald-200 text-[#071512]" : "text-white/60", status !== "idle" && "cursor-not-allowed opacity-70")}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-12">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-200/70">{status === "idle" ? "Ready" : status === "complete" ? "Finished" : mode}</p>
+          <p className="mt-4 text-[72px] font-black leading-none tracking-normal sm:text-[96px]">{km(distanceMeters)}</p>
+          <p className="mt-2 text-sm font-black uppercase tracking-[0.22em] text-white/50">km</p>
+        </div>
+
+        <div className="mx-auto mt-8 grid max-w-sm grid-cols-3 gap-3">
+          {[
+            ["Time", formatTime(elapsedSeconds)],
+            ["Pace", pace(distanceMeters, elapsedSeconds)],
+            ["Speed", liveSpeed != null ? `${(liveSpeed * 3.6).toFixed(1)}` : avgSpeed(distanceMeters, elapsedSeconds)],
+          ].map(([label, value]) => (
+            <div key={label} className="min-w-0 rounded-[18px] border border-white/10 bg-white/8 p-3">
+              <p className="truncate text-[11px] font-semibold text-white/45">{label}</p>
+              <p className="mt-1 truncate text-sm font-black tabular-nums text-white">{value}</p>
             </div>
-            <svg viewBox="0 0 640 360" className="absolute inset-0 h-full w-full">
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#D8E6E1" strokeWidth="1" />
-                </pattern>
-              </defs>
-              <rect width="640" height="360" fill={tiles.length ? "rgba(7,21,18,0.26)" : "url(#grid)"} />
-              {liveRoutePath && <path d={liveRoutePath} fill="none" stroke="#6EE7B7" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />}
-              {!liveRoutePath && path && <path d={path} fill="none" stroke="#6EE7B7" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />}
-              {mapCenter && <circle cx="320" cy="180" r="9" fill="#20C7A4" stroke="#FFFFFF" strokeWidth="4" />}
-            </svg>
-            <div className="absolute left-3 top-3 max-w-[52vw] truncate rounded-full border border-white/15 bg-[#071512]/80 px-3 py-2 text-[11px] font-bold text-emerald-100 shadow-sm backdrop-blur sm:left-4 sm:top-4 sm:max-w-none sm:text-xs">
-              {points.length ? `${points.length} GPS points` : "Waiting for GPS"}
-            </div>
-            <div className="absolute bottom-3 right-3 hidden rounded-full border border-white/15 bg-[#071512]/80 px-3 py-1.5 text-[11px] font-semibold text-white/60 shadow-sm backdrop-blur sm:block">
-              Map tiles © OpenStreetMap
-            </div>
+          ))}
+        </div>
+
+        {error && <p className="mx-auto mt-6 max-w-sm rounded-[16px] bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+
+        <div className="mt-12 flex flex-col items-center gap-4">
+          {status === "tracking" ? (
             <button
               type="button"
-              onClick={toggleFullscreen}
-              className="absolute right-4 top-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#071512]/80 text-white shadow-sm backdrop-blur"
-              title={isFullscreen ? "Exit fullscreen" : "Fullscreen tracker"}
+              onClick={pauseTracking}
+              className="inline-flex h-28 w-28 items-center justify-center rounded-full bg-white text-[#071512] shadow-[0_0_80px_rgba(255,255,255,0.18)]"
+              aria-label="Pause activity"
             >
-              {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+              <Pause className="h-11 w-11 fill-[#071512]" />
             </button>
-            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[radial-gradient(circle,rgba(7,21,18,0.18),rgba(7,21,18,0.56))] p-4">
-              <div className="w-full max-w-[min(86vw,460px)] rounded-[28px] border border-white/10 bg-[#071512]/72 px-5 py-6 text-center shadow-[0_0_70px_rgba(32,199,164,0.22)] backdrop-blur sm:rounded-[32px] sm:px-8 sm:py-7">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200/80 sm:text-xs sm:tracking-[0.22em]">{mode === "run" ? "Run distance" : "Walk distance"}</p>
-                <p className="mt-2 text-[clamp(3.5rem,19vw,8rem)] font-black leading-none tracking-normal text-white">
-                  {km(distanceMeters)}
-                </p>
-                <p className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-100/80 sm:text-sm">km</p>
-              </div>
-            </div>
-          </div>
-
-          <div className={cn("grid shrink-0 grid-cols-2 gap-2 p-3 sm:grid-cols-4 sm:gap-3 sm:p-4", isFullscreen && "max-h-[42dvh] overflow-y-auto min-[520px]:grid-cols-5")}>
-            {[
-              ["Distance", `${km(distanceMeters)} km`],
-              ["Time", formatTime(elapsedSeconds)],
-              ["Pace", pace(distanceMeters, elapsedSeconds)],
-              ["Speed", liveSpeed != null ? `${(liveSpeed * 3.6).toFixed(1)} km/h` : `${avgSpeed(distanceMeters, elapsedSeconds)} km/h`],
-              ...(isFullscreen ? ([["Calories", `${activityBurn.calories} kcal`]] as Array<[string, string]>) : []),
-            ].map(([label, value]) => (
-              <div key={label} className="min-w-0 rounded-[16px] border border-white/10 bg-white/10 p-3 sm:rounded-[18px] sm:p-4">
-                <p className="truncate text-[11px] font-semibold text-emerald-100/70 sm:text-xs">{label}</p>
-                <p className="mt-1 truncate text-lg font-black tabular-nums text-white sm:text-xl">{value}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <aside className="space-y-4">
-          <section className="rounded-[28px] border border-white/10 bg-white/10 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.18)] backdrop-blur">
-            <div className="grid grid-cols-2 gap-2 rounded-full bg-white/10 p-1">
-              {(["run", "walk"] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setMode(item)}
-                  className={cn("min-h-11 rounded-full text-sm font-bold capitalize", mode === item ? "bg-emerald-200 text-[#071512]" : "text-white/60")}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {status === "tracking" ? (
-                <button type="button" onClick={pauseTracking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white/12 font-bold text-white">
-                  <Pause className="h-4 w-4" />
-                  Pause
-                </button>
-              ) : (
-                <button type="button" onClick={startTracking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-emerald-200 font-bold text-[#071512]">
-                  <Play className="h-4 w-4" />
-                  {status === "paused" ? "Resume" : "Start"}
-                </button>
-              )}
-              <button type="button" onClick={finishTracking} disabled={points.length < 2} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#20C7A4] font-bold text-[#071512] disabled:opacity-50">
-                <Square className="h-4 w-4" />
-                {logExercise.isPending ? "Saving..." : "Finish"}
-              </button>
-              <button type="button" onClick={resetTracking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/15 font-bold text-white">
-                <RotateCcw className="h-4 w-4" />
-                Reset
-              </button>
-              <button type="button" onClick={saveActivity} disabled={status !== "complete"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/15 font-bold text-white disabled:opacity-50">
-                <Save className="h-4 w-4" />
-                Save
-              </button>
-            </div>
-            {error && <p className="mt-3 rounded-[14px] bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          </section>
-
-          <section className="rounded-[28px] border border-white/10 bg-white/10 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.18)] backdrop-blur">
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => handlePhoto(event.target.files?.[0])} />
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-white/12 font-bold text-white">
-              <Camera className="h-4 w-4" />
-              Add activity photo
+          ) : (
+            <button
+              type="button"
+              onClick={startTracking}
+              disabled={status === "complete"}
+              className="inline-flex h-28 w-28 items-center justify-center rounded-full bg-[#20C7A4] text-[#071512] shadow-[0_0_80px_rgba(32,199,164,0.28)] disabled:opacity-50"
+              aria-label={status === "paused" ? "Resume activity" : "Start activity"}
+            >
+              <Play className="ml-1 h-12 w-12 fill-[#071512]" />
             </button>
-            {photoDataUrl && <img src={photoDataUrl} alt="Activity" className="mt-3 aspect-video w-full rounded-[16px] object-cover" />}
-            <button type="button" onClick={exportImage} disabled={points.length < 2} className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-200 font-bold text-[#071512] disabled:opacity-50">
-              <Download className="h-4 w-4" />
-              Export share image
-            </button>
-          </section>
+          )}
 
-          <section className="rounded-[28px] border border-white/10 bg-white/10 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.18)] backdrop-blur">
-            <h2 className="text-lg font-black text-white">Offline history</h2>
-            <div className="mt-3 space-y-2">
-              {savedActivities.slice(0, 5).map((activity) => (
-                <div key={activity.id} className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-[16px] border border-white/10 bg-white/10 p-3">
-                  <Route className="h-5 w-5 text-emerald-200" />
-                  <div>
-                    <p className="text-sm font-bold capitalize text-white">{activity.mode}</p>
-                    <p className="text-xs text-white/60">{km(activity.distanceMeters)} km - {formatTime(activity.elapsedSeconds)}</p>
-                  </div>
-                  <Timer className="h-4 w-4 text-white/50" />
-                </div>
-              ))}
-              {!savedActivities.length && (
-                <p className="rounded-[16px] border border-white/10 bg-white/10 p-3 text-sm text-white/60">Saved activities will appear here and remain available offline on this device.</p>
-              )}
-            </div>
-          </section>
-        </aside>
-      </div>
+          {(status === "tracking" || status === "paused") && (
+            <button
+              type="button"
+              onClick={finishTracking}
+              disabled={elapsedSeconds < 1}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/12 px-6 text-sm font-black text-white disabled:opacity-45"
+            >
+              <Square className="h-4 w-4 fill-white" />
+              Finish
+            </button>
+          )}
+
+          {status === "complete" && !completionMessage && (
+            <button
+              type="button"
+              onClick={() => setCompletionMessage("Activity complete.")}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/12 px-6 text-sm font-black text-white"
+            >
+              Options
+            </button>
+          )}
+
+          {status !== "idle" && (
+            <button type="button" onClick={resetTracking} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-bold text-white/55">
+              <RotateCcw className="h-4 w-4" />
+              Reset
+            </button>
+          )}
+        </div>
+
+        {path && (
+          <svg viewBox="0 0 640 360" className="mx-auto mt-10 h-28 w-full max-w-sm opacity-70">
+            <path d={path} fill="none" stroke="#6EE7B7" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </main>
     </div>
   );
 }

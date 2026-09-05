@@ -1,17 +1,24 @@
+import Image from "next/image";
+
 type PageLoaderProps = {
   label?: string;
   variant?: "app" | "marketing";
 };
 
-export function PageLoader({ label = "Loading", variant = "app" }: PageLoaderProps) {
+export function PageLoader({ label = "Loading FitNMove", variant = "app" }: PageLoaderProps) {
   const isMarketing = variant === "marketing";
 
   return (
     <div className={isMarketing ? "min-h-[70vh] bg-background px-4 py-10" : "px-4 py-6 sm:px-6 lg:py-10"}>
       <div className={isMarketing ? "mx-auto max-w-[1080px]" : "mx-auto max-w-[1080px] space-y-6"}>
         <div className="flex items-center gap-3">
-          <span className="h-3 w-3 animate-pulse rounded-full bg-primary" />
-          <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+          <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-primary/15 bg-white shadow-sm dark:bg-card">
+            <Image src="/icons/Logo.png" alt="" fill sizes="40px" className="object-contain p-1" />
+          </span>
+          <div>
+            <p className="text-xs font-black uppercase text-primary">Train. Move. Compete.</p>
+            <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+          </div>
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">

@@ -117,7 +117,7 @@ const DAILY_TASK_POOL: DailyTask[] = [
   {
     key: "log-main-meal",
     title: "Log one main meal",
-    description: "Complete this inside Swastha so your day has useful nutrition context.",
+    description: "Complete this inside FitNMove so your day has useful nutrition context.",
     category: "Task",
     area: "Nutrition",
     difficulty: "steady",
@@ -798,7 +798,7 @@ export const tasksRouter = router({
     .input(
       z
         .object({
-          metric: z.enum(["overall", "pushup", "bicepCurl", "pullup", "squat"]).default("overall"),
+          metric: z.enum(["overall", "pushup", "bicepCurl", "pullup", "squat", "plank"]).default("overall"),
         })
         .optional()
     )

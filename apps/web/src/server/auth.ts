@@ -31,6 +31,39 @@ function getSupabaseEnv() {
   return { supabaseUrl, supabaseAnonKey };
 }
 
+function getStorageKey(supabaseUrl: string) {
+  const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
+  return `sb-${projectRef}-auth-token`;
+}
+
+function decodeSupabaseCookie(value: string) {
+  const encoded = value.startsWith("base64-") ? value.slice("base64-".length) : "";
+  if (!encoded) return null;
+
+  try {
+    return JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as { user?: User };
+  } catch {
+    return null;
+  }
+}
+
+async function getLocalDevCookieUser() {
+  if (process.env.NODE_ENV === "production") return null;
+
+  const env = getSupabaseEnv();
+  if (!env) return null;
+
+  const cookieStore = await cookies();
+  const storageKey = getStorageKey(env.supabaseUrl);
+  const directCookie = cookieStore.get(storageKey)?.value;
+  const chunkedCookie = Array.from({ length: 8 }, (_, index) => cookieStore.get(`${storageKey}.${index}`)?.value ?? "")
+    .filter(Boolean)
+    .join("");
+  const payload = decodeSupabaseCookie(directCookie || chunkedCookie);
+
+  return payload?.user?.id ? payload.user : null;
+}
+
 async function createSupabaseServerClient() {
   const env = getSupabaseEnv();
   if (!env) return null;
@@ -87,6 +120,13 @@ function getNumber(value: unknown, max: number) {
   return Number.isFinite(numberValue) && numberValue > 0 && numberValue <= max
     ? numberValue
     : null;
+}
+
+function isExpectedLocalDbError(error: unknown) {
+  if (process.env.NODE_ENV === "production") return false;
+
+  const errorText = error instanceof Error ? `${error.message} ${String(error.cause ?? "")}` : String(error);
+  return ["EACCES", "ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT"].some((code) => errorText.includes(code));
 }
 
 function getOnboardingProfile(user: User) {
@@ -279,22 +319,16 @@ export async function getSupabaseSession() {
     error,
   } = await supabase.auth.getUser();
 
-  let authUser = user;
-
-  if (error || !authUser) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    authUser = session?.user ?? null;
-  }
+  const authUser = user ?? (process.env.NODE_ENV !== "production" ? await getLocalDevCookieUser() : null);
 
   if (!authUser) return null;
 
   try {
     await ensureApplicationUser(authUser);
   } catch (syncError) {
-    console.warn("Supabase user sync failed; continuing with auth session.", syncError);
+    if (!isExpectedLocalDbError(syncError)) {
+      console.warn("Supabase user sync failed; continuing with auth session.", syncError);
+    }
   }
 
   return toAppSession(authUser);

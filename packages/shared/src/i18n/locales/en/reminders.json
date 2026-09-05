@@ -23,7 +23,7 @@
   "deleted": "Reminder deleted",
   "saveFailed": "Save failed",
   "permissionRequired": "Notification permission required",
-  "permissionMessage": "Please allow notifications for Open Health in system settings.",
+  "permissionMessage": "Please allow notifications for FitNMove in system settings.",
   "types": {
     "water": "Water",
     "exercise": "Exercise",

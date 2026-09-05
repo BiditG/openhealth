@@ -12,7 +12,7 @@ function getParseCtx(): CanvasRenderingContext2D {
     const c = document.createElement('canvas');
     c.width = 1;
     c.height = 1;
-    _parseCtx = c.getContext('2d')!;
+    _parseCtx = c.getContext('2d', { willReadFrequently: true })!;
   }
   return _parseCtx;
 }

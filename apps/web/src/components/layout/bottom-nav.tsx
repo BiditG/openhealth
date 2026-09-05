@@ -17,7 +17,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav data-testid="bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-white/85 lg:hidden dark:bg-background/90">
+    <nav data-testid="bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#153D33] bg-[#041A15]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-[#041A15]/90 lg:hidden">
       <div className="mx-auto grid h-[70px] max-w-lg grid-cols-5 items-center px-2">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
@@ -30,8 +30,8 @@ export function BottomNav() {
                 item.featured
                   ? "-mt-6 text-primary"
                   : isActive
-                    ? "text-primary"
-                    : "text-muted-foreground",
+                    ? "text-[#B8F34A]"
+                    : "text-[#8BA59B]",
               )}
               aria-label={item.label}
             >
@@ -39,9 +39,9 @@ export function BottomNav() {
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-xl",
                   item.featured
-                    ? "h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-[0_10px_28px_rgba(22,160,133,0.22)]"
+                    ? "h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-[0_10px_28px_rgba(184,243,74,0.25)]"
                     : isActive
-                      ? "bg-secondary"
+                      ? "bg-[#10372D]"
                       : "",
                 )}
               >

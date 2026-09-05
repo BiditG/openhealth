@@ -11,6 +11,7 @@ import { trpc } from "@/lib/trpc-client";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { PostHogPageView } from "@/components/posthog-pageview";
 import { MiniKitProvider } from "@/components/minikit-provider";
+import { NavigationLoader } from "@/components/ui/navigation-loader";
 
 // Workaround: React 18/19 types mismatch in monorepo causes children prop errors
 const Theme = ThemeProvider as React.FC<{
@@ -60,6 +61,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <PostHogPageView />
         <Theme attribute="class" defaultTheme="light" enableSystem={false}>
           <trpc.Provider client={trpcClient} queryClient={queryClient}>
+            <NavigationLoader />
             {children}
           </trpc.Provider>
         </Theme>

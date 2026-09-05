@@ -17,7 +17,7 @@
     "loginToContinue": "Sign in to continue",
     "createAccount": "Create Account",
     "loginDescription": "Sign in to access full health tracking features",
-    "registerDescription": "Create an account to start your Health OS",
+    "registerDescription": "Create an account to start your FitNMove hub",
     "loginFailed": "Sign in failed",
     "registerFailed": "Sign up failed",
     "loginFailedRetry": "Sign in failed, please try again later",
@@ -233,7 +233,7 @@
     "recipientTitle": "Data Recipients",
     "recipientBody": "• Google Gemini AI — for nutrition label image recognition\n• MiniMax AI — for text-based nutrition estimation\n\nThese services are provided by Google and MiniMax. Data processing is subject to their respective privacy policies.",
     "purposeTitle": "Purpose",
-    "purposeBody": "Your data is used solely for analyzing nutritional content and will not be used for any other purpose. Open Health does not store the original images or text sent to AI services.",
+    "purposeBody": "Your data is used solely for analyzing nutritional content and will not be used for any other purpose. FitNMove does not store the original images or text sent to AI services.",
     "privacyPolicyLink": "View Full Privacy Policy",
     "accept": "I Understand & Agree",
     "decline": "Don't Use This Feature"

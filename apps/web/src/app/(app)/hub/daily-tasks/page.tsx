@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -174,6 +174,7 @@ function TaskCard({
 export default function DailyTasksPage() {
   const router = useRouter();
   const utils = trpc.useUtils();
+  const [mounted, setMounted] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
   const [levelUp, setLevelUp] = useState<LevelUpState>(null);
   const { data: daily, isLoading } = trpc.tasks.getDaily.useQuery();
@@ -205,7 +206,11 @@ export default function DailyTasksPage() {
   const simpleTasks = daily?.tasks.filter((task) => task.category === "Task") ?? [];
   const missions = daily?.tasks.filter((task) => task.category === "Mission") ?? [];
 
-  if (isLoading) {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-7 w-7 animate-spin text-[#20C7A4]" />
@@ -214,7 +219,7 @@ export default function DailyTasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7FAF9] px-4 py-5 sm:px-6 lg:px-0">
+    <div className="premium-page-bg min-h-screen px-4 py-5 sm:px-6 lg:px-0">
       {celebration && (
         <div className="fixed inset-x-4 top-24 z-50 mx-auto max-w-sm overflow-hidden rounded-[18px] border border-[#20C7A4]/30 bg-white p-4 text-center shadow-xl animate-in slide-in-from-top-4 fade-in">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EAF8F4] text-[#123F37] animate-medal-pop">

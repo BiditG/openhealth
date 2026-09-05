@@ -4,7 +4,7 @@ import { ProPlans } from "@/components/pro/pro-plans";
 
 export default function PendingActivationPage() {
   return (
-    <main className="min-h-screen bg-[#F7FAF9] px-4 py-10">
+    <main className="premium-page-bg min-h-screen px-4 py-10">
       <section className="mx-auto max-w-6xl space-y-6">
         <div className="rounded-2xl border border-[#DCE7DC] bg-[#F8FAF7] p-6 shadow-sm">
           <div className="mb-5 flex items-center justify-between">

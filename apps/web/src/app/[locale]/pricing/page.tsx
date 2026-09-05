@@ -9,11 +9,11 @@ interface Props {
 }
 
 const titles: Record<Locale, string> = {
-  en: "Pricing - Swastha",
+  en: "Pricing - FitNMove",
 };
 
 const descriptions: Record<Locale, string> = {
-  en: "Swastha pricing and deployment options for a Nepal-focused personal health platform.",
+  en: "FitNMove pricing and activation options for a mobile-first fitness platform.",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

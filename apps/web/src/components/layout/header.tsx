@@ -1,7 +1,8 @@
 "use client";
 
 import { useSession } from "@/lib/auth-client";
-import { Bell, Camera, Crown, HeartPulse, LineChart, ListChecks, Route, Search, Trophy, User, Utensils, X } from "lucide-react";
+import { Bell, Camera, Crown, LineChart, ListChecks, Route, Search, Trophy, User, Utensils, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LoginDialog } from "@/components/auth/login-dialog";
@@ -57,13 +58,13 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85 dark:bg-background/90">
+      <header className="sticky top-0 z-40 border-b border-[#153D33] bg-[#041A15]/95 backdrop-blur supports-[backdrop-filter]:bg-[#041A15]/90">
         <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between gap-2 px-3 sm:px-4 lg:h-[72px] lg:px-6">
           <Link href="/hub" className="flex min-w-0 shrink-0 items-center gap-2 text-foreground transition-opacity duration-200 hover:opacity-80 sm:gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-primary">
-              <HeartPulse className="h-4 w-4" strokeWidth={2} />
+            <span className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-white">
+              <Image src="/icons/Logo.png" alt="" fill sizes="32px" className="object-contain" />
             </span>
-            <span className="hidden text-lg font-bold leading-none tracking-tight min-[380px]:inline">Swastha</span>
+            <span className="hidden text-lg font-bold leading-none tracking-tight min-[380px]:inline">FitNMove</span>
           </Link>
 
           <nav className="flex items-center gap-1 lg:hidden">
@@ -71,7 +72,7 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`h-10 items-center justify-center gap-1.5 rounded-xl bg-[#EAF8F4] px-2.5 text-[#123F37] ${
+                className={`h-10 items-center justify-center gap-1.5 rounded-xl bg-[#10372D] px-2.5 text-[#B8F34A] ${
                   item.label === "Notifications" ? "hidden min-[520px]:inline-flex" : "inline-flex"
                 }`}
                 aria-label={item.label}
@@ -87,7 +88,7 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-[#C0D1CA] transition-colors hover:bg-[#10372D] hover:text-[#B8F34A]"
               >
                 <item.icon className="h-4 w-4" strokeWidth={1.8} />
                 {item.label}
@@ -100,10 +101,10 @@ export function Header() {
               <button
                 type="button"
                 onClick={() => setShowRanks(true)}
-                className="hidden min-h-11 max-w-[190px] items-center gap-2 rounded-xl border border-[#DDE8E4] bg-[#F7FAF9] px-3 text-left text-[#123F37] shadow-sm transition hover:border-[#20C7A4]/60 sm:inline-flex"
+                className="hidden min-h-11 max-w-[190px] items-center gap-2 rounded-xl border border-[#1A4D40] bg-[#0B2C24] px-3 text-left text-[#F4F8F5] shadow-sm transition hover:border-[#35D39A]/60 hover:bg-[#16453A] sm:inline-flex"
                 aria-label={`Rank ${rankProgress.current.title}, ${(achievementStats?.points ?? 0).toLocaleString()} points`}
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#10372D]">
                   <RankIcon rank={rankProgress.current} className="h-5 w-5" />
                 </span>
                 <span className="min-w-0 leading-tight">
@@ -114,7 +115,7 @@ export function Header() {
               <button
                 type="button"
                 onClick={() => setShowRanks(true)}
-                className="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-[#DDE8E4] bg-[#F7FAF9] px-2.5 text-[#123F37] transition hover:border-[#20C7A4]/60 max-[360px]:px-0 sm:hidden"
+                className="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-[#1A4D40] bg-[#0B2C24] px-2.5 text-[#B8F34A] transition hover:border-[#35D39A]/60 hover:bg-[#16453A] max-[360px]:px-0 sm:hidden"
                 aria-label={`Rank ${rankProgress.current.title}, ${(achievementStats?.points ?? 0).toLocaleString()} points`}
               >
                 <RankIcon rank={rankProgress.current} className="h-5 w-5" />
@@ -122,21 +123,21 @@ export function Header() {
               </button>
               <Link
                 href="/hub/food/scan-label"
-                className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#0D8064] md:inline-flex"
+                className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#C8FA69] active:bg-[#9ED52E] md:inline-flex"
               >
                 <Camera className="h-4 w-4" strokeWidth={2} />
                 Snap meal
               </Link>
               <Link
                 href="/hub/food/search"
-                className="hidden h-11 w-11 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground transition-colors hover:bg-muted hover:text-primary sm:flex dark:bg-card"
+                className="hidden h-11 w-11 items-center justify-center rounded-xl border border-[#1A4D40] bg-[#0B2C24] text-[#C0D1CA] transition-colors hover:bg-[#16453A] hover:text-[#35D39A] sm:flex"
                 aria-label="Search foods"
               >
                 <Search className="h-5 w-5" strokeWidth={1.8} />
               </Link>
               <Link
                 href="/settings/profile"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-secondary text-primary transition-colors hover:bg-muted dark:bg-card"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#1A4D40] bg-[#10372D] text-[#B8F34A] transition-colors hover:bg-[#16453A]"
                 aria-label="Profile"
               >
                 <User className="h-5 w-5" strokeWidth={1.8} />
@@ -145,7 +146,7 @@ export function Header() {
           ) : (
             <button
               onClick={() => setShowLogin(true)}
-              className="min-h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#0D8064]"
+              className="min-h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[#C8FA69] active:bg-[#9ED52E]"
             >
               {t("auth.login")}
             </button>

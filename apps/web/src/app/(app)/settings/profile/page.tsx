@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Dumbbell, Footprints, Loader2, LogOut, Medal, Shield, Trophy, User } from "lucide-react";
+import { ArrowLeft, Dumbbell, Footprints, Loader2, LogOut, Medal, Shield, ShieldCheck, Trophy, User } from "lucide-react";
 import { RankBadge } from "@/components/ranks/rank-badge";
 import { getRankProgress } from "@/lib/rank-system";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ const teamOptions = {
 export default function ProfilePage() {
   const { t } = useTranslation(["settings", "common"]);
   const { data: session, isPending: sessionPending } = useSession();
+  const { data: me } = trpc.user.getMe.useQuery(undefined, { enabled: Boolean(session?.user) });
   const { data: profile, isLoading: profileLoading } = trpc.user.getProfile.useQuery();
   const { data: achievementStats } = trpc.tasks.getMyStats.useQuery();
   const router = useRouter();
@@ -216,6 +217,21 @@ export default function ProfilePage() {
           </div>
         ) : null}
       </section>
+
+      {me?.isAdmin ? (
+        <Link
+          href="/admin"
+          className="flex min-h-14 items-center justify-between rounded-2xl border border-[#B8F34A]/35 bg-[#10372D] px-4 text-sm font-black text-[#B8F34A] shadow-sm transition hover:border-[#B8F34A]/70 hover:bg-[#16453A]"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#B8F34A] text-[#041A15]">
+              <ShieldCheck className="h-5 w-5" />
+            </span>
+            Admin control center
+          </span>
+          <ArrowLeft className="h-4 w-4 rotate-180" />
+        </Link>
+      ) : null}
 
       <section className="rounded-3xl border border-border bg-white p-5 shadow-[0_4px_18px_rgba(20,40,30,0.04)] dark:bg-card">
         <div className="mb-5 flex items-center gap-3">

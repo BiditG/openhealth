@@ -1,27 +1,27 @@
 {
   "metadata": {
-    "description": "The first open-source, mobile-first personal health AI agent. Understands your nutrition, sleep, fitness, and becomes the health companion that knows you best."
+    "description": "FitNMove helps you train smarter, move daily, track progress, and compete with momentum in one mobile-first fitness hub."
   },
   "hero": {
-    "subtitle": "The first open-source, mobile-first personal health AI agent — understands your nutrition, sleep, and fitness to become the health companion that knows you best",
+    "subtitle": "Train with structure, move with purpose, and compete through points, ranks, and daily wins.",
     "cta": "Get Started"
   },
   "philosophy": {
-    "quote1": "Your health deserves",
-    "quote2": "an AI that truly understands you.",
-    "desc1": "Open Health is more than a tracking tool —",
-    "desc2": "it's a personal health AI that understands your diet, sleep, and fitness to become the companion that knows you best.",
-    "tagline": "Not another tracking app. It's your personal health AI."
+    "quote1": "Your effort deserves",
+    "quote2": "momentum you can feel.",
+    "desc1": "FitNMove is more than a tracking tool —",
+    "desc2": "it's a training, movement, and competition hub that helps your daily effort add up.",
+    "tagline": "Train. Move. Compete."
   },
   "features": {
-    "title01": "Personal Health AI",
-    "desc01": "AI analyzes your food diary, photo-recognizes nutrition labels, and estimates calories from a meal description. More than a tool — a health companion that learns you over time.",
-    "title02": "Comprehensive Tracking",
-    "desc02": "Diet, exercise, sleep, weight, water, fasting — no more juggling multiple apps. One platform covers all aspects of health, with data naturally connected.",
+    "title01": "Training Momentum",
+    "desc01": "Plan workouts, follow sets, and use feedback to make every session clearer.",
+    "title02": "Movement Tracking",
+    "desc02": "Walks, runs, exercise, sleep, weight, water, and nutrition live together so progress is easier to read.",
     "title03": "Data Visualization",
     "desc03": "Weight trends, nutrition intake, sleep quality, exercise performance — all at a glance. Make better decisions with an integrated perspective.",
-    "title04": "Open Source",
-    "desc04": "Your data is entirely yours, no lock-in, no paywalls. Open-source architecture, community-driven, anyone can contribute and extend."
+    "title04": "Friendly Competition",
+    "desc04": "Daily tasks, ranks, points, medals, and leaderboards turn consistency into something worth chasing."
   },
   "install": {
     "comingSoon": "Coming Soon",
@@ -33,7 +33,7 @@
     "android02": "Tap the menu button ⋮ at the top right"
   },
   "blog": {
-    "title": "Health Knowledge Base",
+    "title": "FitNMove Knowledge Base",
     "subtitle": "In-depth content on nutrition science, training methods, and sleep optimization.",
     "comingSoon": "Coming Soon",
     "goToBlog": "Go to Blog →"

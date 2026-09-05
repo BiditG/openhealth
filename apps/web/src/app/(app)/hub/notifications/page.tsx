@@ -15,7 +15,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7FAF9] px-4 py-5 sm:px-6 lg:px-0">
+    <div className="premium-page-bg min-h-screen px-4 py-5 sm:px-6 lg:px-0">
       <section className="rounded-[24px] bg-[#123F37] p-6 text-white shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#20C7A4]">Notifications</p>
         <h1 className="mt-3 text-3xl font-black tracking-normal">Daily health guidance</h1>

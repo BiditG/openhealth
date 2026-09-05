@@ -1,12 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ChevronLeft, Crown, Loader2, Search, Shield, Star, Target, Trophy } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, Crown, Loader2, Medal, Shield, Target, Trophy } from "lucide-react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc-client";
+import { RankIcon } from "@/components/ranks/rank-badge";
+import { getRankForPoints } from "@/lib/rank-system";
 
-type Metric = "overall" | "pushup" | "bicepCurl" | "pullup" | "squat";
+type Metric = "overall" | "pushup" | "bicepCurl" | "pullup" | "squat" | "plank";
 type LeaderboardEntry = {
   userId: string;
   name: string | null;
@@ -21,19 +25,20 @@ type LeaderboardEntry = {
   eliteMedals: number;
 };
 
-const FILTERS: { value: Metric; label: string }[] = [
-  { value: "overall", label: "All" },
-  { value: "pushup", label: "Push-up" },
-  { value: "bicepCurl", label: "Curl" },
-  { value: "pullup", label: "Pull-up" },
-  { value: "squat", label: "Squat" },
+const FILTERS: { value: Metric; label: string; image: string; detail: string }[] = [
+  { value: "overall", label: "All", image: "/Workout/leaderboard-banner.png", detail: "All verified points" },
+  { value: "pushup", label: "Push-up", image: "/Workout/pushup.png", detail: "Chest, core, control" },
+  { value: "bicepCurl", label: "Curl", image: "/Workout/bicep-curl.png", detail: "Arm strength reps" },
+  { value: "pullup", label: "Pull-up", image: "/Workout/bicep-curl.png", detail: "Upper-body strength" },
+  { value: "squat", label: "Squat", image: "/Workout/squat.png", detail: "Lower-body power" },
+  { value: "plank", label: "Plank", image: "/Workout/plank.png", detail: "Core hold streaks" },
 ];
 
 const PODIUM_ORDER = [2, 1, 3];
 const SEASON_END = new Date("2026-09-30T23:59:59");
 
 function initials(name?: string | null) {
-  return (name ?? "OH")
+  return (name ?? "FM")
     .split(" ")
     .map((part) => part[0])
     .join("")
@@ -44,7 +49,7 @@ function initials(name?: string | null) {
 function teamLabel(teamColor?: string | null) {
   if (teamColor === "red") return "Team Red";
   if (teamColor === "blue") return "Team Blue";
-  return "OpenHealth";
+  return "FitNMove";
 }
 
 function seasonCountdown() {
@@ -55,6 +60,7 @@ function seasonCountdown() {
 }
 
 export default function LeaderboardPage() {
+  const [mounted, setMounted] = useState(false);
   const [metric, setMetric] = useState<Metric>("overall");
   const { data: leaderboard, isLoading } = trpc.tasks.getLeaderboard.useQuery({ metric });
   const { data: teamScores } = trpc.tasks.getTeamScores.useQuery();
@@ -64,6 +70,12 @@ export default function LeaderboardPage() {
   const rest = entries.slice(3);
   const currentUser = entries.find((entry) => entry.isCurrentUser) ?? null;
   const scoreLabel = metric === "overall" ? "pts" : "reps";
+  const activeFilter = FILTERS.find((item) => item.value === metric) ?? FILTERS[0];
+  const leaderName = entries[0]?.name ?? "Open spot";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const teamState = useMemo(() => {
     const red = teamScores?.teams.find((team) => team.teamColor === "red") ?? {
@@ -92,7 +104,7 @@ export default function LeaderboardPage() {
     return `${Math.max(1, Number(next.score) - Number(currentUser.score) + 1)} ${scoreLabel} to overtake #${next.rank}`;
   }, [currentUser, entries, scoreLabel]);
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center bg-background">
         <Loader2 className="h-7 w-7 animate-spin text-primary" />
@@ -101,63 +113,159 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#20C7A4_0%,#75DEC9_42%,#F7FAF9_42%,#F7FAF9_100%)] text-foreground lg:bg-[linear-gradient(180deg,#20C7A4_0%,#75DEC9_36%,#F7FAF9_36%,#F7FAF9_100%)]">
-      <div className="mx-auto w-full max-w-[440px] px-4 pb-6 pt-4 lg:max-w-[720px] lg:pt-6">
-        <header className="flex h-11 items-center justify-between text-white">
-          <Link href="/hub" className="inline-flex items-center gap-1 rounded-full py-2 pr-3 text-sm font-semibold text-white/82 transition hover:text-white" aria-label="Back to hub">
-            <ChevronLeft className="h-5 w-5" strokeWidth={2.2} />
-            Home
-          </Link>
-          <h1 className="text-lg font-black">Leaderboards</h1>
-          <Link href="/hub/food/search" className="flex h-10 w-10 items-center justify-center rounded-full text-white/82 transition hover:bg-white/12 hover:text-white" aria-label="Search">
-            <Search className="h-5 w-5" strokeWidth={2.2} />
-          </Link>
-        </header>
-
-        <section className="pt-6">
-          <div className="relative mx-auto flex min-h-[194px] max-w-[390px] items-end justify-center">
-            <div className="absolute inset-x-0 bottom-0 grid grid-cols-3 overflow-hidden rounded-b-[18px] rounded-t-[18px] bg-[#0F5A48] shadow-[0_18px_34px_rgba(13,79,64,0.22)]">
-              <div className="h-[94px] bg-[#0D6C54]" />
-              <div className="h-[130px] bg-[#157D61]" />
-              <div className="h-[94px] bg-[#0D6C54]" />
+    <div className="premium-page-bg min-h-screen text-foreground">
+      <div className="mx-auto w-full max-w-[460px] px-5 pb-10 pt-5 sm:px-6 lg:max-w-[980px] lg:px-8 lg:pb-12 lg:pt-8">
+        <section className="relative overflow-hidden rounded-[30px] border border-white/40 bg-[#07110F] text-white shadow-[0_24px_60px_rgba(7,17,15,0.22)]">
+          <div className="relative min-h-[430px] sm:min-h-[520px] lg:min-h-[620px]">
+            <div className="absolute inset-0">
+              <Image
+                src="/Workout/leaderboard-banner.png"
+                alt="FitNMove leaderboard banner"
+                fill
+                sizes="(min-width: 1024px) 980px, 100vw"
+                className="object-cover object-center"
+                priority
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,17,15,0.28)_0%,rgba(7,17,15,0.08)_45%,rgba(7,17,15,0.62)_100%)]" />
             </div>
 
-            <div className="relative z-10 grid w-full grid-cols-3 items-end px-2">
+            <div className="relative z-10 flex h-full min-h-[430px] flex-col justify-between p-5 sm:min-h-[520px] sm:p-6 lg:min-h-[620px] lg:p-7">
+            <header className="flex h-11 items-center justify-between">
+              <Link href="/hub" className="inline-flex items-center gap-1 rounded-full bg-white/10 py-2 pl-2 pr-3 text-sm font-semibold text-white/88 backdrop-blur transition hover:bg-white/16 hover:text-white" aria-label="Back to hub">
+                <ChevronLeft className="h-5 w-5" strokeWidth={2.2} />
+                Home
+              </Link>
+              <h1 className="text-sm font-black uppercase tracking-[0.18em] text-white/82">Leaderboards</h1>
+              <span className="h-10 w-[76px]" aria-hidden="true" />
+            </header>
+
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                ["Leader", leaderName],
+                ["Board", activeFilter.label],
+                ["Season", seasonCountdown()],
+              ].map(([label, value]) => (
+                <div key={label} className="min-w-0 rounded-2xl border border-white/14 bg-[#07110F]/38 p-3 backdrop-blur">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/50">{label}</p>
+                  <p className="mt-1 truncate text-sm font-black text-white">{value}</p>
+                </div>
+              ))}
+            </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-[30px] border border-white bg-white p-7 shadow-[0_18px_50px_rgba(23,32,30,0.10)] sm:mt-8 sm:p-8 lg:mt-10 lg:p-10">
+          <div className="flex items-center justify-between gap-4 px-1 sm:px-2 lg:px-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary">Top competitors</p>
+              <h2 className="mt-1 text-xl font-black text-[#17201E]">TOP PERFORMER</h2>
+            </div>
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#DDEAE5] bg-[#F7FAF9] px-3 py-1.5 text-xs font-black text-[#123F37]">
+              <Medal className="h-3.5 w-3.5 text-primary" />
+              {scoreLabel.toUpperCase()}
+            </div>
+          </div>
+
+          <div className="relative mx-auto mt-10 flex min-h-[278px] max-w-[540px] items-end justify-center overflow-hidden rounded-[28px] px-3 pt-10 sm:mt-12">
+            <motion.div
+              aria-hidden="true"
+              animate={{ opacity: [0.25, 0.5, 0.25], scale: [0.92, 1.05, 0.92] }}
+              transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute left-1/2 top-12 h-40 w-40 -translate-x-1/2 rounded-full bg-[#B8F34A]/20 blur-3xl"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-x-2 bottom-0 grid grid-cols-3 overflow-hidden rounded-[24px] border border-[#CFE8DF] bg-[#0F5A48] shadow-[0_24px_54px_rgba(13,79,64,0.22)]"
+            >
+              <div className="h-[112px] bg-[linear-gradient(180deg,#1B8E70,#0D6C54)]" />
+              <div className="relative h-[154px] overflow-hidden bg-[linear-gradient(180deg,#D7FF8A,#20C7A4_40%,#157D61)]">
+                <motion.span
+                  aria-hidden="true"
+                  animate={{ x: ["-140%", "160%"] }}
+                  transition={{ duration: 2.9, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
+                  className="absolute inset-y-0 w-12 rotate-12 bg-white/35 blur-md"
+                />
+              </div>
+              <div className="h-[112px] bg-[linear-gradient(180deg,#1B8E70,#0D6C54)]" />
+            </motion.div>
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={{
+                hidden: {},
+                show: { transition: { staggerChildren: 0.12, delayChildren: 0.18 } },
+              }}
+              className="relative z-10 grid w-full grid-cols-3 items-end px-2"
+            >
               {PODIUM_ORDER.map((rank) => {
                 const entry = topThree.find((item) => item.rank === rank);
                 return entry ? <PodiumSpot key={entry.userId} entry={entry} scoreLabel={scoreLabel} /> : <EmptyPodiumSpot key={rank} rank={rank} />;
               })}
-            </div>
+            </motion.div>
           </div>
 
-          <div className="mx-auto mt-4 grid max-w-[390px] grid-cols-[1fr_54px_1fr] items-stretch gap-2 rounded-[20px] bg-white/18 p-2 text-white shadow-[0_12px_26px_rgba(13,79,64,0.12)] backdrop-blur">
+          <div className="mx-auto mt-9 grid max-w-[540px] grid-cols-[1fr_72px_1fr] items-stretch gap-3 rounded-[24px] border border-[#1A4D40] bg-[#07251E]/80 p-4 text-[#F4F8F5] sm:mt-10">
             <TeamChip label="Red" score={teamState.red.points} active={teamState.leader.teamColor === "red"} tone="red" />
-            <div className="flex min-w-0 flex-col items-center justify-center rounded-2xl bg-white/16 px-1 text-center">
-              <p className="text-sm font-black uppercase text-white">VS</p>
-              <p className="mt-0.5 max-w-full truncate text-[9px] font-black uppercase text-white/62">{seasonCountdown()}</p>
+            <div className="flex min-w-0 flex-col items-center justify-center rounded-2xl border border-[#35D39A]/15 bg-[#10372D] px-1 text-center shadow-sm">
+              <p className="text-sm font-black uppercase text-[#B8F34A]">VS</p>
+              <p className="mt-0.5 max-w-full truncate text-[9px] font-black uppercase text-[#C0D1CA]">{teamState.gap.toLocaleString()} gap</p>
             </div>
             <TeamChip label="Blue" score={teamState.blue.points} active={teamState.leader.teamColor === "blue"} tone="blue" />
           </div>
         </section>
 
-        <section className="mt-5 rounded-[22px] border border-white/80 bg-white p-3 shadow-[0_18px_42px_rgba(23,32,30,0.14)] lg:p-4">
-          <div className="flex gap-1 overflow-x-auto rounded-2xl bg-[#0F5A48] p-1 scrollbar-hide">
+        <section className="mt-6 rounded-[26px] border border-[#E3EAE7] bg-white p-5 shadow-[0_14px_36px_rgba(23,32,30,0.08)] sm:p-6 lg:p-8">
+          <div className="mb-5 overflow-hidden rounded-[22px] border border-[#D7ECE5] bg-[#07110F]">
+            <div className="grid min-h-[132px] grid-cols-[1fr_132px] items-stretch sm:grid-cols-[1fr_170px]">
+              <div className="min-w-0 p-4 text-white">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#20C7A4]">Active board</p>
+                <h2 className="mt-2 truncate text-2xl font-black">{activeFilter.label}</h2>
+                <p className="mt-1 text-xs font-semibold text-white/62">{activeFilter.detail}</p>
+                <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-white/42">{entries.length} ranked athletes</p>
+              </div>
+              <div className="relative min-h-[136px] overflow-hidden">
+                <Image
+                  src={activeFilter.image}
+                  alt={`${activeFilter.label} leaderboard artwork`}
+                  fill
+                  sizes="132px"
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-l from-transparent to-[#07110F]/12" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 overflow-x-auto rounded-2xl border border-[#DDEAE5] bg-[#F7FAF9] p-2 scrollbar-hide">
             {FILTERS.map((item) => (
               <button
                 key={item.value}
                 type="button"
+                aria-pressed={metric === item.value}
                 onClick={() => setMetric(item.value)}
                 className={cn(
-                  "min-h-10 shrink-0 rounded-xl px-4 text-xs font-black transition",
-                  metric === item.value ? "bg-[#20C7A4] text-white shadow-[0_6px_16px_rgba(32,199,164,0.24)]" : "text-white/88 hover:bg-white/10"
+                  "grid w-[92px] shrink-0 gap-1 overflow-hidden rounded-xl p-1 text-left text-xs font-black transition",
+                  metric === item.value ? "bg-[#123F37] text-white shadow-[0_8px_20px_rgba(18,63,55,0.16)]" : "bg-white text-[#123F37] hover:bg-[#EAF8F4]"
                 )}
               >
-                {item.label}
+                <span className="relative h-12 overflow-hidden rounded-lg bg-black/20">
+                  <Image src={item.image} alt="" fill sizes="86px" className="object-cover" />
+                </span>
+                <span className="truncate px-1 pb-0.5">{item.label}</span>
               </button>
             ))}
           </div>
 
-          <div className="mt-3 divide-y divide-border">
+          <div className="mt-6 overflow-hidden rounded-[20px] border border-[#E3EAE7]">
+            <div className="grid grid-cols-[48px_minmax(0,1fr)_80px] bg-[#F7FAF9] px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+              <span>Rank</span>
+              <span>Athlete</span>
+              <span className="text-right">Score</span>
+            </div>
+            <div className="divide-y divide-border bg-white">
             {rest.map((entry) => (
               <RankRow key={entry.userId} entry={entry} scoreLabel={scoreLabel} />
             ))}
@@ -169,10 +277,11 @@ export default function LeaderboardPage() {
                 </p>
               </div>
             )}
+            </div>
           </div>
         </section>
 
-        <aside className="mt-4 rounded-[20px] border border-[#BFE7D4] bg-white/92 p-4 shadow-[0_12px_30px_rgba(20,50,40,0.08)] backdrop-blur">
+        <aside className="mt-6 rounded-[22px] border border-[#BFE7D4] bg-white/92 p-5 shadow-[0_12px_30px_rgba(20,50,40,0.08)] backdrop-blur sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-primary">Your Rank</p>
@@ -195,30 +304,60 @@ function TeamChip({ label, score, active, tone }: { label: string; score: number
   return (
     <div
       className={cn(
-        "min-w-0 rounded-2xl border px-2 py-2.5 text-center shadow-[0_10px_22px_rgba(13,79,64,0.16)]",
+        "min-w-0 rounded-2xl border px-2 py-2.5 text-center shadow-sm transition",
         tone === "red"
-          ? "border-red-200/70 bg-[linear-gradient(180deg,#F87171_0%,#DC2626_100%)]"
-          : "border-blue-200/70 bg-[linear-gradient(180deg,#60A5FA_0%,#2563EB_100%)]",
-        active && "ring-2 ring-white/80"
+          ? "border-[#FF5C68]/40 bg-[linear-gradient(180deg,rgba(255,92,104,0.22),rgba(11,44,36,0.96))] text-[#FFD9DD]"
+          : "border-[#67B7E8]/40 bg-[linear-gradient(180deg,rgba(103,183,232,0.22),rgba(11,44,36,0.96))] text-[#D9F0FF]",
+        active && "ring-2 ring-[#B8F34A]/70"
       )}
     >
       <div className="flex items-center justify-center gap-1">
-        <Shield className="h-3.5 w-3.5 text-white/88" />
-        <p className="text-[10px] font-black uppercase text-white/84">Team {label}</p>
+        <Shield className="h-3.5 w-3.5" />
+        <p className="text-[10px] font-black uppercase">Team {label}</p>
       </div>
-      <p className="mt-1 truncate text-xl font-black leading-none tabular-nums text-white">{score.toLocaleString()}</p>
-      <p className="mt-0.5 text-[9px] font-black uppercase text-white/72">{active ? "Leading" : "Chasing"}</p>
+      <p className="mt-1 truncate text-xl font-black leading-none tabular-nums text-[#F4F8F5]">{score.toLocaleString()}</p>
+      <p className="mt-0.5 text-[9px] font-black uppercase text-[#C0D1CA]">{active ? "Leading" : "Chasing"}</p>
     </div>
   );
 }
 
 function PodiumSpot({ entry, scoreLabel }: { entry: LeaderboardEntry; scoreLabel: string }) {
   const isChampion = entry.rank === 1;
+  const rank = getRankForPoints(entry.points);
   return (
-    <article className={cn("flex min-w-0 flex-col items-center text-center text-white", isChampion ? "pb-4" : "pb-3")}>
-      {isChampion ? <Crown className="mb-1 h-9 w-9 fill-accent text-accent drop-shadow-sm" /> : <div className="h-7" />}
+    <motion.article
+      variants={{
+        hidden: { opacity: 0, y: 32, scale: 0.92, filter: "blur(8px)" },
+        show: {
+          opacity: 1,
+          y: isChampion ? [0, -8, 0] : 0,
+          scale: 1,
+          filter: "blur(0px)",
+          transition: {
+            duration: 0.7,
+            ease: [0.22, 1, 0.36, 1],
+            y: { duration: 3.6, repeat: Infinity, ease: "easeInOut" },
+          },
+        },
+      }}
+      whileHover={{ y: -8, scale: 1.03 }}
+      className={cn("flex min-w-0 flex-col items-center text-center text-white", isChampion ? "pb-4" : "pb-3")}
+    >
+      {isChampion ? (
+        <motion.div
+          animate={{ rotate: [-3, 3, -3], y: [0, -3, 0] }}
+          transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Crown className="mb-1 h-9 w-9 fill-accent text-accent drop-shadow-[0_0_14px_rgba(184,243,74,0.42)]" />
+        </motion.div>
+      ) : (
+        <div className="h-7" />
+      )}
       <div className="relative">
         <Avatar name={entry.name} team={entry.teamColor} large={isChampion} />
+        <span className={cn("absolute -right-2 -top-2 flex items-center justify-center rounded-full border border-white/70 bg-white shadow-[0_10px_24px_rgba(15,90,72,0.24)]", isChampion ? "h-9 w-9 text-amber-700" : "h-7 w-7 text-[#0F5A48]")}>
+          <RankIcon rank={rank} className={isChampion ? "h-7 w-7" : "h-5 w-5"} />
+        </span>
         <span
           className={cn(
             "absolute -bottom-2 left-1/2 flex -translate-x-1/2 items-center justify-center rounded-full border-2 border-white text-[10px] font-black text-white shadow-sm",
@@ -228,16 +367,23 @@ function PodiumSpot({ entry, scoreLabel }: { entry: LeaderboardEntry; scoreLabel
           {entry.rank}
         </span>
       </div>
-      <h2 className={cn("mt-4 w-full truncate px-1 font-black", isChampion ? "text-sm" : "text-xs")}>{entry.name ?? "OpenHealth"}</h2>
+      <h2 className={cn("mt-4 w-full truncate px-1 font-black", isChampion ? "text-sm" : "text-xs")}>{entry.name ?? "FitNMove"}</h2>
       <p className={cn("mt-1 font-black tabular-nums", isChampion ? "text-accent" : "text-primary")}>{Number(entry.score).toLocaleString()}</p>
       <p className="mt-0.5 w-full truncate px-1 text-[10px] font-semibold text-white/58">{scoreLabel} / {entry.rankTitle}</p>
-    </article>
+    </motion.article>
   );
 }
 
 function EmptyPodiumSpot({ rank }: { rank: number }) {
   return (
-    <article className="flex min-w-0 flex-col items-center pb-4 text-center text-white/70">
+    <motion.article
+      variants={{
+        hidden: { opacity: 0, y: 28, scale: 0.94 },
+        show: { opacity: 1, y: 0, scale: 1 },
+      }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      className="flex min-w-0 flex-col items-center pb-4 text-center text-white/70"
+    >
       <div className="h-7" />
       <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/40 bg-white/14 text-lg font-black">
         {rank}
@@ -245,21 +391,29 @@ function EmptyPodiumSpot({ rank }: { rank: number }) {
       <p className="mt-4 text-xs font-black">Open spot</p>
       <p className="mt-1 text-xs font-black tabular-nums">0</p>
       <p className="mt-0.5 text-[10px] font-semibold text-white/50">complete a task</p>
-    </article>
+    </motion.article>
   );
 }
 
 function RankRow({ entry, scoreLabel }: { entry: LeaderboardEntry; scoreLabel: string }) {
+  const rank = getRankForPoints(entry.points);
   return (
-    <div className={cn("grid grid-cols-[34px_46px_minmax(0,1fr)_auto] items-center gap-3 px-1 py-3.5", entry.isCurrentUser && "rounded-2xl bg-secondary px-2")}>
-      <div className="relative flex h-8 w-8 items-center justify-center">
-        <Star className="absolute h-8 w-8 fill-accent text-accent" strokeWidth={1.7} />
-        <span className="relative text-[10px] font-black tabular-nums text-accent-foreground">{entry.rank}</span>
+    <div className={cn("grid grid-cols-[48px_46px_minmax(0,1fr)_84px] items-center gap-4 px-4 py-4 sm:px-5", entry.isCurrentUser && "bg-[#EAF8F4]")}>
+      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#DDEAE5] bg-[#F7FAF9] text-[11px] font-black tabular-nums text-[#123F37]">
+        #{entry.rank}
       </div>
-      <Avatar name={entry.name} team={entry.teamColor} />
+      <div className="relative">
+        <Avatar name={entry.name} team={entry.teamColor} />
+        <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white text-[#0F5A48] shadow-sm">
+          <RankIcon rank={rank} className="h-4 w-4" />
+        </span>
+      </div>
       <div className="min-w-0">
-        <p className="truncate text-sm font-black text-foreground">{entry.name ?? "OpenHealth"}</p>
-        <p className="truncate text-xs font-semibold text-muted-foreground">{teamLabel(entry.teamColor)} • {entry.rankTitle}</p>
+        <p className="truncate text-sm font-black text-foreground">{entry.name ?? "FitNMove"}</p>
+        <p className="truncate text-xs font-semibold text-muted-foreground">{teamLabel(entry.teamColor)} / {entry.rankTitle}</p>
+        <p className="mt-0.5 truncate text-[10px] font-bold text-[#5F6F69]">
+          +{Number(entry.todayPoints).toLocaleString()} today / {entry.eliteMedals} elite medals
+        </p>
       </div>
       <div className="text-right">
         <p className="text-sm font-black tabular-nums text-[#0F5A48]">{Number(entry.score).toLocaleString()}</p>

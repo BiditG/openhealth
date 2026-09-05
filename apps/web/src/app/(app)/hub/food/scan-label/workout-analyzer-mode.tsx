@@ -1,17 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   Activity,
-  Bookmark,
   Camera,
   CheckCircle2,
   ChevronDown,
   Clock,
   Dumbbell,
   Flame,
-  Heart,
   ListChecks,
   Loader2,
   Maximize2,
@@ -24,8 +22,6 @@ import {
   RotateCcw,
   Search,
   Settings,
-  Shield,
-  Sparkles,
   TimerReset,
   VideoOff,
   Volume2,
@@ -36,12 +32,15 @@ import {
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc-client";
 import { toast } from "sonner";
+import { motion } from "motion/react";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   MUSCLE_TRAINING_STORAGE_KEY,
   getDecayedMuscleScore,
   getMusclesForExercise,
   type MuscleTrainingProfile,
 } from "@/lib/exercise-media";
+import { getWorkoutClipForExercise } from "@/lib/workout-clips";
 
 type Landmark = {
   x: number;
@@ -151,6 +150,7 @@ type RoutineStep =
 type PresetExercise = {
   label: string;
   exercise?: ExerciseKey;
+  clipSrc?: string;
   sets: number;
   reps?: number;
   seconds?: number;
@@ -203,12 +203,6 @@ type WorkoutProgram = {
   label: string;
   description: string;
   steps: RoutineStep[];
-};
-
-type WorkoutAnalyzerExperience = "combined" | "quick" | "programs";
-
-type WorkoutAnalyzerModeProps = {
-  experience?: WorkoutAnalyzerExperience;
 };
 
 const EXERCISES: ExerciseDefinition[] = [
@@ -345,7 +339,7 @@ const TIMED_EXERCISES = new Set<ExerciseKey>(["plank", "wallSit", "sidePlank"]);
 const TRACKING_PROFILES: Record<ExerciseKey, ExerciseTrackingProfile> = {
   squat: { recommended: "camera", motion: true, motionHint: "Phone in pocket or waistband; count the down-up rhythm." },
   pushup: { recommended: "camera", motion: false, motionHint: "Motion is less reliable for push-ups; use tap, audio, or Manual Mode if camera is weak." },
-  plank: { recommended: "interactive", motion: false, motionHint: "Use Voice Assisted Mode or Manual Mode for timer-based hold work." },
+  plank: { recommended: "interactive", motion: false, motionHint: "Use Audio Cue or Manual Mode for timer-based hold work." },
   gluteBridge: { recommended: "camera", motion: true, motionHint: "Phone at waistband; count hip lift rhythm." },
   reverseLunge: { recommended: "camera", motion: true, motionHint: "Phone in pocket; count each return to standing." },
   forwardLunge: { recommended: "camera", motion: true, motionHint: "Phone in pocket; count each return to standing." },
@@ -356,8 +350,8 @@ const TRACKING_PROFILES: Record<ExerciseKey, ExerciseTrackingProfile> = {
   situp: { recommended: "camera", motion: true, motionHint: "Phone near torso or waistband; count sit-up rhythm." },
   burpee: { recommended: "motion", motion: true, motionHint: "Phone secure in pocket; large motion and impact count burpees." },
   calfRaise: { recommended: "camera", motion: true, motionHint: "Phone in pocket; count rise-lower rhythm." },
-  wallSit: { recommended: "interactive", motion: false, motionHint: "Use Voice Assisted Mode or Manual Mode for timer-based hold work." },
-  sidePlank: { recommended: "interactive", motion: false, motionHint: "Use Voice Assisted Mode or Manual Mode for timer-based hold work." },
+  wallSit: { recommended: "interactive", motion: false, motionHint: "Use Audio Cue or Manual Mode for timer-based hold work." },
+  sidePlank: { recommended: "interactive", motion: false, motionHint: "Use Audio Cue or Manual Mode for timer-based hold work." },
   legRaise: { recommended: "camera", motion: true, motionHint: "Phone near waistband; count controlled raise rhythm." },
   shoulderTaps: { recommended: "camera", motion: true, motionHint: "Phone secured near torso; count tap rhythm." },
   squatJump: { recommended: "motion", motion: true, motionHint: "Phone in pocket; impact rhythm counts each jump." },
@@ -373,7 +367,6 @@ const TRACKING_OPTIONS: Array<{
   proof: string;
 }> = [
   { mode: "camera", title: "Camera Mode", description: "Pose tracking with the strongest proof.", proof: "4x points" },
-  { mode: "motion", title: "Motion Mode", description: "Pocket accelerometer/gyroscope rhythm counting.", proof: "4x points" },
   { mode: "interactive", title: "Interactive Mode", description: "Tap or audio reps without camera.", proof: "2x points" },
   { mode: "trust", title: "Manual Mode", description: "Complete the timer and self-confirm.", proof: "1x points" },
 ];
@@ -384,7 +377,7 @@ const INTERACTIVE_OPTIONS: Array<{
   description: string;
 }> = [
   { mode: "tap", title: "Tap-to-Rep", description: "Tap the big button, space, enter, or supported volume keys after each rep." },
-  { mode: "audio", title: "Voice Assisted Mode", description: "Say each rep or make a clear breath/impact rhythm for the microphone." },
+  { mode: "audio", title: "Audio Rep", description: "Say each rep or make a clear breath/impact rhythm for the microphone." },
 ];
 
 const PROOF_LABELS: Record<ProofSource, string> = {
@@ -429,327 +422,116 @@ const WORKOUT_PROGRAMS: WorkoutProgram[] = [
   },
 ];
 
-const FILTER_CHIPS = [
-  "For You",
-  "High Points",
-  "Beginner",
-  "Strength",
-  "Core",
-  "Cardio",
-  "Mobility",
-  "No Equipment",
-];
+const MotionCard = motion.create(Card);
 
 const WORKOUT_PRESETS: WorkoutPreset[] = [
   {
-    id: "five-minute-burner",
-    name: "The 5-Minute Burner",
-    displayName: "The 5-Minute Burner",
-    tagline: "Fast heat when you only have a pocket of time.",
+    id: "chest-press-builder",
+    name: "Chest Press Builder",
+    displayName: "Chest Press Builder",
+    tagline: "Push-up strength for chest, shoulders, and triceps.",
     difficulty: "Beginner",
-    durationMin: 5,
-    goal: "Cardio spark",
+    durationMin: 9,
+    goal: "Chest strength",
     equipment: "No Equipment",
-    muscles: ["Full body", "Core", "Legs"],
-    calories: 55,
-    compatibility: "Audio-first",
-    thumbnail: "5M",
-    pointsReward: 80,
-    tags: ["Beginner", "5-10 min", "Cardio", "No Equipment"],
-    recommended: true,
-    completed: true,
-    bestScore: 156,
-    streak: 2,
-    exercises: [
-      { label: "Squats", exercise: "squat", sets: 1, reps: 12, restSeconds: 15, tracking: "camera" },
-      { label: "Mountain Climbers", exercise: "mountainClimbers", sets: 1, reps: 20, restSeconds: 15, tracking: "camera" },
-      { label: "Push-ups", exercise: "pushup", sets: 1, reps: 8, restSeconds: 15, tracking: "camera" },
-      { label: "Plank", exercise: "plank", sets: 1, seconds: 30, restSeconds: 0, tracking: "timer" },
-    ],
-  },
-  {
-    id: "core-lock",
-    name: "Core Lock",
-    displayName: "Core Lock",
-    tagline: "Brace, hold, and build a steadier center.",
-    difficulty: "Intermediate",
-    durationMin: 12,
-    goal: "Core stability",
-    equipment: "No Equipment",
-    muscles: ["Core", "Abs", "Shoulders"],
-    calories: 95,
-    compatibility: "Timer guided",
-    thumbnail: "CL",
-    pointsReward: 120,
-    tags: ["15-20 min", "Core", "No Equipment", "High Points"],
-    recommended: true,
-    bestScore: 220,
-    exercises: [
-      { label: "Plank", exercise: "plank", sets: 3, seconds: 35, restSeconds: 20, tracking: "timer" },
-      { label: "Mountain Climbers", exercise: "mountainClimbers", sets: 3, reps: 20, restSeconds: 20, tracking: "camera" },
-      { label: "Shoulder Taps", exercise: "shoulderTaps", sets: 2, reps: 16, restSeconds: 20, tracking: "camera" },
-      { label: "Leg Raises", exercise: "legRaise", sets: 2, reps: 10, restSeconds: 0, tracking: "camera" },
-    ],
-  },
-  {
-    id: "push-up-rush",
-    name: "Push-Up Rush",
-    displayName: "Push-Up Rush",
-    tagline: "Upper-body pressure with short rests.",
-    difficulty: "Intermediate",
-    durationMin: 10,
-    goal: "Upper-body strength",
-    equipment: "No Equipment",
-    muscles: ["Chest", "Arms", "Core"],
-    calories: 115,
-    compatibility: "Audio-first",
-    thumbnail: "PR",
+    muscles: ["Chest", "Shoulders", "Triceps"],
+    calories: 90,
+    compatibility: "Manual, audio cue, camera",
+    thumbnail: "CP",
     pointsReward: 110,
-    tags: ["5-10 min", "Strength", "No Equipment"],
-    streak: 1,
-    exercises: [
-      { label: "Push-ups", exercise: "pushup", sets: 4, reps: 10, restSeconds: 20, tracking: "camera" },
-      { label: "Plank Shoulder Taps", exercise: "shoulderTaps", sets: 3, reps: 16, restSeconds: 20, tracking: "camera" },
-      { label: "Plank", exercise: "plank", sets: 2, seconds: 30, restSeconds: 0, tracking: "timer" },
-    ],
-  },
-  {
-    id: "morning-ignition",
-    name: "Morning Ignition",
-    displayName: "Morning Ignition",
-    tagline: "Wake up your joints and get moving clean.",
-    difficulty: "Beginner",
-    durationMin: 8,
-    goal: "Mobility warm-up",
-    equipment: "No Equipment",
-    muscles: ["Mobility", "Legs", "Core"],
-    calories: 65,
-    compatibility: "Timer guided",
-    thumbnail: "MI",
-    pointsReward: 90,
-    tags: ["Beginner", "5-10 min", "Mobility", "No Equipment"],
+    tags: ["Beginner", "5-10 min", "Strength", "No Equipment"],
     recommended: true,
     exercises: [
-      { label: "Standing March", exercise: "highKnees", sets: 2, reps: 20, restSeconds: 15, tracking: "camera" },
-      { label: "Bodyweight Squats", exercise: "squat", sets: 2, reps: 10, restSeconds: 15, tracking: "camera" },
-      { label: "Reverse Lunges", exercise: "reverseLunge", sets: 2, reps: 10, restSeconds: 15, tracking: "camera" },
-      { label: "Calf Raises", exercise: "calfRaise", sets: 2, reps: 14, restSeconds: 0, tracking: "camera" },
+      { label: "Push-up", exercise: "pushup", clipSrc: "/Workout/workoutclips/Chest/pushup.mp4", sets: 2, reps: 8, restSeconds: 20, tracking: "camera" },
+      { label: "Diamond push-up", exercise: "pushup", clipSrc: "/Workout/workoutclips/Chest/diamondpushup.mp4", sets: 2, reps: 6, restSeconds: 20, tracking: "camera" },
+      { label: "Pike push-up", exercise: "pushup", clipSrc: "/Workout/workoutclips/Chest/pikepushup.mp4", sets: 2, reps: 6, restSeconds: 0, tracking: "camera" },
     ],
   },
   {
-    id: "full-body-blitz",
-    name: "Full-Body Blitz",
-    displayName: "Full-Body Blitz",
-    tagline: "A compact circuit that hits everything.",
-    difficulty: "Advanced",
-    durationMin: 20,
-    goal: "Total-body power",
-    equipment: "No Equipment",
-    muscles: ["Full body", "Chest", "Legs", "Core"],
-    calories: 230,
-    compatibility: "Mixed tracking",
-    thumbnail: "FB",
-    pointsReward: 180,
-    tags: ["15-20 min", "Strength", "Cardio", "No Equipment", "High Points"],
-    exercises: [
-      { label: "Push-ups", exercise: "pushup", sets: 4, reps: 12, restSeconds: 30, tracking: "camera" },
-      { label: "Squats", exercise: "squat", sets: 4, reps: 18, restSeconds: 25, tracking: "camera" },
-      { label: "Burpees", exercise: "burpee", sets: 3, reps: 8, restSeconds: 35, tracking: "camera" },
-      { label: "Mountain Climbers", exercise: "mountainClimbers", sets: 3, reps: 24, restSeconds: 30, tracking: "camera" },
-      { label: "Plank", exercise: "plank", sets: 3, seconds: 45, restSeconds: 0, tracking: "timer" },
-    ],
-  },
-  {
-    id: "iron-minute",
-    name: "Iron Minute",
-    displayName: "Iron Minute",
-    tagline: "One-minute blocks for controlled strength.",
-    difficulty: "Intermediate",
-    durationMin: 16,
-    goal: "Chest + Shoulders",
-    equipment: "Dumbbells optional",
-    muscles: ["Upper body", "Shoulders", "Arms"],
-    calories: 150,
-    compatibility: "High tracking",
-    thumbnail: "IM",
-    pointsReward: 140,
-    tags: ["15-20 min", "Strength", "High Points"],
-    exercises: [
-      { label: "Bicep Curls", exercise: "bicepCurl", sets: 3, reps: 14, restSeconds: 25, tracking: "camera" },
-      { label: "Overhead Press", exercise: "overheadPress", sets: 3, reps: 12, restSeconds: 25, tracking: "camera" },
-      { label: "Push-ups", exercise: "pushup", sets: 3, reps: 12, restSeconds: 30, tracking: "camera" },
-      { label: "Plank", exercise: "plank", sets: 2, seconds: 35, restSeconds: 0, tracking: "timer" },
-    ],
-  },
-  {
-    id: "no-excuse-10",
-    name: "No-Excuse 10",
-    displayName: "No-Excuse 10",
-    tagline: "Simple, sharp, and hard to skip.",
+    id: "core-control",
+    name: "Core Control",
+    displayName: "Core Control",
+    tagline: "Abs and obliques with simple visual pacing.",
     difficulty: "Beginner",
     durationMin: 10,
-    goal: "Foundation",
+    goal: "Core strength",
     equipment: "No Equipment",
-    muscles: ["Full body", "Core"],
+    muscles: ["Abs", "Obliques"],
     calories: 85,
-    compatibility: "Audio-first",
-    thumbnail: "10",
-    pointsReward: 100,
-    tags: ["Beginner", "5-10 min", "Strength", "No Equipment"],
+    compatibility: "Manual, audio cue, camera",
+    thumbnail: "CC",
+    pointsReward: 120,
+    tags: ["Beginner", "5-10 min", "Core", "No Equipment", "High Points"],
+    recommended: true,
     exercises: [
-      { label: "Squats", exercise: "squat", sets: 2, reps: 12, restSeconds: 20, tracking: "camera" },
-      { label: "Push-ups", exercise: "pushup", sets: 2, reps: 8, restSeconds: 20, tracking: "camera" },
-      { label: "Reverse Lunges", exercise: "reverseLunge", sets: 2, reps: 10, restSeconds: 20, tracking: "camera" },
-      { label: "Plank", exercise: "plank", sets: 2, seconds: 30, restSeconds: 0, tracking: "timer" },
+      { label: "Sit-ups", exercise: "situp", clipSrc: "/Workout/workoutclips/Abs/Situps.mp4", sets: 2, reps: 10, restSeconds: 20, tracking: "camera" },
+      { label: "Crunch", exercise: "crunch", clipSrc: "/Workout/workoutclips/Abs/Crunch.mp4", sets: 2, reps: 12, restSeconds: 20, tracking: "camera" },
+      { label: "Plank", exercise: "plank", clipSrc: "/Workout/workoutclips/Abs/plank.mp4", sets: 2, seconds: 30, restSeconds: 0, tracking: "timer" },
     ],
   },
   {
-    id: "upper-body-charge",
-    name: "Upper Body Charge",
-    displayName: "Upper Body Charge",
-    tagline: "Build pressing strength and arm endurance.",
+    id: "leg-foundation",
+    name: "Leg Foundation",
+    displayName: "Leg Foundation",
+    tagline: "Quads, hamstrings, calves, and glutes in one clean circuit.",
     difficulty: "Intermediate",
-    durationMin: 16,
-    goal: "Chest + Arms",
-    equipment: "Dumbbells optional",
-    muscles: ["Upper body", "Chest", "Arms"],
-    calories: 140,
-    compatibility: "High tracking",
-    thumbnail: "UC",
-    pointsReward: 135,
-    tags: ["15-20 min", "Strength", "High Points"],
-    exercises: [
-      { label: "Push-ups", exercise: "pushup", sets: 3, reps: 12, restSeconds: 30, tracking: "camera" },
-      { label: "Bicep Curls", exercise: "bicepCurl", sets: 3, reps: 15, restSeconds: 30, tracking: "camera" },
-      { label: "Pull-ups", exercise: "pullup", sets: 3, reps: 6, restSeconds: 0, tracking: "camera" },
-    ],
-  },
-  {
-    id: "leg-day-lite",
-    name: "Leg Day Lite",
-    displayName: "Leg Day Lite",
-    tagline: "Leg strength without wrecking tomorrow.",
-    difficulty: "Beginner",
     durationMin: 14,
-    goal: "Leg strength",
+    goal: "Lower body",
     equipment: "No Equipment",
-    muscles: ["Lower body", "Legs"],
-    calories: 130,
-    compatibility: "Mixed tracking",
-    thumbnail: "LL",
-    pointsReward: 115,
-    tags: ["Beginner", "15-20 min", "Strength", "No Equipment"],
+    muscles: ["Quadriceps", "Hamstrings", "Glutes", "Calves"],
+    calories: 140,
+    compatibility: "Manual, audio cue, camera",
+    thumbnail: "LF",
+    pointsReward: 140,
+    tags: ["15-20 min", "Strength", "No Equipment"],
+    recommended: true,
     exercises: [
-      { label: "Squats", exercise: "squat", sets: 4, reps: 15, restSeconds: 25, tracking: "camera" },
-      { label: "Reverse Lunges", exercise: "reverseLunge", sets: 3, reps: 12, restSeconds: 25, tracking: "camera" },
-      { label: "Wall Sit", exercise: "wallSit", sets: 2, seconds: 45, restSeconds: 0, tracking: "timer" },
+      { label: "Bodyweight squat", exercise: "squat", clipSrc: "/Workout/workoutclips/Quadriceps/Bodyweightsquat.mp4", sets: 3, reps: 12, restSeconds: 25, tracking: "camera" },
+      { label: "Lunges", exercise: "forwardLunge", clipSrc: "/Workout/workoutclips/Quadriceps/Lunges.mp4", sets: 2, reps: 10, restSeconds: 25, tracking: "camera" },
+      { label: "Glute bridge", exercise: "gluteBridge", clipSrc: "/Workout/workoutclips/Glutes/glutebridge.mp4", sets: 2, reps: 12, restSeconds: 20, tracking: "camera" },
+      { label: "Standing calf raise", exercise: "calfRaise", clipSrc: "/Workout/workoutclips/Calves/standingcalfraise.mp4", sets: 2, reps: 14, restSeconds: 0, tracking: "camera" },
     ],
   },
   {
-    id: "sweat-sprint",
-    name: "Sweat Sprint",
-    displayName: "Sweat Sprint",
-    tagline: "Short cardio bursts with no room to drift.",
+    id: "shoulder-arm-stability",
+    name: "Shoulder Arm Stability",
+    displayName: "Shoulder Arm Stability",
+    tagline: "Shoulder control and arm endurance using floor work.",
     difficulty: "Intermediate",
-    durationMin: 15,
-    goal: "Conditioning",
-    equipment: "No Equipment",
-    muscles: ["Cardio", "Core", "Legs"],
-    calories: 190,
-    compatibility: "Motion ready",
-    thumbnail: "SS",
-    pointsReward: 150,
-    tags: ["15-20 min", "Cardio", "No Equipment", "High Points"],
-    exercises: [
-      { label: "Jumping Jacks", exercise: "jumpingJacks", sets: 3, reps: 30, restSeconds: 20, tracking: "camera" },
-      { label: "High Knees", exercise: "highKnees", sets: 3, reps: 30, restSeconds: 20, tracking: "camera" },
-      { label: "Burpees", exercise: "burpee", sets: 3, reps: 8, restSeconds: 25, tracking: "camera" },
-      { label: "Mountain Climbers", exercise: "mountainClimbers", sets: 3, reps: 24, restSeconds: 0, tracking: "camera" },
-    ],
-  },
-  {
-    id: "desk-escape",
-    name: "Desk Escape",
-    displayName: "Desk Escape",
-    tagline: "Reset your posture and shake off stiffness.",
-    difficulty: "Beginner",
-    durationMin: 7,
-    goal: "Mobility reset",
-    equipment: "No Equipment",
-    muscles: ["Mobility", "Core", "Legs"],
-    calories: 45,
-    compatibility: "Timer guided",
-    thumbnail: "DE",
-    pointsReward: 70,
-    tags: ["Beginner", "5-10 min", "Mobility", "No Equipment"],
-    exercises: [
-      { label: "Bodyweight Squats", exercise: "squat", sets: 2, reps: 10, restSeconds: 15, tracking: "camera" },
-      { label: "Standing March", exercise: "highKnees", sets: 2, reps: 20, restSeconds: 15, tracking: "camera" },
-      { label: "Calf Raises", exercise: "calfRaise", sets: 2, reps: 14, restSeconds: 0, tracking: "camera" },
-    ],
-  },
-  {
-    id: "final-rep",
-    name: "Final Rep",
-    displayName: "Final Rep",
-    tagline: "A tougher finish for days you want the extra badge.",
-    difficulty: "Intermediate",
-    durationMin: 18,
-    goal: "Strength endurance",
-    equipment: "No Equipment",
-    muscles: ["Full body", "Chest", "Core"],
-    calories: 220,
-    compatibility: "Mixed tracking",
-    thumbnail: "FR",
-    pointsReward: 200,
-    tags: ["15-20 min", "Strength", "Cardio", "No Equipment", "High Points"],
-    exercises: [
-      { label: "Push-ups", exercise: "pushup", sets: 4, reps: 12, restSeconds: 25, tracking: "camera" },
-      { label: "Squats", exercise: "squat", sets: 4, reps: 18, restSeconds: 25, tracking: "camera" },
-      { label: "Burpees", exercise: "burpee", sets: 3, reps: 8, restSeconds: 25, tracking: "camera" },
-      { label: "Plank", exercise: "plank", sets: 3, seconds: 45, restSeconds: 0, tracking: "timer" },
-    ],
-  },
-  {
-    id: "beginner-boost",
-    name: "Beginner Boost",
-    displayName: "Beginner Boost",
-    tagline: "A confidence-building starter challenge.",
-    difficulty: "Beginner",
-    durationMin: 10,
-    goal: "Foundation",
-    equipment: "No Equipment",
-    muscles: ["Full body"],
-    calories: 80,
-    compatibility: "Audio-first",
-    thumbnail: "BB",
-    pointsReward: 95,
-    tags: ["Beginner", "5-10 min", "Strength", "No Equipment"],
-    exercises: [
-      { label: "Squats", exercise: "squat", sets: 2, reps: 10, restSeconds: 25, tracking: "camera" },
-      { label: "Push-ups", exercise: "pushup", sets: 2, reps: 8, restSeconds: 25, tracking: "camera" },
-      { label: "Plank", exercise: "plank", sets: 2, seconds: 25, restSeconds: 0, tracking: "timer" },
-    ],
-  },
-  {
-    id: "blue-flow",
-    name: "Blue Flow",
-    displayName: "Blue Flow",
-    tagline: "Calm control, smooth reps, clean breathing.",
-    difficulty: "Beginner",
     durationMin: 12,
-    goal: "Control + mobility",
+    goal: "Shoulders + arms",
     equipment: "No Equipment",
-    muscles: ["Mobility", "Core", "Legs"],
-    calories: 75,
-    compatibility: "Timer guided",
-    thumbnail: "BF",
-    pointsReward: 105,
-    tags: ["Beginner", "15-20 min", "Mobility", "Core", "No Equipment"],
+    muscles: ["Shoulder", "Triceps", "Forearms"],
+    calories: 110,
+    compatibility: "Manual, audio cue, camera",
+    thumbnail: "SA",
+    pointsReward: 130,
+    tags: ["15-20 min", "Strength", "No Equipment"],
     exercises: [
-      { label: "Glute Bridges", exercise: "gluteBridge", sets: 3, reps: 12, restSeconds: 20, tracking: "camera" },
-      { label: "Side Plank", exercise: "sidePlank", sets: 2, seconds: 25, restSeconds: 20, tracking: "timer" },
-      { label: "Calf Raises", exercise: "calfRaise", sets: 3, reps: 14, restSeconds: 0, tracking: "camera" },
+      { label: "Shoulder tap", exercise: "shoulderTaps", clipSrc: "/Workout/workoutclips/Shoulder/shouldertap.mp4", sets: 3, reps: 12, restSeconds: 20, tracking: "camera" },
+      { label: "Side plank reach", exercise: "sidePlank", clipSrc: "/Workout/workoutclips/Shoulder/sideplankreach.mp4", sets: 2, seconds: 25, restSeconds: 20, tracking: "timer" },
+      { label: "Hindu push-up", exercise: "pushup", clipSrc: "/Workout/workoutclips/Triceps/hindupushup.mp4", sets: 2, reps: 8, restSeconds: 0, tracking: "camera" },
+    ],
+  },
+  {
+    id: "posterior-chain-reset",
+    name: "Posterior Chain Reset",
+    displayName: "Posterior Chain Reset",
+    tagline: "Upper back, lower back, glutes, and hamstrings.",
+    difficulty: "Beginner",
+    durationMin: 11,
+    goal: "Back + glutes",
+    equipment: "No Equipment",
+    muscles: ["Upper back", "Lower back", "Glutes", "Hamstrings"],
+    calories: 95,
+    compatibility: "Manual, audio cue, camera",
+    thumbnail: "PC",
+    pointsReward: 115,
+    tags: ["Beginner", "15-20 min", "Mobility", "No Equipment"],
+    exercises: [
+      { label: "Superman", exercise: "plank", clipSrc: "/Workout/workoutclips/upperback/superman.mp4", sets: 2, seconds: 30, restSeconds: 20, tracking: "timer" },
+      { label: "Reverse snow angel", exercise: "plank", clipSrc: "/Workout/workoutclips/upperback/reversesnowangel.mp4", sets: 2, reps: 10, restSeconds: 20, tracking: "camera" },
+      { label: "Single leg glute bridge", exercise: "gluteBridge", clipSrc: "/Workout/workoutclips/Glutes/singlelegglutebridge.mp4", sets: 2, reps: 10, restSeconds: 0, tracking: "camera" },
     ],
   },
 ];
@@ -1018,12 +800,9 @@ function formatPresetPreview(exercise: PresetExercise) {
 }
 
 function getPresetTrackingModes(preset: WorkoutPreset) {
-  const hasMotion = preset.exercises.some((item) => item.exercise && TRACKING_PROFILES[item.exercise].motion);
-  const modes = ["Audio Coach"];
-  if (hasMotion) modes.push("Motion");
+  const modes = ["Manual", "Audio Cue"];
   if (preset.exercises.some((item) => item.exercise)) modes.push("Camera");
-  modes.push("Simple");
-  return Array.from(new Set(modes));
+  return modes;
 }
 
 function getVisibilityGuidance(metrics: AnalyzerMetrics) {
@@ -1661,12 +1440,9 @@ async function loadPoseLandmarker(): Promise<PoseLandmarkerLike> {
   }
 }
 
-export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzerModeProps) {
+export function WorkoutAnalyzerMode({ experience }: { experience?: AnalyzerTab }) {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const utils = trpc.useUtils();
-  const isCombinedExperience = experience === "combined";
-  const isProgramsExperience = experience === "programs";
   const analyzerShellRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1736,15 +1512,10 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
   const [customReps, setCustomReps] = useState(15);
   const [customSets, setCustomSets] = useState(2);
   const [customRestSeconds, setCustomRestSeconds] = useState(20);
-  const [workoutFlowStep, setWorkoutFlowStep] = useState<WorkoutFlowStep>(
-    isCombinedExperience ? "activity" : "setup"
-  );
-  const [activeTab, setActiveTab] = useState<AnalyzerTab>(
-    isProgramsExperience ? "programs" : "quick"
-  );
+  const [workoutFlowStep, setWorkoutFlowStep] = useState<WorkoutFlowStep>("activity");
+  const [activeTab, setActiveTab] = useState<AnalyzerTab>(experience ?? "quick");
   const [selectedPreset, setSelectedPreset] = useState<WorkoutPreset | null>(null);
   const [activePreset, setActivePreset] = useState<WorkoutPreset | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string>("All Programs");
   const [showSettings, setShowSettings] = useState(false);
   const [showExerciseMenu, setShowExerciseMenu] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState("");
@@ -1764,8 +1535,6 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
   const [timedRemaining, setTimedRemaining] = useState<number | null>(null);
   const [cameraFacingMode, setCameraFacingMode] = useState<"user" | "environment">("user");
   const shouldRestartCameraRef = useRef(false);
-  const [favoritePresetIds, setFavoritePresetIds] = useState<Set<string>>(new Set(["core-lock"]));
-  const [savedPresetIds, setSavedPresetIds] = useState<Set<string>>(new Set(["beginner-boost"]));
   const [taskCompleted, setTaskCompleted] = useState(false);
   const [rewardPopup, setRewardPopup] = useState<RewardPopup | null>(null);
 
@@ -1773,7 +1542,6 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
   const requestedExercise = searchParams.get("exercise");
   const requestedTracking = searchParams.get("tracking");
   const requestedMuscle = searchParams.get("muscle") ?? undefined;
-  const requestedExerciseName = searchParams.get("exerciseName")?.trim() ?? "";
   const taskExercise = EXERCISES.some((item) => item.key === requestedExercise)
     ? (requestedExercise as ExerciseKey)
     : null;
@@ -1815,24 +1583,13 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
   });
 
   useEffect(() => {
-    if (isCombinedExperience) return;
-    setWorkoutFlowStep("setup");
-    setActiveTab(isProgramsExperience ? "programs" : "quick");
-    if (!isProgramsExperience) {
-      setActivePreset(null);
-      setProgram("custom");
-      programRef.current = "custom";
-    }
-  }, [isCombinedExperience, isProgramsExperience]);
-
-  useEffect(() => {
     exerciseRef.current = exercise;
   }, [exercise]);
 
   useEffect(() => {
     if (!isTaskMode || !taskExercise || !taskTarget) return;
     setWorkoutFlowStep("setup");
-    setActiveTab(isProgramsExperience ? "programs" : "quick");
+    setActiveTab("quick");
     setActivePreset(null);
     setProgram("free");
     programRef.current = "free";
@@ -1852,26 +1609,12 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
   useEffect(() => {
     if (isTaskMode || !taskExercise) return;
     setWorkoutFlowStep("setup");
-    setActiveTab(isProgramsExperience ? "programs" : "quick");
+    setActiveTab("quick");
     setActivePreset(null);
     setProgram("custom");
     programRef.current = "custom";
     setExercise(taskExercise);
     exerciseRef.current = taskExercise;
-    if (requestedTracking === "manual") {
-      setTrackingMode("trust");
-      trackingModeRef.current = "trust";
-      stopCamera();
-      setStatus("ready");
-      metricsRef.current = {
-        ...metricsRef.current,
-        confidence: 55,
-        feedback: "Manual Mode selected. Press Start set when ready.",
-        quality: "tracking",
-      };
-      setMetrics(metricsRef.current);
-      return;
-    }
     if (requestedTracking === "audio") {
       setTrackingMode("interactive");
       trackingModeRef.current = "interactive";
@@ -1882,7 +1625,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
       metricsRef.current = {
         ...metricsRef.current,
         confidence: 70,
-        feedback: "Voice Assisted Mode selected. Press Start set when ready.",
+        feedback: "Audio Cue Mode selected. Press Start set when ready.",
         quality: "tracking",
       };
       setMetrics(metricsRef.current);
@@ -1929,8 +1672,6 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
     () => EXERCISES.find((item) => item.key === exercise) ?? EXERCISES[0],
     [exercise]
   );
-  const manualExerciseLaunch = !isTaskMode && taskExercise != null && requestedTracking === "manual";
-  const selectedExerciseLabel = manualExerciseLaunch && requestedExerciseName ? requestedExerciseName : selectedExercise.label;
   const filteredExercises = useMemo(() => {
     const query = exerciseSearch.trim().toLowerCase();
     if (!query) return EXERCISES;
@@ -1948,34 +1689,21 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
     const steps: RoutineStep[] = [];
     for (let setIndex = 0; setIndex < customSets; setIndex += 1) {
       if (TIMED_EXERCISES.has(exercise)) {
-        steps.push({ type: "timed", exercise, label: selectedExerciseLabel, seconds: customReps });
+        steps.push({ type: "timed", exercise, label: getExerciseLabel(exercise), seconds: customReps });
       } else {
-        steps.push({ type: "work", exercise, label: selectedExerciseLabel, reps: customReps });
+        steps.push({ type: "work", exercise, reps: customReps });
       }
       if (setIndex < customSets - 1 && customRestSeconds > 0) {
         steps.push({ type: "rest", seconds: customRestSeconds });
       }
     }
     return steps;
-  }, [customReps, customRestSeconds, customSets, exercise, selectedExerciseLabel]);
+  }, [customReps, customRestSeconds, customSets, exercise]);
   const presetRoutineSteps = useMemo(
     () => (activePreset ? buildPresetSteps(activePreset) : []),
     [activePreset]
   );
   const activeRoutineSteps = activePreset ? presetRoutineSteps : customRoutineSteps;
-  const filteredPresets = useMemo(() => {
-    if (activeFilter === "All Programs") return WORKOUT_PRESETS;
-    if (activeFilter === "For You") return WORKOUT_PRESETS.filter((preset) => preset.recommended);
-    return WORKOUT_PRESETS.filter((preset) => {
-      const tags = [preset.difficulty, preset.equipment, preset.goal, ...preset.muscles, ...preset.tags].map((tag) =>
-        tag.toLowerCase()
-      );
-      if (activeFilter === "High Points") return preset.pointsReward >= 120;
-      return tags.includes(activeFilter.toLowerCase());
-    });
-  }, [activeFilter]);
-  const recommendedPresets = WORKOUT_PRESETS.filter((preset) => preset.recommended).slice(0, 3);
-
   const speak = useCallback(
     (message: string, priority = false) => {
       if (!voiceEnabled || typeof window === "undefined") return;
@@ -2382,17 +2110,14 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
           coachExtraRepsRef.current = null;
           metricsRef.current = next;
           setMetrics(next);
-          if (activePreset && advanceAfterCompletedSet()) return;
-          routinePhaseRef.current = "summary";
-          setRoutinePhase("summary");
-          setStatus("paused");
+          advanceAfterCompletedSet();
         }
       }
 
       metricsRef.current = next;
       setMetrics(next);
     },
-    [activePreset, activeRoutineSteps, advanceAfterCompletedSet, playSound, recordRepSignal, recordSetSummary, sessionSeconds, speak]
+    [activeRoutineSteps, advanceAfterCompletedSet, playSound, recordRepSignal, recordSetSummary, sessionSeconds, speak]
   );
 
   const drawPose = useCallback((landmarks?: Landmark[]) => {
@@ -2545,13 +2270,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
               coachExtraRepsRef.current = null;
               metricsRef.current = next;
               setMetrics(next);
-              if (activePreset) {
-                advanceAfterCompletedSet();
-              } else {
-                routinePhaseRef.current = "summary";
-                setRoutinePhase("summary");
-                setStatus("paused");
-              }
+              advanceAfterCompletedSet();
             }
           }
         } else {
@@ -2586,7 +2305,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
     }
 
     animationRef.current = requestAnimationFrame(runDetectionLoop);
-  }, [activePreset, activeRoutineSteps, advanceAfterCompletedSet, drawPose, playSound, recordRepSignal, recordSetSummary, sessionSeconds, speak]);
+  }, [activeRoutineSteps, advanceAfterCompletedSet, drawPose, playSound, recordRepSignal, recordSetSummary, sessionSeconds, speak]);
 
   const stopCamera = useCallback(() => {
     stopLoop();
@@ -3003,8 +2722,29 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
     status === "countdown";
   const isWorkoutSurfaceActive = trackingMode !== "camera" || isCameraActive;
   const repProgress = metrics.repProgress;
-  const activeRoutineStep = program === "custom" ? activeRoutineSteps[routineStepIndex] : selectedProgram.steps[routineStepIndex];
-  const activeStep = program === "custom" ? activeRoutineStep : null;
+  const currentRoutineStep = selectedProgram.steps[routineStepIndex];
+  const currentCustomStep = activeRoutineSteps[routineStepIndex];
+  const activeRoutineStep = program === "custom" ? currentCustomStep : currentRoutineStep;
+  const activeStep = program === "custom" ? activeRoutineSteps[routineStepIndex] : null;
+  const visibleRoutineStep = useMemo(() => {
+    if (status === "rest") {
+      return activeRoutineSteps.find((step, index) => index > routineStepIndex && step.type !== "rest") ?? activeStep;
+    }
+    return activeStep;
+  }, [activeRoutineSteps, activeStep, routineStepIndex, status]);
+  const activeDemoClip = useMemo(() => {
+    if (!visibleRoutineStep || visibleRoutineStep.type === "rest") return null;
+    const presetExercise = activePreset?.exercises.find(
+      (item) =>
+        item.label === visibleRoutineStep.label ||
+        (visibleRoutineStep.exercise && item.exercise === visibleRoutineStep.exercise)
+    );
+    return (
+      presetExercise?.clipSrc ??
+      getWorkoutClipForExercise(visibleRoutineStep.exercise, visibleRoutineStep.label)?.src ??
+      null
+    );
+  }, [activePreset, visibleRoutineStep]);
   const targetReps = activeRoutineStep?.type === "work" ? activeRoutineStep.reps : null;
   const targetSeconds = activeRoutineStep?.type === "timed" ? activeRoutineStep.seconds : null;
   const displayTargetReps = coachExtraRepsRef.current ?? (isTaskMode ? taskTarget : targetReps);
@@ -3018,12 +2758,10 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
     : targetSeconds && timedRemaining != null
       ? Math.min(100, ((targetSeconds - timedRemaining) / targetSeconds) * 100)
       : repProgress;
-  const modeLocked = isTaskMode || Boolean(activePreset) || (program !== "free" && routinePhase !== "idle" && routinePhase !== "complete");
-  const customDescription = activePreset
-    ? `${activePreset.name}: ${activePreset.exercises.length} guided moves, ${activePreset.durationMin} min estimate.`
-    : isTimedExercise
-      ? `${customSets} set${customSets === 1 ? "" : "s"} x ${customReps}s ${selectedExerciseLabel}, ${customRestSeconds}s rest.`
-      : `${customSets} set${customSets === 1 ? "" : "s"} x ${customReps} ${selectedExerciseLabel} reps, ${customRestSeconds}s rest.`;
+  const modeLocked = isTaskMode || (program !== "free" && routinePhase !== "idle" && routinePhase !== "complete");
+  const customDescription = isTimedExercise
+    ? `${customSets} set${customSets === 1 ? "" : "s"} x ${customReps}s ${getExerciseLabel(exercise)}, ${customRestSeconds}s rest.`
+    : `${customSets} set${customSets === 1 ? "" : "s"} x ${customReps} ${getExerciseLabel(exercise)} reps, ${customRestSeconds}s rest.`;
   const stageLabel =
     status === "rest"
       ? `${routineRemaining ?? 0}s rest`
@@ -3092,39 +2830,27 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
     });
   }, [completeTask, interactiveMode, isTaskMode, metrics.repCount, playSound, speak, taskCompleted, taskId, taskTarget, trackingMode]);
 
-  const endCurrentSet = (confirmedReps?: number, feedback = "Set complete") => {
+  const endCurrentSet = () => {
     const label =
       activeStep?.type === "work"
         ? activeStep.label ?? getExerciseLabel(activeStep.exercise)
         : activeStep?.type === "timed"
           ? activeStep.label
-          : selectedExerciseLabel;
-    const reps = routinePhase === "timed" ? 0 : confirmedReps ?? currentSetReps;
+          : selectedExercise.label;
+    const reps = routinePhase === "timed" ? 0 : currentSetReps;
     const elapsed =
       activeStep?.type === "timed"
         ? activeStep.seconds - (timedRemaining ?? 0)
         : sessionSeconds;
-    if (confirmedReps != null) {
-      const nextRepCount = setStartRepRef.current + confirmedReps;
-      metricsRef.current = {
-        ...metricsRef.current,
-        repCount: nextRepCount,
-        repProgress: displayTargetReps ? 100 : metricsRef.current.repProgress,
-        feedback: `${feedback}.`,
-        confidence: Math.max(metricsRef.current.confidence, 55),
-        quality: "good",
-      };
-      setMetrics(metricsRef.current);
-    }
     const summary = recordSetSummary(label, reps, Math.max(0, elapsed));
     metricsRef.current = {
       ...metricsRef.current,
-      feedback: `${feedback} - ${reps ? `${reps} reps` : label} • ${formatSessionTime(summary.seconds)}`,
+      feedback: `Set complete - ${reps ? `${reps} reps` : label} • ${formatSessionTime(summary.seconds)}`,
       quality: "good",
     };
     setMetrics(metricsRef.current);
     setLastSetSummary(summary);
-    if (activePreset && advanceAfterCompletedSet()) return;
+    if (advanceAfterCompletedSet()) return;
     setRoutinePhase("summary");
     routinePhaseRef.current = "summary";
     setStatus("paused");
@@ -3158,7 +2884,6 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
   };
 
   const chooseTrackingMode = async (mode: TrackingMode, interactive: InteractiveMode = interactiveMode) => {
-    if (manualExerciseLaunch && (mode === "camera" || mode === "motion")) return;
     const wasRunning = statusRef.current === "running";
     setTrackingMode(mode);
     setInteractiveMode(interactive);
@@ -3204,7 +2929,6 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
 
   const updateTrackingModeSelection = (value: string) => {
     const [modeValue, interactiveValue] = value.split(":") as [TrackingMode, InteractiveMode | undefined];
-    if (manualExerciseLaunch && (modeValue === "camera" || modeValue === "motion")) return;
     const nextInteractive = interactiveValue ?? interactiveMode;
     if (statusRef.current === "running") {
       void chooseTrackingMode(modeValue, nextInteractive);
@@ -3267,8 +2991,17 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
 
   const confirmTrustSet = () => {
     if (status !== "running") return;
-    const confirmedReps = displayTargetReps ?? currentSetReps;
-    endCurrentSet(Math.max(0, confirmedReps), "Self-confirmed set complete");
+    const missingReps = displayTargetReps ? Math.max(0, displayTargetReps - currentSetReps) : 1;
+    if (missingReps <= 0) {
+      endCurrentSet();
+      return;
+    }
+    for (let index = 0; index < missingReps; index += 1) {
+      registerFallbackRep(
+        "trust",
+        index === missingReps - 1 ? "Self-confirmed set complete." : "Self-confirmed rep."
+      );
+    }
   };
 
   const nudgeRepCount = (delta: 1 | -1, source: ProofSource = "tap") => {
@@ -3409,128 +3142,71 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
     programRef.current = "custom";
     setExercise(firstCameraExercise);
     exerciseRef.current = firstCameraExercise;
+    setTrackingMode("trust");
+    trackingModeRef.current = "trust";
+    setInteractiveMode("audio");
+    interactiveModeRef.current = "audio";
     resetSession();
   };
 
-  const toggleFavorite = (presetId: string) => {
-    setFavoritePresetIds((current) => {
-      const next = new Set(current);
-      if (next.has(presetId)) next.delete(presetId);
-      else next.add(presetId);
-      return next;
-    });
-  };
-
-  const toggleSaved = (presetId: string) => {
-    setSavedPresetIds((current) => {
-      const next = new Set(current);
-      if (next.has(presetId)) next.delete(presetId);
-      else next.add(presetId);
-      return next;
-    });
-  };
-
-  const programCard = (preset: WorkoutPreset, variant: "carousel" | "list" = "list") => {
-    const preview = preset.exercises.slice(0, 4).map(formatPresetPreview);
-    const goalText = preset.goal.toLowerCase();
-    const MotifIcon = goalText.includes("core")
-      ? Shield
-      : goalText.includes("cardio") || goalText.includes("conditioning")
-        ? Zap
-        : goalText.includes("mobility")
-          ? Activity
-          : goalText.includes("strength") || goalText.includes("body")
-            ? Dumbbell
-            : Flame;
-    const motifClass = goalText.includes("core")
-      ? "from-[#EAF8F4] to-[#DCEBFF] text-[#15483F]"
-      : goalText.includes("cardio") || goalText.includes("conditioning")
-        ? "from-[#FFF4D7] to-[#EAF8F4] text-[#8B5B00]"
-        : goalText.includes("mobility")
-          ? "from-[#EAF8F4] to-[#F5F0FF] text-[#4C5F59]"
-          : "from-[#FFECE7] to-[#EAF8F4] text-[#8A3324]";
-    const progressLabel = preset.streak
-      ? `${preset.streak}-day streak`
-      : preset.bestScore
-        ? `Best ${preset.bestScore} pts`
-        : preset.completed
-          ? "Completed"
-          : "Not started";
-    const actionLabel = preset.streak ? "Continue" : preset.bestScore ? "Beat Your Best" : "Start";
+  const programCard = (preset: WorkoutPreset) => {
+    const preview = preset.exercises.slice(0, 3).map(formatPresetPreview);
+    const coverClip = preset.exercises[0]?.clipSrc ?? getWorkoutClipForExercise(preset.exercises[0]?.exercise, preset.exercises[0]?.label)?.src;
     return (
-      <article
+      <MotionCard
         key={preset.id}
-        className={cn(
-          "rounded-[22px] border border-[#DDE8E4] bg-white p-3.5 shadow-[0_10px_24px_rgba(21,72,63,0.06)] transition hover:-translate-y-0.5 hover:border-[#20C7A4]/50",
-          variant === "carousel" ? "w-[276px] shrink-0" : "min-w-0"
-        )}
+        whileHover={{ y: -2 }}
+        whileTap={{ scale: 0.99 }}
+        transition={{ type: "spring", stiffness: 360, damping: 28 }}
+        className="overflow-hidden rounded-[20px] border-[#E3ECE8] bg-white shadow-none"
       >
         <button type="button" onClick={() => setSelectedPreset(preset)} className="block w-full text-left">
-          <div className="flex items-start gap-3">
-            <div className={`relative flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br ${motifClass}`}>
-              <MotifIcon className="h-7 w-7" strokeWidth={2.3} />
-              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#20C7A4] shadow-sm">
-                <Sparkles className="h-3 w-3" />
+          <div className="relative aspect-[16/10] overflow-hidden bg-[#071512]">
+            {coverClip ? (
+              <video src={coverClip} className="h-full w-full object-cover" muted loop playsInline autoPlay />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-[#EAF8F4] text-[#15483F]">
+                <Dumbbell className="h-9 w-9" strokeWidth={2.2} />
+              </div>
+            )}
+          </div>
+          <CardContent className="p-6 sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate text-base font-black text-[#17201E]">{preset.name}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#6B7773]">{preset.tagline}</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-[#EAF8F4] px-2.5 py-1 text-[11px] font-black text-[#15483F]">
+                {preset.durationMin}m
               </span>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-black text-[#17201E]">{preset.name}</p>
-                  <p className="mt-0.5 line-clamp-1 text-xs leading-5 text-[#6B7773]">{preset.tagline}</p>
-                </div>
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#15483F] px-2.5 py-1 text-xs font-black text-white">
-                  <Zap className="h-3.5 w-3.5 fill-current" />
-                  +{preset.pointsReward}
+
+            <div className="mt-4 flex items-center gap-2 text-xs text-[#6B7773]">
+              <span>{preset.goal}</span>
+              <span className="h-1 w-1 rounded-full bg-[#C7D4CF]" />
+              <span>{preset.exercises.length} moves</span>
+            </div>
+
+            <div className="mt-4 flex gap-2 overflow-x-auto whitespace-nowrap pb-0.5">
+              {preview.map((item) => (
+                <span key={`${preset.id}-${item}`} className="rounded-full bg-[#F7FAF9] px-2.5 py-1 text-[11px] font-bold text-[#4C5F59]">
+                  {item}
                 </span>
-              </div>
-
-              <div className="mt-3 flex items-center gap-2 overflow-hidden text-xs text-[#6B7773]">
-                <span className="shrink-0 font-bold text-[#17201E]">{preset.durationMin}m</span>
-                <span className="h-1 w-1 shrink-0 rounded-full bg-[#C7D4CF]" />
-                <span className="shrink-0">{preset.exercises.length} moves</span>
-                <span className="h-1 w-1 shrink-0 rounded-full bg-[#C7D4CF]" />
-                <span className="truncate">{preset.goal}</span>
-              </div>
-
-              <div className="mt-2 flex items-center gap-2">
-                <span className="rounded-full bg-[#F1F7F4] px-2.5 py-1 text-[11px] font-bold text-[#4C5F59]">{preset.difficulty}</span>
-                <span className="truncate text-[11px] font-bold text-[#20C7A4]">{progressLabel}</span>
-              </div>
+              ))}
             </div>
-          </div>
-
-          <div className="mt-3 flex min-h-[30px] items-center gap-2 overflow-x-auto whitespace-nowrap pb-0.5">
-            {preview.map((item, index) => (
-              <span key={`${preset.id}-${item}-${index}`} className="inline-flex items-center gap-2 text-[11px] font-bold text-[#4C5F59]">
-                <span className="rounded-full bg-[#F7FAF9] px-2.5 py-1">{item}</span>
-                {index < preview.length - 1 && <span className="text-[#20C7A4]">-&gt;</span>}
-              </span>
-            ))}
-          </div>
+          </CardContent>
         </button>
 
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={favoritePresetIds.has(preset.id) ? "Remove favorite" : "Favorite program"}
-            onClick={() => toggleFavorite(preset.id)}
-            className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#DDE8E4] transition",
-              favoritePresetIds.has(preset.id) ? "bg-[#EAF8F4] text-[#15483F]" : "bg-white text-[#6B7773]"
-            )}
-          >
-            <Heart className={cn("h-5 w-5", favoritePresetIds.has(preset.id) && "fill-current")} />
-          </button>
+        <div className="px-6 pb-6 sm:px-7 sm:pb-7">
           <button
             type="button"
             onClick={() => startPresetWorkout(preset)}
-            className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-[#20C7A4] px-4 text-sm font-black text-[#071512]"
+            className="flex min-h-11 w-full items-center justify-center rounded-full bg-[#15483F] px-4 text-sm font-black text-white"
           >
-            {actionLabel}
+            Start workout
           </button>
         </div>
-      </article>
+      </MotionCard>
     );
   };
 
@@ -3607,7 +3283,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
   const nextExerciseLabel =
     activeRoutineSteps.find((step, index) => index > routineStepIndex && step.type === "work")?.type === "work"
       ? getExerciseLabel((activeRoutineSteps.find((step, index) => index > routineStepIndex && step.type === "work") as Extract<RoutineStep, { type: "work" }>).exercise)
-      : selectedExerciseLabel;
+      : selectedExercise.label;
   const hasNextRoutineStep =
     program === "custom" && activeRoutineSteps.some((_, index) => index > routineStepIndex);
   const continueSetLabel = hasNextRoutineStep ? "Start next" : "Finish";
@@ -3654,7 +3330,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
         </div>
       )}
 
-      {isCombinedExperience && workoutFlowStep === "activity" && (
+      {workoutFlowStep === "activity" && (
         <section className="space-y-4 rounded-[22px] border border-border bg-white p-4 shadow-sm dark:bg-card">
           <div>
             <h2 className="text-xl font-black text-[#17201E] dark:text-foreground">Choose workout activity</h2>
@@ -3701,98 +3377,49 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
 
       {workoutFlowStep === "setup" && (
       <>
-      {isCombinedExperience && (
-        <div className="grid grid-cols-2 gap-2 rounded-full border border-border bg-white p-1 shadow-sm dark:bg-card">
-          {(["quick", "programs"] as AnalyzerTab[]).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "min-h-11 rounded-full text-sm font-semibold transition",
-                activeTab === tab ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-              )}
-            >
-              {tab === "quick" ? "Quick workout" : "Programs"}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-2 rounded-full border border-border bg-white p-1 shadow-sm dark:bg-card">
+        {(["quick", "programs"] as AnalyzerTab[]).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              "min-h-11 rounded-full text-sm font-semibold transition",
+              activeTab === tab ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+            )}
+          >
+            {tab === "quick" ? "Quick workout" : "Programs"}
+          </button>
+        ))}
+      </div>
 
-      {activeTab === "programs" && !activePreset ? (
-        <section className="space-y-5">
-          <div>
-            <h2 className="text-xl font-black text-[#17201E]">Programs</h2>
-            <p className="mt-1 text-sm leading-5 text-[#6B7773]">
-              Pick a challenge, earn points, and build a streak.
-            </p>
+      {activeTab === "programs" ? (
+        <section className="space-y-7 rounded-[26px] border border-[#E3ECE8] bg-[#F7FAF9] p-6 sm:p-7 lg:p-8">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-[#17201E]">Programs</h2>
+              <p className="mt-1 text-sm leading-5 text-[#6B7773]">Clip-guided routines by body area.</p>
+            </div>
+            <span className="shrink-0 text-xs font-bold text-[#6B7773]">{WORKOUT_PRESETS.length} ready</span>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {["All Programs", ...FILTER_CHIPS].map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                onClick={() => setActiveFilter(chip)}
-                className={cn(
-                  "shrink-0 rounded-full border px-4 py-2 text-xs font-black transition",
-                  activeFilter === chip
-                    ? "border-[#20C7A4] bg-[#EAF8F4] text-[#15483F]"
-                    : "border-[#DDE8E4] bg-white text-[#6B7773]"
-                )}
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black text-[#17201E]">Recommended for you</h3>
-              <Sparkles className="h-4 w-4 text-[#20C7A4]" />
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {recommendedPresets.map((preset) => programCard(preset, "carousel"))}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-black text-[#17201E]">All Programs</h3>
-                <p className="mt-0.5 text-xs text-[#6B7773]">{filteredPresets.length} challenges ready</p>
-              </div>
-              {activeFilter !== "All Programs" && (
-                <button type="button" onClick={() => setActiveFilter("All Programs")} className="text-xs font-bold text-[#20C7A4]">
-                  Clear
-                </button>
-              )}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {filteredPresets.map((preset) => programCard(preset))}
-            </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:gap-7">
+            {WORKOUT_PRESETS.map((preset) => programCard(preset))}
           </div>
 
           <button
             type="button"
             onClick={() => {
-              if (isCombinedExperience) {
-                setActiveTab("quick");
-                setProgram("custom");
-                programRef.current = "custom";
-                setActivePreset(null);
-                resetSession();
-                return;
-              }
-              router.push("/hub/workout/quick");
+              setActiveTab("quick");
+              setProgram("custom");
+              programRef.current = "custom";
+              setActivePreset(null);
+              resetSession();
             }}
-            className="flex w-full items-center justify-between rounded-[22px] border border-dashed border-primary/40 bg-white p-4 text-left dark:bg-card"
+            className="flex w-full items-center justify-between rounded-[20px] border border-dashed border-primary/30 bg-white p-6 text-left dark:bg-card sm:p-7"
           >
             <span>
               <span className="block text-sm font-semibold">Create your own workout</span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                Choose exercise, reps, sets, rest, then save the routine.
-              </span>
             </span>
             <ListChecks className="h-5 w-5 text-primary" />
           </button>
@@ -3800,10 +3427,10 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
       ) : (
         <>
           <section className="rounded-[22px] border border-border bg-white p-4 shadow-sm dark:bg-card">
-            <div className={cn("grid gap-4 lg:items-end", activePreset ? "lg:grid-cols-1" : "lg:grid-cols-[1.4fr_1fr]")}>
+            <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr] lg:items-end">
               <div className="relative">
                 <label className="text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">
-                  {activePreset ? "First program move" : "Exercise"}
+                  Exercise
                 </label>
                 <button
                   type="button"
@@ -3811,7 +3438,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
                   onClick={() => setShowExerciseMenu((value) => !value)}
                   className="mt-2 flex min-h-12 w-full items-center justify-between rounded-2xl border border-input bg-background px-4 text-left text-sm font-semibold disabled:opacity-70"
                 >
-                  <span className="truncate">{activeStep?.type === "timed" ? activeStep.label : selectedExerciseLabel}</span>
+                  <span className="truncate">{activeStep?.type === "timed" ? activeStep.label : selectedExercise.label}</span>
                   <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                 </button>
                 {showExerciseMenu && !modeLocked && (
@@ -3851,49 +3478,26 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
                 )}
               </div>
 
-              {activePreset ? (
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-[16px] bg-[#F7FAF9] p-3">
-                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6B7773]">Moves</p>
-                    <p className="mt-1 text-lg font-black text-[#17201E]">{activePreset.exercises.length}</p>
-                  </div>
-                  <div className="rounded-[16px] bg-[#F7FAF9] p-3">
-                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6B7773]">Estimate</p>
-                    <p className="mt-1 text-lg font-black text-[#17201E]">{activePreset.durationMin} min</p>
-                  </div>
-                  <div className="rounded-[16px] bg-[#F7FAF9] p-3">
-                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6B7773]">First target</p>
-                    <p className="mt-1 text-lg font-black text-[#17201E]">
-                      {activeRoutineStep?.type === "timed"
-                        ? `${activeRoutineStep.seconds}s`
-                        : activeRoutineStep?.type === "work"
-                          ? `${activeRoutineStep.reps} reps`
-                          : "Ready"}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {([
-                    [isTimedExercise ? "Seconds" : "Reps", customReps, setCustomReps, isTimedExercise ? 5 : 1, isTimedExercise ? 600 : 100],
-                    ["Sets", customSets, setCustomSets, 1, 20],
-                    ["Break", customRestSeconds, setCustomRestSeconds, 0, 300],
-                  ] as Array<[string, number, (value: number) => void, number, number]>).map(([label, value, setter, min, max]) => (
-                    <label key={String(label)} className="space-y-1">
-                      <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">{label}</span>
-                      <input
-                        type="number"
-                        min={Number(min)}
-                        max={Number(max)}
-                        disabled={modeLocked || isTaskMode}
-                        value={Number(value)}
-                        onChange={(event) => setter(Math.max(min, Math.min(max, Number(event.target.value) || min)))}
-                        className="h-12 w-full rounded-2xl border border-input bg-background px-3 text-sm font-semibold tabular-nums outline-none disabled:opacity-60"
-                      />
-                    </label>
-                  ))}
-                </div>
-              )}
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  [isTimedExercise ? "Seconds" : "Reps", customReps, setCustomReps, isTimedExercise ? 5 : 1, isTimedExercise ? 600 : 100],
+                  ["Sets", customSets, setCustomSets, 1, 20],
+                  ["Break", customRestSeconds, setCustomRestSeconds, 0, 300],
+                ] as Array<[string, number, (value: number) => void, number, number]>).map(([label, value, setter, min, max]) => (
+                  <label key={String(label)} className="space-y-1">
+                    <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">{label}</span>
+                    <input
+                      type="number"
+                      min={Number(min)}
+                      max={Number(max)}
+                      disabled={modeLocked || isTaskMode}
+                      value={Number(value)}
+                      onChange={(event) => setter(Math.max(min, Math.min(max, Number(event.target.value) || min)))}
+                      className="h-12 w-full rounded-2xl border border-input bg-background px-3 text-sm font-semibold tabular-nums outline-none disabled:opacity-60"
+                    />
+                  </label>
+                ))}
+              </div>
             </div>
             <p className="mt-3 text-xs font-medium text-muted-foreground">{customDescription}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
@@ -3903,7 +3507,9 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
               <span className="rounded-full bg-muted px-3 py-1 font-semibold text-muted-foreground">
                 {PROOF_LABELS[activeProofSource]}
               </span>
-              <span className="text-muted-foreground">{activeTrackingProfile.motionHint}</span>
+              <span className="text-muted-foreground">
+                {activePreset ? "Your workout clip loops during manual and audio cue sets." : activeTrackingProfile.motionHint}
+              </span>
             </div>
           </section>
 
@@ -3919,10 +3525,10 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
                   className="h-12 w-full rounded-2xl border border-input bg-background px-4 text-sm font-semibold outline-none"
                 >
                   <option value="trust">Manual Mode - 1x points</option>
-                  <option value="interactive:tap">Tap Mode - 2x points</option>
-                  <option value="interactive:audio">Voice Assisted Mode - 2x points</option>
-                  <option value="camera" disabled={manualExerciseLaunch}>Camera Coach - 4x points</option>
-                  <option value="motion" disabled={manualExerciseLaunch || !activeTrackingProfile.motion}>Phone Motion - 4x points</option>
+                  {!activePreset && <option value="interactive:tap">Tap Mode - 2x points</option>}
+                  <option value="interactive:audio">Audio Cue Mode - 2x points</option>
+                  <option value="camera">Camera Coach - 4x points</option>
+                  {!activePreset && <option value="motion" disabled={!activeTrackingProfile.motion}>Phone Motion - 4x points</option>}
                 </select>
               </label>
             </div>
@@ -3952,13 +3558,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
           <div className="grid gap-2 sm:grid-cols-[auto_1fr]">
             <button
               type="button"
-              onClick={() => {
-                if (isCombinedExperience) {
-                  setWorkoutFlowStep("activity");
-                  return;
-                }
-                router.push("/hub/workout");
-              }}
+              onClick={() => setWorkoutFlowStep("activity")}
               className="min-h-12 rounded-full border border-border px-5 text-sm font-semibold text-muted-foreground"
             >
               Back
@@ -3970,7 +3570,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 text-sm font-black text-primary-foreground shadow-sm disabled:opacity-60"
             >
               {status === "loading" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" />}
-              {activePreset ? "Start program" : "Start workout"}
+              Start workout
             </button>
           </div>
         </>
@@ -3988,7 +3588,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
               isFullscreen ? "h-screen w-screen rounded-none border-0" : "rounded-[24px] border border-border"
             )}
           >
-            <div className={cn("relative w-full", isFullscreen ? "h-screen min-h-screen" : "h-[72vh] min-h-[560px] sm:h-[76vh] sm:min-h-[640px]")}>
+            <div className={cn("relative w-full", isFullscreen ? "h-[100svh] min-h-[100svh]" : "h-[calc(100svh-112px)] min-h-[430px] max-h-[760px] sm:h-[76vh] sm:min-h-[640px]")}>
               <video
                 ref={videoRef}
                 className={cn("h-full w-full object-cover", cameraFacingMode === "user" && "scale-x-[-1]")}
@@ -4004,19 +3604,32 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
 
               {trackingMode !== "camera" && isWorkoutSurfaceActive && (
                 <div className="absolute inset-0 overflow-hidden bg-[#071512] text-white">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_22%,rgba(32,199,164,0.22),transparent_34%),linear-gradient(180deg,#0B211D_0%,#06110F_58%,#030806_100%)]" />
-                  <div className="absolute -left-24 top-20 h-64 w-64 rounded-full bg-[#20C7A4]/10 blur-3xl" />
-                  <div className="absolute -right-20 bottom-20 h-72 w-72 rounded-full bg-emerald-300/10 blur-3xl" />
+                  {activeDemoClip ? (
+                    <>
+                      <video
+                        key={activeDemoClip}
+                        src={activeDemoClip}
+                        className="absolute inset-0 h-full w-full object-contain sm:object-cover"
+                        muted
+                        loop
+                        playsInline
+                        autoPlay
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-[#071512]/55 to-[#071512]/92" />
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,#0B211D_0%,#06110F_58%,#030806_100%)]" />
+                  )}
 
-                  <div className="relative z-10 flex h-full flex-col px-5 pb-5 pt-20">
+                  <div className="relative z-10 flex h-full flex-col px-3 pb-3 pt-16 sm:px-5 sm:pb-5 sm:pt-20">
                     <div className="text-center">
                       <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-200/80">
-                        {activeStep?.type === "timed" ? activeStep.label : selectedExerciseLabel}
+                        {activeStep?.type === "timed" ? activeStep.label : selectedExercise.label}
                       </p>
-                      <p className="mt-3 text-2xl font-black tracking-normal text-white">{stageStatus}</p>
+                      <p className="mt-2 text-xl font-black tracking-normal text-white sm:mt-3 sm:text-2xl">{stageStatus}</p>
                     </div>
 
-                    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 py-5">
+                    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 py-3 sm:gap-6 sm:py-5">
                       {routinePhase === "summary" && lastSetSummary ? (
                         <div className="w-full max-w-md rounded-[28px] border border-emerald-100/20 bg-white/12 p-5 text-center shadow-[0_0_60px_rgba(32,199,164,0.18)] backdrop-blur">
                           <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-200" />
@@ -4043,15 +3656,15 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
                         </div>
                       ) : status === "rest" ? (
                         <div className="text-center">
-                          <div className="mx-auto flex h-52 w-52 items-center justify-center rounded-full border border-emerald-200/20 bg-white/8 shadow-[0_0_70px_rgba(32,199,164,0.22)] animate-pulse">
-                            <span className="text-6xl font-black tabular-nums">{routineRemaining ?? 0}</span>
+                          <div className="mx-auto flex h-36 w-36 items-center justify-center rounded-full border border-emerald-200/20 bg-white/8 shadow-[0_0_70px_rgba(32,199,164,0.22)] animate-pulse sm:h-52 sm:w-52">
+                            <span className="text-5xl font-black tabular-nums sm:text-6xl">{routineRemaining ?? 0}</span>
                           </div>
-                          <p className="mt-5 text-lg font-black">Recover. Next: {nextExerciseLabel}.</p>
+                          <p className="mt-3 text-base font-black sm:mt-5 sm:text-lg">Recover. Next: {nextExerciseLabel}.</p>
                         </div>
                       ) : (
                         <>
                           {trackingMode === "interactive" && interactiveMode === "audio" && (
-                            <div className="flex h-24 items-end justify-center gap-1.5">
+                            <div className="hidden h-24 items-end justify-center gap-1.5 sm:flex">
                               {[0.34, 0.62, 0.44, 0.82, 0.52, 1, 0.58, 0.76, 0.4, 0.66, 0.36].map((height, index) => (
                                 <span
                                   key={`${height}-${index}`}
@@ -4087,22 +3700,22 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
                           )}
 
                           {trackingMode === "trust" && (
-                            <div className="rounded-[28px] border border-emerald-100/20 bg-white/10 px-8 py-6 text-center shadow-[0_0_60px_rgba(32,199,164,0.18)]">
-                              <p className="text-3xl font-black">{selectedExerciseLabel}</p>
-                              <p className="mt-2 text-lg font-semibold text-emerald-100">
+                            <div className="rounded-[22px] border border-emerald-100/20 bg-white/10 px-5 py-4 text-center shadow-[0_0_60px_rgba(32,199,164,0.18)] sm:rounded-[28px] sm:px-8 sm:py-6">
+                              <p className="text-2xl font-black sm:text-3xl">{selectedExercise.label}</p>
+                              <p className="mt-2 text-base font-semibold text-emerald-100 sm:text-lg">
                                 {targetSeconds ? `${targetSeconds} sec` : displayTargetReps ? `${displayTargetReps} reps` : formatSessionTime(sessionSeconds)}
                               </p>
                             </div>
                           )}
 
                           <div
-                            className="relative flex h-56 w-56 items-center justify-center rounded-full"
+                            className="relative flex h-40 w-40 items-center justify-center rounded-full sm:h-56 sm:w-56"
                             style={{
                               background: `conic-gradient(#6EE7B7 ${routineProgress}%, rgba(255,255,255,0.16) ${routineProgress}% 100%)`,
                             }}
                           >
-                            <div className="flex h-[13rem] w-[13rem] flex-col items-center justify-center rounded-full bg-[#071512] shadow-inner">
-                              <p className="text-6xl font-black leading-none tabular-nums">{stageRepLabel}</p>
+                            <div className="flex h-[9.25rem] w-[9.25rem] flex-col items-center justify-center rounded-full bg-[#071512] shadow-inner sm:h-[13rem] sm:w-[13rem]">
+                              <p className="text-4xl font-black leading-none tabular-nums sm:text-6xl">{stageRepLabel}</p>
                               <p className="mt-2 text-xs font-black uppercase tracking-[0.22em] text-emerald-100/80">{stageUnitLabel}</p>
                             </div>
                           </div>
@@ -4125,7 +3738,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
                               <button type="button" onClick={confirmTrustSet} className="min-h-14 rounded-full bg-emerald-200 px-5 text-sm font-black text-[#071512]">
                                 Completed
                               </button>
-                              <button type="button" onClick={() => endCurrentSet()} className="min-h-14 rounded-full border border-white/20 bg-white/10 px-5 text-sm font-black text-white">
+                              <button type="button" onClick={endCurrentSet} className="min-h-14 rounded-full border border-white/20 bg-white/10 px-5 text-sm font-black text-white">
                                 Did fewer
                               </button>
                             </div>
@@ -4175,7 +3788,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
 
               <div className="absolute left-4 right-4 top-4 z-10 flex items-center justify-between gap-3">
                 <div className="min-w-0 rounded-full bg-white/92 px-4 py-2 text-sm font-semibold text-foreground shadow-sm backdrop-blur">
-                  <span className="block max-w-[180px] truncate">{activeStep?.type === "timed" ? activeStep.label : selectedExerciseLabel}</span>
+                  <span className="block max-w-[180px] truncate">{activeStep?.type === "timed" ? activeStep.label : selectedExercise.label}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {trackingMode === "camera" && (
@@ -4260,13 +3873,14 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
                     <div>
                       <p className="text-sm font-semibold">Camera tracking is weak</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Continue this same mission with {activeTrackingProfile.motion ? "Motion Mode" : "Tap-to-Rep"} without restarting.
+                        Continue this same mission with {activePreset ? "Audio Cue Mode" : activeTrackingProfile.motion ? "Motion Mode" : "Tap-to-Rep"} without restarting.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        if (activeTrackingProfile.motion) void chooseTrackingMode("motion");
+                        if (activePreset) void chooseTrackingMode("interactive", "audio");
+                        else if (activeTrackingProfile.motion) void chooseTrackingMode("motion");
                         else void chooseTrackingMode("interactive", "tap");
                       }}
                       className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
@@ -4577,33 +4191,31 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
-                disabled={manualExerciseLaunch}
                 onClick={() => void chooseTrackingMode("camera")}
-                className={cn(
-                  "min-h-[118px] rounded-[20px] border border-border bg-background p-4 text-left transition hover:border-primary/50",
-                  manualExerciseLaunch && "cursor-not-allowed opacity-50"
-                )}
+                className="min-h-[118px] rounded-[20px] border border-border bg-background p-4 text-left transition hover:border-primary/50"
               >
                 <span className="block text-sm font-black text-foreground">Camera Coach</span>
                 <span className="mt-1 block text-xs leading-5 text-muted-foreground">Automatic rep counting plus form guidance.</span>
                 <span className="mt-3 block text-xs font-semibold text-primary">4x points multiplier</span>
               </button>
 
-              <button
-                type="button"
-                disabled={manualExerciseLaunch || !activeTrackingProfile.motion}
-                onClick={() => void chooseTrackingMode("motion")}
-                className={cn(
-                  "min-h-[118px] rounded-[20px] border border-border bg-background p-4 text-left transition hover:border-primary/50",
-                  (manualExerciseLaunch || !activeTrackingProfile.motion) && "cursor-not-allowed opacity-50"
-                )}
-              >
-                <span className="block text-sm font-black text-foreground">Phone Motion</span>
-                <span className="mt-1 block text-xs leading-5 text-muted-foreground">Uses your phone sensors to track movement.</span>
-                <span className="mt-3 block text-xs font-semibold text-primary">
-                  {activeTrackingProfile.motion ? "4x points multiplier" : "Not ideal for this exercise"}
-                </span>
-              </button>
+              {!activePreset && (
+                <button
+                  type="button"
+                  disabled={!activeTrackingProfile.motion}
+                  onClick={() => void chooseTrackingMode("motion")}
+                  className={cn(
+                    "min-h-[118px] rounded-[20px] border border-border bg-background p-4 text-left transition hover:border-primary/50",
+                    !activeTrackingProfile.motion && "cursor-not-allowed opacity-50"
+                  )}
+                >
+                  <span className="block text-sm font-black text-foreground">Phone Motion</span>
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">Uses your phone sensors to track movement.</span>
+                  <span className="mt-3 block text-xs font-semibold text-primary">
+                    {activeTrackingProfile.motion ? "4x points multiplier" : "Not ideal for this exercise"}
+                  </span>
+                </button>
+              )}
             </div>
 
             <div className="mt-5 rounded-[20px] border border-border bg-background p-3">
@@ -4611,7 +4223,7 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
                 Interactive options
               </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {INTERACTIVE_OPTIONS.map((option) => (
+                {INTERACTIVE_OPTIONS.filter((option) => !activePreset || option.mode === "audio").map((option) => (
                   <button
                     key={option.mode}
                     type="button"
@@ -4715,15 +4327,12 @@ export function WorkoutAnalyzerMode({ experience = "combined" }: WorkoutAnalyzer
               </p>
             </div>
 
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => toggleFavorite(selectedPreset.id)} className="min-h-11 rounded-full border border-[#DDE8E4] text-sm font-bold">
-                {favoritePresetIds.has(selectedPreset.id) ? "Favorited" : "Favorite"}
-              </button>
-              <button type="button" onClick={() => toggleSaved(selectedPreset.id)} className="min-h-11 rounded-full border border-[#DDE8E4] text-sm font-bold">
-                {savedPresetIds.has(selectedPreset.id) ? "Saved" : "Save"}
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setSelectedPreset(null)} className="min-h-11 rounded-full border border-[#DDE8E4] text-sm font-bold">
+                Close
               </button>
               <button type="button" onClick={() => startPresetWorkout(selectedPreset)} className="min-h-11 rounded-full bg-[#20C7A4] text-sm font-black text-[#071512]">
-                Start
+                Start workout
               </button>
             </div>
           </div>

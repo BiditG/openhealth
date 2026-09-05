@@ -9,7 +9,7 @@ export const PRO_PLANS = [
     name: "Monthly",
     price: "Rs. 199",
     period: "month",
-    note: "Best to try Swastha Pro without thinking too much.",
+    note: "Best to try FitNMove Pro without thinking too much.",
     highlight: false,
   },
   {
@@ -31,7 +31,7 @@ export const PRO_PLANS = [
 ] as const;
 
 export const PRO_FEATURES = [
-  "Full Swastha hub access after admin activation",
+  "Full FitNMove hub access after admin activation",
   "Food tools, calorie guidance, and progress tracking",
   "Workout analyzer, tasks, missions, medals, and leaderboard",
   "AI coach and health guidance features",

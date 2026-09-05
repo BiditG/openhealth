@@ -202,7 +202,7 @@ export const SET_TYPE_LABELS: Record<string, string> = {
   dropset: "Drop set",
 };
 
-export const APP_NAME = "Open Health";
+export const APP_NAME = "FitNMove";
 export const THEME_COLOR = "#16a34a";
 export const DANGER_COLOR = "#ef4444";
 

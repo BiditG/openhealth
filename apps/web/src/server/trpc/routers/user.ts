@@ -131,7 +131,7 @@ async function getOllamaCoachSuggestion(prompt: string) {
         {
           role: "system",
           content:
-            "You are Swastha Coach. Return strict JSON only. Suggest safe, realistic daily nutrition goals for a general wellness app.",
+            "You are FitNMove Coach. Return strict JSON only. Suggest safe, realistic daily nutrition goals for a general wellness app.",
         },
         { role: "user", content: prompt },
       ],
@@ -150,6 +150,24 @@ async function getOllamaCoachSuggestion(prompt: string) {
 }
 
 export const userRouter = router({
+  getMe: protectedProcedure.query(async ({ ctx }) => {
+    const row = await ctx.db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        isActive: users.isActive,
+        isAdmin: users.isAdmin,
+        plan: users.plan,
+        planExpiresAt: users.planExpiresAt,
+      })
+      .from(users)
+      .where(eq(users.id, ctx.user.id))
+      .then((rows) => rows[0]);
+
+    return row ?? null;
+  }),
+
   getProfile: protectedProcedure.query(async ({ ctx }) => {
     const profile = await ctx.db.query.userProfiles.findFirst({
       where: eq(userProfiles.userId, ctx.user.id),

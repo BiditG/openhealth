@@ -15,11 +15,11 @@ interface Props {
 }
 
 const descriptions: Record<Locale, string> = {
-  en: "Nutrition, fitness, sleep, preventive health, and Nepali food education from Swastha.",
+  en: "Nutrition, fitness, sleep, preventive health, and movement education from FitNMove.",
 };
 
 const titles: Record<Locale, string> = {
-  en: "Learn — Swastha",
+  en: "Learn — FitNMove",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -62,7 +62,7 @@ export default async function BlogPage({ params }: Props) {
   const posts = await getPosts(lang);
 
   return (
-    <div className="bg-white dark:bg-black text-black dark:text-white min-h-screen selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
+    <div className="dark premium-page-bg min-h-screen text-white selection:bg-white selection:text-black">
       <SiteNav />
       <BlogListContent posts={posts} />
     </div>

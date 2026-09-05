@@ -30,7 +30,7 @@ export function DocsContent() {
   const lp = useLocalePath();
 
   return (
-    <div className="bg-white dark:bg-black text-black dark:text-white min-h-screen selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
+    <div className="dark premium-page-bg min-h-screen text-white selection:bg-white selection:text-black">
       <SiteNav />
 
       <main className="max-w-4xl mx-auto px-6 pt-28 pb-16 md:pt-32 md:pb-24">

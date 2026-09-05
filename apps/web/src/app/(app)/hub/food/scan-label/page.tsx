@@ -367,14 +367,14 @@ function ScanLabelContent() {
               setMode("food");
               router.push("/hub/food/scan-label");
             }}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#DDE8E4] bg-white text-[#15483F] shadow-sm"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#1A4D40] bg-[#0B2C24] text-[#B8F34A] shadow-sm"
             aria-label="Back to activities"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0">
-            <h1 className="truncate text-[24px] font-black leading-tight text-[#17201E]">{focusedActivity.title}</h1>
-            <p className="mt-1 text-sm leading-5 text-[#6B7773]">{focusedActivity.description}</p>
+            <h1 className="truncate text-[24px] font-black leading-tight text-[#F4F8F5]">{focusedActivity.title}</h1>
+            <p className="mt-1 text-sm leading-5 text-[#C0D1CA]">{focusedActivity.description}</p>
           </div>
         </div>
 
@@ -383,10 +383,10 @@ function ScanLabelContent() {
         {mode === "meditation" && <MeditationMode />}
         {mode === "games" && <VirtualGamesMode initialGame={initialGame} initialCricketMode={initialCricketMode} />}
         {mode === "stretch" && (
-          <section className="space-y-4 rounded-[24px] border border-[#DDE8E4] bg-white p-5 shadow-sm">
+          <section className="space-y-4 rounded-[24px] border border-[#1A4D40] bg-[#0B2C24]/90 p-5 shadow-sm backdrop-blur">
             <div>
-              <p className="text-xl font-black text-[#17201E]">Mobility & recovery</p>
-              <p className="mt-1 text-sm leading-5 text-[#6B7773]">
+              <p className="text-xl font-black text-[#F4F8F5]">Mobility & recovery</p>
+              <p className="mt-1 text-sm leading-5 text-[#C0D1CA]">
                 Pick a light routine to loosen up and recover.
               </p>
             </div>
@@ -396,14 +396,14 @@ function ScanLabelContent() {
                   key={routine.title}
                   type="button"
                   onClick={() => toast.success(`${routine.title} selected. Start gently and breathe steadily.`)}
-                  className="min-h-[132px] rounded-[18px] border border-[#E3EAE7] bg-[#F7FAF9] p-4 text-left transition hover:border-[#20C7A4]/45 hover:bg-white"
+                  className="min-h-[132px] rounded-[18px] border border-[#1A4D40] bg-[#10372D] p-4 text-left transition hover:border-[#B8F34A]/55 hover:bg-[#16453A]"
                 >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#15483F]">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#07251E] text-[#B8F34A]">
                     <Activity className="h-6 w-6" />
                   </span>
-                  <span className="mt-4 block text-base font-black text-[#17201E]">{routine.title}</span>
-                  <span className="mt-1 block text-xs font-bold text-[#20C7A4]">{routine.duration}</span>
-                  <span className="mt-1 block text-sm leading-5 text-[#6B7773]">{routine.detail}</span>
+                  <span className="mt-4 block text-base font-black text-[#F4F8F5]">{routine.title}</span>
+                  <span className="mt-1 block text-xs font-bold text-[#B8F34A]">{routine.duration}</span>
+                  <span className="mt-1 block text-sm leading-5 text-[#C0D1CA]">{routine.detail}</span>
                 </button>
               ))}
             </div>
@@ -415,30 +415,30 @@ function ScanLabelContent() {
 
   return (
     <div className="px-4 py-4">
-      <section className="mb-4 rounded-[24px] border border-[#DDE8E4] bg-[#F7FAF9] p-4 shadow-sm sm:p-5">
+      <section className="mb-4 rounded-[24px] border border-[#1A4D40] bg-[#0B2C24]/90 p-4 shadow-sm backdrop-blur sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-[24px] font-black leading-tight text-[#17201E]">Explore</h1>
-            <p className="mt-1 text-sm leading-5 text-[#6B7773]">
+            <h1 className="text-[24px] font-black leading-tight text-[#F4F8F5]">Explore</h1>
+            <p className="mt-1 text-sm leading-5 text-[#C0D1CA]">
               Choose how you want to move, eat or recharge.
             </p>
           </div>
           <button
             type="button"
             onClick={() => openActivity(recommendedMode)}
-            className="flex min-h-[78px] items-center gap-3 rounded-[18px] border border-[#CFECE4] bg-white px-4 py-3 text-left shadow-[0_10px_24px_rgba(21,72,63,0.06)] transition hover:border-[#20C7A4]/60"
+            className="flex min-h-[78px] items-center gap-3 rounded-[18px] border border-[#35D39A]/20 bg-[#10372D] px-4 py-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition hover:border-[#B8F34A]/60 hover:bg-[#16453A]"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#EAF8F4] text-[#15483F]">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#07251E] text-[#B8F34A]">
               <RecommendedIcon className="h-7 w-7" />
             </span>
             <span className="min-w-0">
-              <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-[#20C7A4]">Recommended for you</span>
-              <span className="mt-1 block truncate text-sm font-black text-[#17201E]">{recommendationText}</span>
+              <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-[#35D39A]">Recommended for you</span>
+              <span className="mt-1 block truncate text-sm font-black text-[#F4F8F5]">{recommendationText}</span>
             </span>
           </button>
         </div>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-[#6B7773]">Or choose an activity</p>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-[#8BA59B]">Or choose an activity</p>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {exploreActivities.map((activity) => {
             const Icon = activity.icon;
@@ -450,22 +450,22 @@ function ScanLabelContent() {
                 onClick={() => openActivity(activity.mode)}
                 className={`min-h-[126px] rounded-[18px] border p-4 text-left transition ${
                   isActive
-                    ? "border-[#20C7A4] bg-white shadow-[0_12px_28px_rgba(21,72,63,0.09)]"
-                    : "border-[#E3EAE7] bg-white/72 hover:border-[#20C7A4]/45 hover:bg-white"
+                    ? "border-[#B8F34A] bg-[#10372D] shadow-[0_12px_28px_rgba(184,243,74,0.12)]"
+                    : "border-[#1A4D40] bg-[#0B2C24]/82 hover:border-[#35D39A]/45 hover:bg-[#16453A]"
                 }`}
               >
                 <span className="flex items-start justify-between gap-3">
-                  <span className={`flex h-[52px] w-[52px] items-center justify-center rounded-[16px] ${isActive ? "bg-[#EAF8F4] text-[#15483F]" : "bg-[#F1F7F4] text-[#6B7773]"}`}>
+                  <span className={`flex h-[52px] w-[52px] items-center justify-center rounded-[16px] ${isActive ? "bg-[#B8F34A] text-[#041A15]" : "bg-[#10372D] text-[#8BA59B]"}`}>
                     <Icon className="h-7 w-7" />
                   </span>
                   {isActive && (
-                    <span className="rounded-full bg-[#EAF8F4] px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#15483F]">
+                    <span className="rounded-full bg-[#B8F34A] px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#041A15]">
                       Active
                     </span>
                   )}
                 </span>
-                <span className="mt-4 block text-base font-black text-[#17201E]">{activity.title}</span>
-                <span className="mt-1 block text-sm leading-5 text-[#6B7773]">{activity.description}</span>
+                <span className="mt-4 block text-base font-black text-[#F4F8F5]">{activity.title}</span>
+                <span className="mt-1 block text-sm leading-5 text-[#C0D1CA]">{activity.description}</span>
               </button>
             );
           })}
@@ -477,10 +477,10 @@ function ScanLabelContent() {
       {mode === "meditation" && <MeditationMode />}
       {mode === "games" && <VirtualGamesMode initialGame={initialGame} initialCricketMode={initialCricketMode} />}
       {mode === "stretch" && (
-        <section className="space-y-4 rounded-[24px] border border-[#DDE8E4] bg-white p-5 shadow-sm">
+        <section className="space-y-4 rounded-[24px] border border-[#1A4D40] bg-[#0B2C24]/90 p-5 shadow-sm backdrop-blur">
           <div>
-            <p className="text-xl font-black text-[#17201E]">Mobility & recovery</p>
-            <p className="mt-1 text-sm leading-5 text-[#6B7773]">
+            <p className="text-xl font-black text-[#F4F8F5]">Mobility & recovery</p>
+            <p className="mt-1 text-sm leading-5 text-[#C0D1CA]">
               Pick a light routine to loosen up and recover.
             </p>
           </div>
@@ -490,14 +490,14 @@ function ScanLabelContent() {
                 key={routine.title}
                 type="button"
                 onClick={() => toast.success(`${routine.title} selected. Start gently and breathe steadily.`)}
-                className="min-h-[132px] rounded-[18px] border border-[#E3EAE7] bg-[#F7FAF9] p-4 text-left transition hover:border-[#20C7A4]/45 hover:bg-white"
+                className="min-h-[132px] rounded-[18px] border border-[#1A4D40] bg-[#10372D] p-4 text-left transition hover:border-[#B8F34A]/55 hover:bg-[#16453A]"
               >
-                <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#15483F]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#07251E] text-[#B8F34A]">
                   <Activity className="h-6 w-6" />
                 </span>
-                <span className="mt-4 block text-base font-black text-[#17201E]">{routine.title}</span>
-                <span className="mt-1 block text-xs font-bold text-[#20C7A4]">{routine.duration}</span>
-                <span className="mt-1 block text-sm leading-5 text-[#6B7773]">{routine.detail}</span>
+                <span className="mt-4 block text-base font-black text-[#F4F8F5]">{routine.title}</span>
+                <span className="mt-1 block text-xs font-bold text-[#B8F34A]">{routine.duration}</span>
+                <span className="mt-1 block text-sm leading-5 text-[#C0D1CA]">{routine.detail}</span>
               </button>
             ))}
           </div>

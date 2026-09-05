@@ -345,7 +345,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const csv = await exporters[cat](session.user.id);
-    const fileName = `OpenHealth_${categoryFileNames[cat]}_${new Date().toISOString().slice(0, 10)}.csv`;
+    const fileName = `FitNMove_${categoryFileNames[cat]}_${new Date().toISOString().slice(0, 10)}.csv`;
 
     return new NextResponse(csv, {
       headers: {

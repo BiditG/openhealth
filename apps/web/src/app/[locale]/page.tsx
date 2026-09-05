@@ -10,7 +10,7 @@ interface Props {
 }
 
 const descriptions: Record<Locale, string> = {
-  en: "A mobile-first health platform for Nepal: understand food, track wellness, explain reports, and ask educational health questions with AI.",
+  en: "FitNMove helps you train smarter, move daily, track progress, and compete with momentum in one mobile-first fitness hub.",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const lang = (locale as Locale) || defaultLocale;
 
   return {
-    title: "Swastha — Personal Health, Food, and Wellness AI for Nepal",
+    title: "FitNMove — Train, Move, Compete",
     description: descriptions[lang],
     alternates: {
       canonical: BASE_URL,
@@ -32,7 +32,7 @@ export default async function LandingPage({ params }: Props) {
   void locale;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="premium-page-bg min-h-screen overflow-x-hidden text-foreground">
       <SiteNav />
       <LandingContent posts={[]} />
     </div>

@@ -31,31 +31,31 @@ import {
 } from "@open-health/shared/constants";
 
 const NUTRIENT_PROGRESS_METRICS = [
-  { key: "fiber", label: "Dietary Fiber", unit: "g", target: 28, color: "#5A8E62", nutrientId: NUTRIENT_IDS.fiber },
-  { key: "cholesterol", label: "Cholesterol", unit: "mg", target: 300, color: "#B76A16", nutrientId: NUTRIENT_IDS.cholesterol },
-  { key: "sodium", label: "Sodium", unit: "mg", target: 2300, color: "#3976B9", nutrientId: NUTRIENT_IDS.sodium },
-  { key: "foodWater", label: "Water", unit: "g", target: null, color: "#2E9DC5", nutrientId: NUTRIENT_IDS.water },
-  { key: "vitaminA", label: "Vitamin A", unit: "mcg", target: 900, color: "#6E65B8", nutrientId: NUTRIENT_IDS.vitaminA },
-  { key: "vitaminB1", label: "Vitamin B1", unit: "mg", target: 1.2, color: "#5A8E62", nutrientId: NUTRIENT_IDS.vitaminB1 },
-  { key: "vitaminB11", label: "Vitamin B11", unit: "mcg", target: 400, color: "#7B6BB7", nutrientId: NUTRIENT_IDS.folate },
-  { key: "vitaminB12", label: "Vitamin B12", unit: "mcg", target: 2.4, color: "#6E65B8", nutrientId: NUTRIENT_IDS.vitaminB12 },
-  { key: "vitaminB2", label: "Vitamin B2", unit: "mg", target: 1.3, color: "#3976B9", nutrientId: NUTRIENT_IDS.vitaminB2 },
-  { key: "vitaminB3", label: "Vitamin B3", unit: "mg", target: 16, color: "#D99535", nutrientId: NUTRIENT_IDS.vitaminB3 },
-  { key: "vitaminB5", label: "Vitamin B5", unit: "mg", target: 5, color: "#16A085", nutrientId: NUTRIENT_IDS.vitaminB5 },
-  { key: "vitaminB6", label: "Vitamin B6", unit: "mg", target: 1.7, color: "#5A8E62", nutrientId: NUTRIENT_IDS.vitaminB6 },
-  { key: "vitaminC", label: "Vitamin C", unit: "mg", target: 90, color: "#16A085", nutrientId: NUTRIENT_IDS.vitaminC },
-  { key: "vitaminD", label: "Vitamin D", unit: "mcg", target: 20, color: "#6E65B8", nutrientId: NUTRIENT_IDS.vitaminD },
-  { key: "vitaminE", label: "Vitamin E", unit: "mg", target: 15, color: "#D99535", nutrientId: NUTRIENT_IDS.vitaminE },
-  { key: "vitaminK", label: "Vitamin K", unit: "mcg", target: 120, color: "#5A8E62", nutrientId: NUTRIENT_IDS.vitaminK },
-  { key: "calcium", label: "Calcium", unit: "mg", target: 1300, color: "#3976B9", nutrientId: NUTRIENT_IDS.calcium },
-  { key: "copper", label: "Copper", unit: "mg", target: 0.9, color: "#B76A16", nutrientId: NUTRIENT_IDS.copper },
-  { key: "iron", label: "Iron", unit: "mg", target: 18, color: "#171A19", nutrientId: NUTRIENT_IDS.iron },
-  { key: "magnesium", label: "Magnesium", unit: "mg", target: 420, color: "#16A085", nutrientId: NUTRIENT_IDS.magnesium },
-  { key: "manganese", label: "Manganese", unit: "mg", target: 2.3, color: "#7B6BB7", nutrientId: NUTRIENT_IDS.manganese },
-  { key: "phosphorus", label: "Phosphorus", unit: "mg", target: 1250, color: "#3976B9", nutrientId: NUTRIENT_IDS.phosphorus },
-  { key: "potassium", label: "Potassium", unit: "mg", target: 4700, color: "#5A8E62", nutrientId: NUTRIENT_IDS.potassium },
-  { key: "selenium", label: "Selenium", unit: "mcg", target: 55, color: "#6E65B8", nutrientId: NUTRIENT_IDS.selenium },
-  { key: "zinc", label: "Zinc", unit: "mg", target: 11, color: "#171A19", nutrientId: NUTRIENT_IDS.zinc },
+  { key: "fiber", label: "Dietary Fiber", unit: "g", target: 28, color: "#35D39A", nutrientId: NUTRIENT_IDS.fiber },
+  { key: "cholesterol", label: "Cholesterol", unit: "mg", target: 300, color: "#FF9F43", nutrientId: NUTRIENT_IDS.cholesterol },
+  { key: "sodium", label: "Sodium", unit: "mg", target: 2300, color: "#67B7E8", nutrientId: NUTRIENT_IDS.sodium },
+  { key: "foodWater", label: "Water", unit: "g", target: null, color: "#67B7E8", nutrientId: NUTRIENT_IDS.water },
+  { key: "vitaminA", label: "Vitamin A", unit: "mcg", target: 900, color: "#A78BFA", nutrientId: NUTRIENT_IDS.vitaminA },
+  { key: "vitaminB1", label: "Vitamin B1", unit: "mg", target: 1.2, color: "#35D39A", nutrientId: NUTRIENT_IDS.vitaminB1 },
+  { key: "vitaminB11", label: "Vitamin B11", unit: "mcg", target: 400, color: "#A78BFA", nutrientId: NUTRIENT_IDS.folate },
+  { key: "vitaminB12", label: "Vitamin B12", unit: "mcg", target: 2.4, color: "#A78BFA", nutrientId: NUTRIENT_IDS.vitaminB12 },
+  { key: "vitaminB2", label: "Vitamin B2", unit: "mg", target: 1.3, color: "#67B7E8", nutrientId: NUTRIENT_IDS.vitaminB2 },
+  { key: "vitaminB3", label: "Vitamin B3", unit: "mg", target: 16, color: "#FF9F43", nutrientId: NUTRIENT_IDS.vitaminB3 },
+  { key: "vitaminB5", label: "Vitamin B5", unit: "mg", target: 5, color: "#35D39A", nutrientId: NUTRIENT_IDS.vitaminB5 },
+  { key: "vitaminB6", label: "Vitamin B6", unit: "mg", target: 1.7, color: "#35D39A", nutrientId: NUTRIENT_IDS.vitaminB6 },
+  { key: "vitaminC", label: "Vitamin C", unit: "mg", target: 90, color: "#35D39A", nutrientId: NUTRIENT_IDS.vitaminC },
+  { key: "vitaminD", label: "Vitamin D", unit: "mcg", target: 20, color: "#A78BFA", nutrientId: NUTRIENT_IDS.vitaminD },
+  { key: "vitaminE", label: "Vitamin E", unit: "mg", target: 15, color: "#FF9F43", nutrientId: NUTRIENT_IDS.vitaminE },
+  { key: "vitaminK", label: "Vitamin K", unit: "mcg", target: 120, color: "#35D39A", nutrientId: NUTRIENT_IDS.vitaminK },
+  { key: "calcium", label: "Calcium", unit: "mg", target: 1300, color: "#67B7E8", nutrientId: NUTRIENT_IDS.calcium },
+  { key: "copper", label: "Copper", unit: "mg", target: 0.9, color: "#FF9F43", nutrientId: NUTRIENT_IDS.copper },
+  { key: "iron", label: "Iron", unit: "mg", target: 18, color: "#FF5C68", nutrientId: NUTRIENT_IDS.iron },
+  { key: "magnesium", label: "Magnesium", unit: "mg", target: 420, color: "#35D39A", nutrientId: NUTRIENT_IDS.magnesium },
+  { key: "manganese", label: "Manganese", unit: "mg", target: 2.3, color: "#A78BFA", nutrientId: NUTRIENT_IDS.manganese },
+  { key: "phosphorus", label: "Phosphorus", unit: "mg", target: 1250, color: "#67B7E8", nutrientId: NUTRIENT_IDS.phosphorus },
+  { key: "potassium", label: "Potassium", unit: "mg", target: 4700, color: "#35D39A", nutrientId: NUTRIENT_IDS.potassium },
+  { key: "selenium", label: "Selenium", unit: "mcg", target: 55, color: "#A78BFA", nutrientId: NUTRIENT_IDS.selenium },
+  { key: "zinc", label: "Zinc", unit: "mg", target: 11, color: "#FF5C68", nutrientId: NUTRIENT_IDS.zinc },
 ] as const;
 
 type NutrientMetricKey = (typeof NUTRIENT_PROGRESS_METRICS)[number]["key"];
@@ -189,14 +189,14 @@ function ProgressContent() {
 
   const metricOptions = useMemo<MetricConfig[]>(
     () => [
-      { key: "calories", label: "Calories", unit: "kcal", target: goals?.calorieTarget ? toNumber(goals.calorieTarget) : DEFAULT_CALORIE_TARGET, color: "#16A085", icon: Utensils },
-      { key: "carbs", label: "Carbohydrates", unit: "g", target: goals?.carbsG ? toNumber(goals.carbsG) : DEFAULT_CARBS_G, color: "#3976B9", icon: BarChart3 },
-      { key: "protein", label: "Protein", unit: "g", target: goals?.proteinG ? toNumber(goals.proteinG) : DEFAULT_PROTEIN_G, color: "#16A085", icon: BarChart3 },
-      { key: "fat", label: "Fat", unit: "g", target: goals?.fatG ? toNumber(goals.fatG) : DEFAULT_FAT_G, color: "#D99535", icon: BarChart3 },
+      { key: "calories", label: "Calories", unit: "kcal", target: goals?.calorieTarget ? toNumber(goals.calorieTarget) : DEFAULT_CALORIE_TARGET, color: "#FF9F43", icon: Utensils },
+      { key: "carbs", label: "Carbohydrates", unit: "g", target: goals?.carbsG ? toNumber(goals.carbsG) : DEFAULT_CARBS_G, color: "#67B7E8", icon: BarChart3 },
+      { key: "protein", label: "Protein", unit: "g", target: goals?.proteinG ? toNumber(goals.proteinG) : DEFAULT_PROTEIN_G, color: "#35D39A", icon: BarChart3 },
+      { key: "fat", label: "Fat", unit: "g", target: goals?.fatG ? toNumber(goals.fatG) : DEFAULT_FAT_G, color: "#FF7A59", icon: BarChart3 },
       ...NUTRIENT_PROGRESS_METRICS.map((metric) => ({ ...metric, icon: BarChart3 })),
-      { key: "weight", label: "Weight", unit: "kg", target: targetWeight, color: "#171A19", icon: Scale },
-      { key: "steps", label: "Steps", unit: "steps", target: 10000, color: "#3976B9", icon: Footprints },
-      { key: "water", label: "Water intake", unit: "ml", target: toNumber(analytics?.waterGoalMl ?? DEFAULT_WATER_GOAL_ML), color: "#2E9DC5", icon: Droplets },
+      { key: "weight", label: "Weight", unit: "kg", target: targetWeight, color: "#B8F34A", icon: Scale },
+      { key: "steps", label: "Steps", unit: "steps", target: 10000, color: "#35D39A", icon: Footprints },
+      { key: "water", label: "Water intake", unit: "ml", target: toNumber(analytics?.waterGoalMl ?? DEFAULT_WATER_GOAL_ML), color: "#67B7E8", icon: Droplets },
     ],
     [analytics?.waterGoalMl, goals?.calorieTarget, goals?.carbsG, goals?.fatG, goals?.proteinG, targetWeight]
   );
@@ -218,7 +218,7 @@ function ProgressContent() {
   };
 
   return (
-    <div className="bg-[#F6F8F7] px-4 py-6 sm:px-6 lg:py-10">
+    <div className="px-4 py-6 sm:px-6 lg:py-10">
       <div className="mx-auto max-w-[1080px] space-y-7">
         <DateNavigator date={date} onDateChange={handleDateChange} />
 
@@ -304,15 +304,15 @@ function ProgressContent() {
               <div className="h-[230px] min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={metricData} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
-                    <CartesianGrid stroke="#E6EEEA" vertical={false} />
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#6B7470" }} minTickGap={18} />
-                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#6B7470" }} />
+                    <CartesianGrid stroke="rgba(53,211,154,0.16)" vertical={false} />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#8BA59B" }} minTickGap={18} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#8BA59B" }} />
                     <Tooltip
-                      cursor={{ stroke: "#D9E7E2" }}
-                      contentStyle={{ borderRadius: 14, border: "1px solid #DCE8E3", boxShadow: "0 12px 36px rgba(20,50,40,0.12)" }}
+                      cursor={{ stroke: "rgba(184,243,74,0.35)" }}
+                      contentStyle={{ borderRadius: 14, border: "1px solid rgba(53,211,154,0.22)", background: "rgba(4,26,21,0.95)", color: "#F4F8F5", boxShadow: "0 12px 36px rgba(0,0,0,0.25)" }}
                       formatter={(value) => [`${Math.round(Number(value)).toLocaleString()} ${selected.unit}`, selected.label]}
                     />
-                    <Line type="monotone" dataKey={selectedMetric} stroke={selected.color} strokeWidth={2.5} dot={false} connectNulls />
+                    <Line type="monotone" dataKey={selectedMetric} stroke={selected.color} strokeWidth={3} dot={false} connectNulls />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -328,7 +328,7 @@ function ProgressContent() {
                     <span className="font-medium text-muted-foreground">Coverage</span>
                     <span className="font-semibold text-foreground">{progressPct}%</span>
                   </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E0EAE5]">
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#07251E]">
                     <div className="h-full rounded-full" style={{ width: `${progressPct}%`, backgroundColor: selected.color }} />
                   </div>
                 </div>
@@ -374,7 +374,7 @@ function ProgressContent() {
             <div className="mt-5 h-24 min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={metricData.slice(-7)}>
-                  <Area type="monotone" dataKey="calories" stroke="#16A085" fill="#DDF4EE" strokeWidth={2} />
+                  <Area type="monotone" dataKey="calories" stroke="#FF9F43" fill="rgba(255,159,67,0.22)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

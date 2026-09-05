@@ -33,7 +33,7 @@ const faqs = [
   },
   {
     q: "Is this a medical diagnosis app?",
-    a: "No. Swastha provides educational information, wellness tracking, and nutrition estimates. It does not diagnose diseases, provide emergency care, or replace qualified clinicians.",
+    a: "No. FitNMove provides educational information, wellness tracking, and nutrition estimates. It does not diagnose diseases, provide emergency care, or replace qualified clinicians.",
   },
   {
     q: "Can it understand Nepali foods?",
@@ -43,7 +43,7 @@ const faqs = [
 
 export function SupportContent() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="premium-page-bg min-h-screen text-foreground">
       <SiteNav />
 
       <main className="mx-auto max-w-5xl px-4 pb-20 pt-28 sm:px-6 md:pb-24">
@@ -55,7 +55,7 @@ export function SupportContent() {
             How can we help?
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Get help with setup, privacy, account access, and the health tracking tools inside Swastha.
+            Get help with setup, privacy, account access, and the training, movement, and progress tools inside FitNMove.
           </p>
         </div>
 
